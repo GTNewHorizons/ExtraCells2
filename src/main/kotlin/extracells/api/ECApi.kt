@@ -1,18 +1,17 @@
-package extracells.api;
+package extracells.api
 
-public class ECApi {
+object ECApi {
+    fun instance(): ExtraCellsApi? {
+        if (instance == null) {
+            try {
+                instance = Class
+                        .forName("extracells.ExtraCellsApiInstance")
+                        .getField("instance")[null] as ExtraCellsApi
+            } catch (e: Exception) {
+            }
+        }
+        return instance
+    }
 
-	public static ExtraCellsApi instance() {
-		if (instance == null) {
-			try {
-				instance = (ExtraCellsApi) Class
-						.forName("extracells.ExtraCellsApiInstance")
-						.getField("instance").get(null);
-			} catch (Exception e) {}
-		}
-		return instance;
-	}
-
-	private static ExtraCellsApi instance = null;
-
+    private var instance: ExtraCellsApi? = null
 }

@@ -1,17 +1,12 @@
-package extracells.api;
+package extracells.api
 
+import appeng.api.features.INetworkEncodable
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemStack
 
-import appeng.api.features.INetworkEncodable;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-
-public interface IWirelessGasFluidTermHandler extends INetworkEncodable {
-
-    boolean canHandle(ItemStack is);
-
-    boolean hasPower(EntityPlayer player, double amount, ItemStack is);
-
-    boolean isItemNormalWirelessTermToo(ItemStack is);
-
-    boolean usePower(EntityPlayer player, double amount, ItemStack is);
+interface IWirelessGasFluidTermHandler : INetworkEncodable {
+    fun canHandle(`is`: ItemStack?): Boolean
+    fun hasPower(player: EntityPlayer?, amount: Double, `is`: ItemStack?): Boolean
+    fun isItemNormalWirelessTermToo(`is`: ItemStack?): Boolean
+    fun usePower(player: EntityPlayer?, amount: Double, `is`: ItemStack?): Boolean
 }

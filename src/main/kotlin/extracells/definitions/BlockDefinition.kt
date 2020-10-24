@@ -1,65 +1,57 @@
-package extracells.definitions;
+package extracells.definitions
 
-import appeng.api.definitions.ITileDefinition;
-import extracells.api.definitions.IBlockDefinition;
-import extracells.registries.BlockEnum;
-import extracells.tileentity.*;
+import appeng.api.definitions.ITileDefinition
+import extracells.api.definitions.IBlockDefinition
+import extracells.registries.BlockEnum
+import extracells.tileentity.*
 
-public class BlockDefinition implements IBlockDefinition {
-
-	public static final BlockDefinition instance = new BlockDefinition();
-
-	@Override
-	public ITileDefinition blockInterface() {
-		return new BlockItemDefinitions(BlockEnum.ECBASEBLOCK.getBlock(),
-				TileEntityFluidInterface.class);
-	}
-
-	@Override
-	public ITileDefinition certusTank() {
-		return new BlockItemDefinitions(BlockEnum.CERTUSTANK.getBlock(),
-				TileEntityCertusTank.class);
-	}
-
-	@Override
-	public ITileDefinition fluidCrafter() {
-		return new BlockItemDefinitions(BlockEnum.FLUIDCRAFTER.getBlock(),
-				TileEntityFluidCrafter.class);
-	}
-
-	@Override
-	public ITileDefinition fluidFiller() {
-		return new BlockItemDefinitions(BlockEnum.FLUIDCRAFTER.getBlock(), 1,
-				TileEntityFluidFiller.class);
-	}
-
-	@Override
-	public ITileDefinition walrus() {
-		return new BlockItemDefinitions(BlockEnum.WALRUS.getBlock(),
-				TileEntityWalrus.class);
-	}
-
-    @Override
-    public ITileDefinition craftingStorage256k() {
-        return new BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.getBlock(), 0,
-                TileEntityCraftingStorage.class);
+class BlockDefinition : IBlockDefinition {
+    override fun blockInterface(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.ECBASEBLOCK.block,
+                TileEntityFluidInterface::class.java)
     }
 
-    @Override
-    public ITileDefinition craftingStorage1024k() {
-        return new BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.getBlock(), 1,
-                TileEntityCraftingStorage.class);
+    override fun certusTank(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.CERTUSTANK.block,
+                TileEntityCertusTank::class.java)
     }
 
-    @Override
-    public ITileDefinition craftingStorage4096k() {
-        return new BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.getBlock(), 2,
-                TileEntityCraftingStorage.class);
+    override fun fluidCrafter(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.FLUIDCRAFTER.block,
+                TileEntityFluidCrafter::class.java)
     }
 
-    @Override
-    public ITileDefinition craftingStorage16384k() {
-        return new BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.getBlock(), 3,
-                TileEntityCraftingStorage.class);
+    override fun fluidFiller(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.FLUIDCRAFTER.block, 1,
+                TileEntityFluidFiller::class.java)
+    }
+
+    override fun walrus(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.WALRUS.block,
+                TileEntityWalrus::class.java)
+    }
+
+    override fun craftingStorage256k(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.block, 0,
+                TileEntityCraftingStorage::class.java)
+    }
+
+    override fun craftingStorage1024k(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.block, 1,
+                TileEntityCraftingStorage::class.java)
+    }
+
+    override fun craftingStorage4096k(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.block, 2,
+                TileEntityCraftingStorage::class.java)
+    }
+
+    override fun craftingStorage16384k(): ITileDefinition {
+        return BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.block, 3,
+                TileEntityCraftingStorage::class.java)
+    }
+
+    companion object {
+        val instance = BlockDefinition()
     }
 }

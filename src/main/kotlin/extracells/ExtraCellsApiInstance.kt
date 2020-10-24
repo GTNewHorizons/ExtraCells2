@@ -1,168 +1,127 @@
-package extracells;
+package extracells
 
-import appeng.api.AEApi;
-import appeng.api.implementations.tiles.IWirelessAccessPoint;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridHost;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.storage.*;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.util.WorldCoord;
-import extracells.api.*;
-import extracells.api.definitions.IBlockDefinition;
-import extracells.api.definitions.IItemDefinition;
-import extracells.api.definitions.IPartDefinition;
-import extracells.definitions.BlockDefinition;
-import extracells.definitions.ItemDefinition;
-import extracells.definitions.PartDefinition;
-import extracells.integration.Integration;
-import extracells.inventory.HandlerItemStorageFluid;
-import extracells.network.GuiHandler;
-import extracells.util.FluidCellHandler;
-import extracells.util.FuelBurnTime;
-import extracells.wireless.WirelessTermRegistry;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
+import appeng.api.AEApi
+import appeng.api.implementations.tiles.IWirelessAccessPoint
+import appeng.api.networking.IGridHost
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.storage.IMEInventoryHandler
+import appeng.api.storage.IMEMonitor
+import appeng.api.storage.MEMonitorHandler
+import appeng.api.storage.StorageChannel
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IAEStack
+import extracells.Extracells.VERSION
+import extracells.api.*
+import extracells.api.definitions.IBlockDefinition
+import extracells.api.definitions.IItemDefinition
+import extracells.api.definitions.IPartDefinition
+import extracells.definitions.BlockDefinition
+import extracells.definitions.ItemDefinition
+import extracells.definitions.PartDefinition
+import extracells.integration.Integration
+import extracells.inventory.HandlerItemStorageFluid
+import extracells.network.GuiHandler.getGuiId
+import extracells.network.GuiHandler.launchGui
+import extracells.util.FluidCellHandler
+import extracells.util.FuelBurnTime.registerFuel
+import extracells.wireless.WirelessTermRegistry
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemStack
+import net.minecraft.world.World
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.Fluid
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class ExtraCellsApiInstance : ExtraCellsApi {
+    private val blacklistShowClass: MutableList<Class<out Fluid>> = ArrayList()
+    private val blacklistShowFluid: MutableList<Fluid> = ArrayList()
+    private val blacklistStorageClass: MutableList<Class<out Fluid>> = ArrayList()
+    private val blacklistStorageFluid: MutableList<Fluid> = ArrayList()
+    override fun addFluidToShowBlacklist(clazz: Class<out Fluid>?) {
+        if (clazz == null || clazz == Fluid::class.java) return
+        blacklistShowClass.add(clazz)
+    }
 
-public class ExtraCellsApiInstance implements ExtraCellsApi {
+    override fun addFluidToShowBlacklist(fluid: Fluid?) {
+        if (fluid == null) return
+        blacklistShowFluid.add(fluid)
+    }
 
-	public static final ExtraCellsApi instance = new ExtraCellsApiInstance();
+    override fun addFluidToStorageBlacklist(clazz: Class<out Fluid>?) {
+        if (clazz == null || clazz == Fluid::class.java) return
+        blacklistStorageClass.add(clazz)
+    }
 
-	private final List<Class<? extends Fluid>> blacklistShowClass = new ArrayList<Class<? extends Fluid>>();
-	private final List<Fluid> blacklistShowFluid = new ArrayList<Fluid>();
-	private final List<Class<? extends Fluid>> blacklistStorageClass = new ArrayList<Class<? extends Fluid>>();
-	private final List<Fluid> blacklistStorageFluid = new ArrayList<Fluid>();
+    override fun addFluidToStorageBlacklist(fluid: Fluid?) {
+        if (fluid == null) return
+        blacklistStorageFluid.add(fluid)
+    }
 
-	@Override
-	public void addFluidToShowBlacklist(Class<? extends Fluid> clazz) {
-		if (clazz == null || clazz == Fluid.class)
-			return;
-		this.blacklistShowClass.add(clazz);
-	}
+    override fun blocks(): IBlockDefinition {
+        return BlockDefinition.Companion.instance
+    }
 
-	@Override
-	public void addFluidToShowBlacklist(Fluid fluid) {
-		if (fluid == null)
-			return;
-		this.blacklistShowFluid.add(fluid);
-	}
+    override fun canFluidSeeInTerminal(fluid: Fluid?): Boolean {
+        if (fluid == null) return false
+        if (blacklistShowFluid.contains(fluid)) return false
+        for (clazz in blacklistShowClass) {
+            if (clazz.isInstance(fluid)) return false
+        }
+        return true
+    }
 
-	@Override
-	public void addFluidToStorageBlacklist(Class<? extends Fluid> clazz) {
-		if (clazz == null || clazz == Fluid.class)
-			return;
-		this.blacklistStorageClass.add(clazz);
-	}
+    override fun canStoreFluid(fluid: Fluid?): Boolean {
+        if (fluid == null) return false
+        if (blacklistStorageFluid.contains(fluid)) return false
+        for (clazz in blacklistStorageClass) {
+            if (clazz.isInstance(fluid)) return false
+        }
+        return true
+    }
 
-	@Override
-	public void addFluidToStorageBlacklist(Fluid fluid) {
-		if (fluid == null)
-			return;
-		this.blacklistStorageFluid.add(fluid);
-	}
+    @get:Deprecated("Incorrect spelling")
+    override val verion: String?
+        get() = VERSION
+    override val version: String?
+        get() = VERSION
 
-	@Override
-	public IBlockDefinition blocks() {
-		return BlockDefinition.instance;
-	}
+    override fun getWirelessFluidTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler? {
+        return getWirelessTermHandler(`is`) as IWirelessFluidTermHandler?
+    }
 
-	@Override
-	public boolean canFluidSeeInTerminal(Fluid fluid) {
-		if (fluid == null)
-			return false;
-		if (this.blacklistShowFluid.contains(fluid))
-			return false;
-		for (Class<? extends Fluid> clazz : this.blacklistShowClass) {
-			if (clazz.isInstance(fluid))
-				return false;
-		}
-		return true;
-	}
+    override fun getWirelessTermHandler(`is`: ItemStack?): IWirelessGasFluidTermHandler? {
+        return WirelessTermRegistry.getWirelessTermHandler(`is`)
+    }
 
-	@Override
-	public boolean canStoreFluid(Fluid fluid) {
-		if (fluid == null)
-			return false;
-		if (this.blacklistStorageFluid.contains(fluid))
-			return false;
-		for (Class<? extends Fluid> clazz : this.blacklistStorageClass) {
-			if (clazz.isInstance(fluid))
-				return false;
-		}
-		return true;
-	}
+    override fun isWirelessFluidTerminal(`is`: ItemStack?): Boolean {
+        return WirelessTermRegistry.isWirelessItem(`is`)
+    }
 
-	/**
-	 * @deprecated Incorrect spelling
-	 */
-	@Override
-	@Deprecated
-	public String getVerion() {
-		return Extracells.INSTANCE.getVERSION();
-	}
+    override fun items(): IItemDefinition {
+        return ItemDefinition.Companion.instance
+    }
 
-	@Override
-	public String getVersion() {
-		return Extracells.INSTANCE.getVERSION();
-	}
+    override fun openPortableCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
+        return openPortableFluidCellGui(player, stack, world)
+    }
 
-	@Override
-	public IWirelessFluidTermHandler getWirelessFluidTermHandler(ItemStack is) {
-		return (IWirelessFluidTermHandler) getWirelessTermHandler(is);
-	}
+    override fun openPortableFluidCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
+        if (world.isRemote || stack == null || stack.item == null) return stack
+        val item = stack.item
+        if (item !is IPortableFluidStorageCell) return stack
+        val cellHandler = AEApi.instance().registries().cell().getHandler(stack) as? FluidCellHandler ?: return stack
+        val handler: IMEInventoryHandler<out IAEStack<*>> = cellHandler.getCellInventoryPlayer(stack,
+                player) as? HandlerItemStorageFluid
+                ?: return stack
+        val fluidInventory: IMEMonitor<IAEFluidStack> = MEMonitorHandler<IAEFluidStack>(handler, StorageChannel.FLUIDS)
+        launchGui(getGuiId(3), player, arrayOf(fluidInventory, item))
+        return stack
+    }
 
-	@Override
-	public IWirelessGasFluidTermHandler getWirelessTermHandler(ItemStack is) {
-		return WirelessTermRegistry.getWirelessTermHandler(is);
-	}
-
-	@Override
-	public boolean isWirelessFluidTerminal(ItemStack is) {
-		return WirelessTermRegistry.isWirelessItem(is);
-	}
-
-	@Override
-	public IItemDefinition items() {
-		return ItemDefinition.instance;
-	}
-
-	@Override
-	public ItemStack openPortableCellGui (EntityPlayer player, ItemStack stack, World world){
-		return openPortableFluidCellGui(player, stack, world);
-	}
-
-	@Override
-	public ItemStack openPortableFluidCellGui(EntityPlayer player, ItemStack stack, World world) {
-		if (world.isRemote || stack == null || stack.getItem() == null)
-			return stack;
-		Item item = stack.getItem();
-		if (!(item instanceof IPortableFluidStorageCell))
-			return stack;
-		ICellHandler cellHandler = AEApi.instance().registries().cell().getHandler(stack);
-		if (!(cellHandler instanceof FluidCellHandler))
-			return stack;
-		IMEInventoryHandler<IAEFluidStack> handler = ((FluidCellHandler) cellHandler).getCellInventoryPlayer(stack, player);
-		if (!(handler instanceof HandlerItemStorageFluid)) {
-			return stack;
-		}
-		IMEMonitor<IAEFluidStack> fluidInventory = new MEMonitorHandler<IAEFluidStack>(handler, StorageChannel.FLUIDS);
-		GuiHandler.launchGui(GuiHandler.getGuiId(3), player, new Object[]{fluidInventory, item});
-		return stack;
-	}
-
-	@Override
-	public ItemStack openPortableGasCellGui(EntityPlayer player, ItemStack stack, World world) {
+    override fun openPortableGasCellGui(player: EntityPlayer?, stack: ItemStack, world: World?): ItemStack {
 //		if (world.isRemote || stack == null || stack.getItem() == null)
-			return stack;
-//		Item item = stack.getItem();
+        return stack
+        //		Item item = stack.getItem();
 //		if (!(item instanceof IPortableGasStorageCell))
 //			return stack;
 //		ICellHandler cellHandler = AEApi.instance().registries().cell().getHandler(stack);
@@ -175,201 +134,174 @@ public class ExtraCellsApiInstance implements ExtraCellsApi {
 //		IMEMonitor<IAEFluidStack> fluidInventory = new MEMonitorHandler<IAEFluidStack>(handler, StorageChannel.FLUIDS);
 //		GuiHandler.launchGui(GuiHandler.getGuiId(6), player, new Object[]{fluidInventory, item});
 //		return stack;
-	}
+    }
 
-	@Override
-	public ItemStack openWirelessTerminal(EntityPlayer player, ItemStack stack, World world) {
-		return openWirelessFluidTerminal(player, stack, world);
-	}
+    override fun openWirelessTerminal(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
+        return openWirelessFluidTerminal(player, stack, world)
+    }
 
-	@Override
-	public ItemStack openWirelessFluidTerminal(EntityPlayer player, ItemStack stack, World world) {
-		if (world.isRemote)
-			return stack;
-		if (!isWirelessFluidTerminal(stack))
-			return stack;
-		IWirelessGasFluidTermHandler handler = getWirelessTermHandler(stack);
-		if (!handler.hasPower(player, 1.0D, stack))
-			return stack;
-		Long key;
-		try {
-			key = Long.parseLong(handler.getEncryptionKey(stack));
-		} catch (Throwable ignored) {
-			return stack;
-		}
-		return openWirelessTerminal(player, stack, world, (int) player.posX, (int) player.posY, (int) player.posZ, key);
-	}
+    override fun openWirelessFluidTerminal(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
+        if (world.isRemote) return stack
+        if (!isWirelessFluidTerminal(stack)) return stack
+        val handler = getWirelessTermHandler(stack)
+        if (!handler!!.hasPower(player, 1.0, stack)) return stack
+        val key: Long
+        key = try {
+            handler.getEncryptionKey(stack).toLong()
+        } catch (ignored: Throwable) {
+            return stack
+        }
+        return openWirelessTerminal(player, stack, world, player.posX.toInt(), player.posY.toInt(), player.posZ.toInt(),
+                key)
+    }
 
-	@Override
-	public ItemStack openWirelessGasTerminal(EntityPlayer player, ItemStack itemStack, World world) {
-		if (world.isRemote)
-			return itemStack;
-		if (!isWirelessFluidTerminal(itemStack))
-			return itemStack;
-		IWirelessGasFluidTermHandler handler = getWirelessTermHandler(itemStack);
-		if (!handler.hasPower(player, 1.0D, itemStack))
-			return itemStack;
-		Long key;
-		try {
-			key = Long.parseLong(handler.getEncryptionKey(itemStack));
-		} catch (Throwable ignored) {
-			return itemStack;
-		}
-		int x = (int) player.posX;
-		int y = (int) player.posY;
-		int z = (int) player.posZ;
-		IGridHost securityTerminal = (IGridHost) AEApi.instance().registries().locatable().getLocatableBy(key);
-		if (securityTerminal == null)
-			return itemStack;
-		IGridNode gridNode = securityTerminal.getGridNode(ForgeDirection.UNKNOWN);
-		if (gridNode == null)
-			return itemStack;
-		IGrid grid = gridNode.getGrid();
-		if (grid == null)
-			return itemStack;
-		for (IGridNode node : grid.getMachines((Class<? extends IGridHost>) AEApi.instance().definitions().blocks().wireless().maybeEntity().get())) {
-			IWirelessAccessPoint accessPoint = (IWirelessAccessPoint) node.getMachine();
-			WorldCoord distance = accessPoint.getLocation().subtract(x, y, z);
-			int squaredDistance = distance.x * distance.x + distance.y * distance.y + distance.z * distance.z;
-			if (squaredDistance <= accessPoint.getRange() * accessPoint.getRange()) {
-				IStorageGrid gridCache = grid.getCache(IStorageGrid.class);
-				if (gridCache != null) {
-					IMEMonitor<IAEFluidStack> fluidInventory = gridCache.getFluidInventory();
-					if (fluidInventory != null) {
-						GuiHandler.launchGui(GuiHandler.getGuiId(5), player, new Object[]{
-								fluidInventory, getWirelessTermHandler(itemStack)});
-					}
-				}
-			}
-		}
-		return itemStack;
-	}
+    override fun openWirelessGasTerminal(player: EntityPlayer, itemStack: ItemStack, world: World): ItemStack {
+        if (world.isRemote) return itemStack
+        if (!isWirelessFluidTerminal(itemStack)) return itemStack
+        val handler = getWirelessTermHandler(itemStack)
+        if (!handler!!.hasPower(player, 1.0, itemStack)) return itemStack
+        val key: Long
+        key = try {
+            handler.getEncryptionKey(itemStack).toLong()
+        } catch (ignored: Throwable) {
+            return itemStack
+        }
+        val x = player.posX.toInt()
+        val y = player.posY.toInt()
+        val z = player.posZ.toInt()
+        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key) as IGridHost
+                ?: return itemStack
+        val gridNode = securityTerminal.getGridNode(ForgeDirection.UNKNOWN) ?: return itemStack
+        val grid = gridNode.grid ?: return itemStack
+        for (node in grid.getMachines(
+                AEApi.instance().definitions().blocks().wireless().maybeEntity().get() as Class<out IGridHost?>)) {
+            val accessPoint = node.machine as IWirelessAccessPoint
+            val distance = accessPoint.location.subtract(x, y, z)
+            val squaredDistance = distance.x * distance.x + distance.y * distance.y + distance.z * distance.z
+            if (squaredDistance <= accessPoint.range * accessPoint.range) {
+                val gridCache = grid.getCache<IStorageGrid>(IStorageGrid::class.java)
+                if (gridCache != null) {
+                    val fluidInventory = gridCache.fluidInventory
+                    if (fluidInventory != null) {
+                        launchGui(getGuiId(5), player, arrayOf<Any?>(
+                                fluidInventory, getWirelessTermHandler(itemStack)))
+                    }
+                }
+            }
+        }
+        return itemStack
+    }
 
-	@Deprecated
-	@Override
-	public ItemStack openWirelessTerminal(EntityPlayer player, ItemStack itemStack, World world, int x, int y, int z, Long key) {
-		if (world.isRemote)
-			return itemStack;
-		IGridHost securityTerminal = (IGridHost) AEApi.instance().registries().locatable().getLocatableBy(key);
-		if (securityTerminal == null)
-			return itemStack;
-		IGridNode gridNode = securityTerminal
-				.getGridNode(ForgeDirection.UNKNOWN);
-		if (gridNode == null)
-			return itemStack;
-		IGrid grid = gridNode.getGrid();
-		if (grid == null)
-			return itemStack;
-		for (IGridNode node : grid.getMachines((Class<? extends IGridHost>) AEApi.instance().definitions().blocks().wireless().maybeEntity().get())) {
-			IWirelessAccessPoint accessPoint = (IWirelessAccessPoint) node
-					.getMachine();
-			WorldCoord distance = accessPoint.getLocation().subtract(x, y, z);
-			int squaredDistance = distance.x * distance.x + distance.y * distance.y + distance.z * distance.z;
-			if (squaredDistance <= accessPoint.getRange() * accessPoint.getRange()) {
-				IStorageGrid gridCache = grid.getCache(IStorageGrid.class);
-				if (gridCache != null) {
-					IMEMonitor<IAEFluidStack> fluidInventory = gridCache.getFluidInventory();
-					if (fluidInventory != null) {
-						GuiHandler.launchGui(GuiHandler.getGuiId(1), player, new Object[]{
-								fluidInventory, getWirelessFluidTermHandler(itemStack)});
-					}
-				}
-			}
-		}
-		return itemStack;
-	}
+    @Deprecated("")
+    override fun openWirelessTerminal(player: EntityPlayer?, itemStack: ItemStack?, world: World, x: Int, y: Int, z: Int, key: Long?): ItemStack? {
+        if (world.isRemote) return itemStack
+        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key!!) as IGridHost
+                ?: return itemStack
+        val gridNode = securityTerminal
+                .getGridNode(ForgeDirection.UNKNOWN) ?: return itemStack
+        val grid = gridNode.grid ?: return itemStack
+        for (node in grid.getMachines(
+                AEApi.instance().definitions().blocks().wireless().maybeEntity().get() as Class<out IGridHost?>)) {
+            val accessPoint = node
+                    .machine as IWirelessAccessPoint
+            val distance = accessPoint.location.subtract(x, y, z)
+            val squaredDistance = distance.x * distance.x + distance.y * distance.y + distance.z * distance.z
+            if (squaredDistance <= accessPoint.range * accessPoint.range) {
+                val gridCache = grid.getCache<IStorageGrid>(IStorageGrid::class.java)
+                if (gridCache != null) {
+                    val fluidInventory = gridCache.fluidInventory
+                    if (fluidInventory != null) {
+                        launchGui(getGuiId(1), player, arrayOf<Any?>(
+                                fluidInventory, getWirelessFluidTermHandler(itemStack)))
+                    }
+                }
+            }
+        }
+        return itemStack
+    }
 
-	@Override
-	public IPartDefinition parts() {
-		return PartDefinition.instance;
-	}
+    override fun parts(): IPartDefinition {
+        return PartDefinition.Companion.instance
+    }
 
-	@Override
-	public void registerWirelessTermHandler(IWirelessGasFluidTermHandler handler) {
-		WirelessTermRegistry.registerWirelessTermHandler(handler);
-	}
+    override fun registerWirelessTermHandler(handler: IWirelessGasFluidTermHandler) {
+        WirelessTermRegistry.registerWirelessTermHandler(handler)
+    }
 
-	@Override
-	public void registerWirelessFluidTermHandler(IWirelessFluidTermHandler handler) {
-		registerWirelessTermHandler(handler);
-	}
+    override fun registerWirelessFluidTermHandler(handler: IWirelessFluidTermHandler) {
+        registerWirelessTermHandler(handler)
+    }
 
-	/**
-	 * @deprecated Incorrect spelling
-	 */
-	@Override
-	@Deprecated
-	public void registryWirelessFluidTermHandler(IWirelessFluidTermHandler handler) {
-		registerWirelessFluidTermHandler(handler);
-	}
+    @Deprecated("Incorrect spelling")
+    override fun registryWirelessFluidTermHandler(handler: IWirelessFluidTermHandler) {
+        registerWirelessFluidTermHandler(handler)
+    }
 
-	@Override
-	public void registerFuelBurnTime(Fluid fuel, int burnTime) {
-		FuelBurnTime.registerFuel(fuel, burnTime);
-	}
+    override fun registerFuelBurnTime(fuel: Fluid?, burnTime: Int) {
+        registerFuel(fuel!!, burnTime)
+    }
 
-//	@Override
-//	public boolean isGasStack(IAEFluidStack stack) {
-//		return stack != null && isGasStack(stack.getFluidStack());
-//	}
-//
-//	@Override
-//	public boolean isGasStack(FluidStack stack) {
-//		return stack != null && isGas(stack.getFluid());
-//	}
-//
-//	@Override
-//	public boolean isGas(Fluid fluid) {
-//		return fluid != null && Integration.Mods.MEKANISMGAS.isEnabled() && checkGas(fluid);
-//	}
-//
-//	@Override
-//	public Object createGasStack(IAEFluidStack stack) {
-//		return Integration.Mods.MEKANISMGAS.isEnabled() ? createGasFromFluidStack(stack) : null;
-//	}
-//
-//	@Override
-//	public IAEFluidStack createFluidStackFromGas(Object gasStack) {
-//		return isMekEnabled() ? createFluidStackFromGasStack(gasStack): null;
-//	}
-//
-//	@Override
-//	public Fluid getGasFluid(Object gas) {
-//		return isMekEnabled() ? createFluidFromGas(gas) : null;
-//	}
-//
-	@Override
-	public void addExternalStorageInterface(IExternalGasStorageHandler esh) {
-		//if(isMekEnabled())
-		//	GasStorageRegistry.addExternalStorageInterface(esh);
-	}
+    //	@Override
+    //	public boolean isGasStack(IAEFluidStack stack) {
+    //		return stack != null && isGasStack(stack.getFluidStack());
+    //	}
+    //
+    //	@Override
+    //	public boolean isGasStack(FluidStack stack) {
+    //		return stack != null && isGas(stack.getFluid());
+    //	}
+    //
+    //	@Override
+    //	public boolean isGas(Fluid fluid) {
+    //		return fluid != null && Integration.Mods.MEKANISMGAS.isEnabled() && checkGas(fluid);
+    //	}
+    //
+    //	@Override
+    //	public Object createGasStack(IAEFluidStack stack) {
+    //		return Integration.Mods.MEKANISMGAS.isEnabled() ? createGasFromFluidStack(stack) : null;
+    //	}
+    //
+    //	@Override
+    //	public IAEFluidStack createFluidStackFromGas(Object gasStack) {
+    //		return isMekEnabled() ? createFluidStackFromGasStack(gasStack): null;
+    //	}
+    //
+    //	@Override
+    //	public Fluid getGasFluid(Object gas) {
+    //		return isMekEnabled() ? createFluidFromGas(gas) : null;
+    //	}
+    //
+    override fun addExternalStorageInterface(esh: IExternalGasStorageHandler?) {
+        //if(isMekEnabled())
+        //	GasStorageRegistry.addExternalStorageInterface(esh);
+    }
 
-//	@Override
-//	public IExternalGasStorageHandler getHandler(TileEntity te, ForgeDirection opposite, BaseActionSource mySrc) {
-//		return null;//return isMekEnabled() ? GasStorageRegistry.getHandler(te, opposite, mySrc) : null;
-//	}
+    //	@Override
+    //	public IExternalGasStorageHandler getHandler(TileEntity te, ForgeDirection opposite, BaseActionSource mySrc) {
+    //		return null;//return isMekEnabled() ? GasStorageRegistry.getHandler(te, opposite, mySrc) : null;
+    //	}
+    //	@Optional.Method(modid = "MekanismAPI|gas")
+    //	private IAEFluidStack createFluidStackFromGasStack(Object gasStack){
+    //		return gasStack instanceof GasStack ? GasUtil.createAEFluidStack((GasStack) gasStack) : null;
+    //	}
+    //	@Optional.Method(modid = "MekanismAPI|gas")
+    //	private Fluid createFluidFromGas(Object gas){
+    //		return null;//gas instanceof Gas ? MekanismGas.getFluidGasMap().containsKey(gas) ? MekanismGas.getFluidGasMap().get(gas) : null : null;
+    //	}
+    //
+    //	@Optional.Method(modid = "MekanismAPI|gas")
+    //	private Object createGasFromFluidStack(IAEFluidStack stack) {
+    //		return stack == null ? null : GasUtil.getGasStack(stack.getFluidStack());
+    //	}
+    //
+    //	@Optional.Method(modid = "MekanismAPI|gas")
+    //	private boolean checkGas(Fluid fluid) {
+    //		return false;//fluid instanceof MekanismGas.GasFluid;
+    //	}
+    val isMekEnabled: Boolean
+        private get() = Integration.Mods.MEKANISMGAS.isEnabled
 
-//	@Optional.Method(modid = "MekanismAPI|gas")
-//	private IAEFluidStack createFluidStackFromGasStack(Object gasStack){
-//		return gasStack instanceof GasStack ? GasUtil.createAEFluidStack((GasStack) gasStack) : null;
-//	}
-
-//	@Optional.Method(modid = "MekanismAPI|gas")
-//	private Fluid createFluidFromGas(Object gas){
-//		return null;//gas instanceof Gas ? MekanismGas.getFluidGasMap().containsKey(gas) ? MekanismGas.getFluidGasMap().get(gas) : null : null;
-//	}
-//
-//	@Optional.Method(modid = "MekanismAPI|gas")
-//	private Object createGasFromFluidStack(IAEFluidStack stack) {
-//		return stack == null ? null : GasUtil.getGasStack(stack.getFluidStack());
-//	}
-//
-//	@Optional.Method(modid = "MekanismAPI|gas")
-//	private boolean checkGas(Fluid fluid) {
-//		return false;//fluid instanceof MekanismGas.GasFluid;
-//	}
-
-	private boolean isMekEnabled(){
-		return Integration.Mods.MEKANISMGAS.isEnabled();
-	}
+    companion object {
+        val instance: ExtraCellsApi = ExtraCellsApiInstance()
+    }
 }

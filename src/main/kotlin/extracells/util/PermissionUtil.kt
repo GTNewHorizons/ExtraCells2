@@ -1,54 +1,41 @@
-package extracells.util;
+package extracells.util
 
-import appeng.api.config.SecurityPermissions;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridHost;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.security.ISecurityGrid;
-import appeng.api.parts.IPart;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.common.util.ForgeDirection;
+import appeng.api.config.SecurityPermissions
+import appeng.api.networking.IGrid
+import appeng.api.networking.IGridCache
+import appeng.api.networking.IGridHost
+import appeng.api.networking.IGridNode
+import appeng.api.networking.security.ISecurityGrid
+import appeng.api.parts.IPart
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraftforge.common.util.ForgeDirection
 
-public class PermissionUtil {
+object PermissionUtil {
+    fun hasPermission(player: EntityPlayer?,
+                      permission: SecurityPermissions?, grid: IGrid?): Boolean {
+        return if (grid != null) hasPermission(player, permission,
+                grid.getCache<IGridCache>(ISecurityGrid::class.java) as ISecurityGrid) else true
+    }
 
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, IGrid grid) {
-		if (grid != null)
-			return hasPermission(player, permission,
-					(ISecurityGrid) grid.getCache(ISecurityGrid.class));
-		return true;
-	}
+    @JvmOverloads
+    fun hasPermission(player: EntityPlayer?,
+                      permission: SecurityPermissions?, host: IGridHost?, side: ForgeDirection? = ForgeDirection.UNKNOWN): Boolean {
+        return if (host != null) hasPermission(player, permission, host.getGridNode(side)) else true
+    }
 
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, IGridHost host) {
-		return hasPermission(player, permission, host, ForgeDirection.UNKNOWN);
-	}
+    fun hasPermission(player: EntityPlayer?,
+                      permission: SecurityPermissions?, host: IGridNode?): Boolean {
+        return if (host != null) hasPermission(player, permission, host.grid) else true
+    }
 
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, IGridHost host, ForgeDirection side) {
-		if (host != null)
-			return hasPermission(player, permission, host.getGridNode(side));
-		return true;
-	}
+    fun hasPermission(player: EntityPlayer?,
+                      permission: SecurityPermissions?, part: IPart?): Boolean {
+        return if (part != null) hasPermission(player, permission, part.gridNode) else true
+    }
 
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, IGridNode host) {
-		if (host != null)
-			return hasPermission(player, permission, host.getGrid());
-		return true;
-	}
-
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, IPart part) {
-		if (part != null)
-			return hasPermission(player, permission, part.getGridNode());
-		return true;
-	}
-
-	public static boolean hasPermission(EntityPlayer player,
-			SecurityPermissions permission, ISecurityGrid securityGrid) {
-		if (player == null || permission == null || securityGrid == null)
-			return true;
-		return securityGrid.hasPermission(player, permission);
-	}
+    fun hasPermission(player: EntityPlayer?,
+                      permission: SecurityPermissions?, securityGrid: ISecurityGrid?): Boolean {
+        return if (player == null || permission == null || securityGrid == null) true else securityGrid.hasPermission(
+                player, permission)
+    }
 }

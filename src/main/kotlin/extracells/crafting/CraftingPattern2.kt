@@ -1,139 +1,118 @@
-package extracells.crafting;
+package extracells.crafting
 
-import appeng.api.AEApi;
-import appeng.api.networking.crafting.ICraftingPatternDetails;
-import appeng.api.storage.data.IAEItemStack;
-import extracells.registries.ItemEnum;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
+import appeng.api.AEApi
+import appeng.api.networking.crafting.ICraftingPatternDetails
+import appeng.api.storage.data.IAEItemStack
+import extracells.registries.ItemEnum
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
 
-public class CraftingPattern2 extends CraftingPattern {
+class CraftingPattern2(_pattern: ICraftingPatternDetails?) : CraftingPattern(_pattern) {
+    private var needExtra = false
+    override fun equals(obj: Any?): Boolean {
+        if (obj == null) return false
+        if (this.javaClass != obj.javaClass) return false
+        val other = obj as CraftingPattern
+        return if (pattern != null && other.pattern != null) pattern == other.pattern else false
+    }
 
-	private boolean needExtra = false;
+    override fun getCondensedInputs(): Array<IAEItemStack> {
+        var s = super.getCondensedInputs()
+        if (s!!.size == 0) {
+            s = arrayOfNulls(1)
+            s[0] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+            needExtra = true
+        }
+        return s
+    }
 
-	public CraftingPattern2(ICraftingPatternDetails _pattern) {
-		super(_pattern);
-	}
+    override fun getCondensedOutputs(): Array<IAEItemStack> {
+        condensedInputs
+        val s = super.getCondensedOutputs()
+        if (needExtra) {
+            val s2 = arrayOfNulls<IAEItemStack>(s!!.size + 1)
+            for (i in s.indices) {
+                s2[i] = s[i]
+            }
+            s2[s.size] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+            return s2
+        }
+        return s
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (obj == null)
-			return false;
-		if (this.getClass() != obj.getClass())
-			return false;
-		CraftingPattern other = (CraftingPattern) obj;
-		if (this.pattern != null && other.pattern != null)
-			return this.pattern.equals(other.pattern);
-		return false;
-	}
+    override fun getInputs(): Array<IAEItemStack> {
+        var `in` = super.getInputs()
+        if (`in`!!.size == 0) {
+            `in` = arrayOfNulls(1)
+            `in`[0] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+        } else {
+            for (s in `in`) {
+                if (s != null) return `in`
+            }
+            `in`[0] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+        }
+        return `in`
+    }
 
-	@Override
-	public IAEItemStack[] getCondensedInputs() {
-		IAEItemStack[] s = super.getCondensedInputs();
-		if (s.length == 0) {
-			s = new IAEItemStack[1];
-			s[0] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-			this.needExtra = true;
-		}
-		return s;
-	}
+    override fun getOutputs(): Array<IAEItemStack> {
+        var out = super.getOutputs()
+        condensedInputs
+        if (!needExtra) return out
+        if (out!!.size == 0) {
+            out = arrayOfNulls(1)
+            out[0] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+        } else {
+            for (i in out.indices) {
+                if (out[i] == null) {
+                    out[i] = AEApi
+                            .instance()
+                            .storage()
+                            .createItemStack(
+                                    ItemStack(ItemEnum.FLUIDPATTERN
+                                            .item))
+                    return out
+                }
+            }
+            val s2 = arrayOfNulls<IAEItemStack>(out.size + 1)
+            for (i in out.indices) {
+                s2[i] = out[i]
+            }
+            s2[out.size] = AEApi
+                    .instance()
+                    .storage()
+                    .createItemStack(
+                            ItemStack(ItemEnum.FLUIDPATTERN.item))
+            return s2
+        }
+        return out
+    }
 
-	@Override
-	public IAEItemStack[] getCondensedOutputs() {
-		getCondensedInputs();
-		IAEItemStack[] s = super.getCondensedOutputs();
-		if (this.needExtra) {
-			IAEItemStack[] s2 = new IAEItemStack[s.length + 1];
-			for (int i = 0; i < s.length; i++) {
-				s2[i] = s[i];
-			}
-			s2[s.length] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-			return s2;
-		}
-		return s;
-	}
-
-	@Override
-	public IAEItemStack[] getInputs() {
-		IAEItemStack[] in = super.getInputs();
-		if (in.length == 0) {
-			in = new IAEItemStack[1];
-			in[0] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-		} else {
-			for (IAEItemStack s : in) {
-				if (s != null)
-					return in;
-			}
-			in[0] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-		}
-		return in;
-	}
-
-	@Override
-	public IAEItemStack[] getOutputs() {
-		IAEItemStack[] out = super.getOutputs();
-		getCondensedInputs();
-		if (!this.needExtra)
-			return out;
-		if (out.length == 0) {
-			out = new IAEItemStack[1];
-			out[0] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-		} else {
-			for (int i = 0; i < out.length; i++) {
-				if (out[i] == null) {
-					out[i] = AEApi
-							.instance()
-							.storage()
-							.createItemStack(
-									new ItemStack(ItemEnum.FLUIDPATTERN
-											.getItem()));
-					return out;
-				}
-			}
-			IAEItemStack[] s2 = new IAEItemStack[out.length + 1];
-			for (int i = 0; i < out.length; i++) {
-				s2[i] = out[i];
-			}
-			s2[out.length] = AEApi
-					.instance()
-					.storage()
-					.createItemStack(
-							new ItemStack(ItemEnum.FLUIDPATTERN.getItem()));
-			return s2;
-		}
-		return out;
-	}
-
-	@Override
-	public ItemStack getPattern() {
-		ItemStack p = this.pattern.getPattern();
-		if (p == null)
-			return null;
-		ItemStack s = new ItemStack(ItemEnum.CRAFTINGPATTERN.getItem(), 1, 1);
-		NBTTagCompound tag = new NBTTagCompound();
-		tag.setTag("item", p.writeToNBT(new NBTTagCompound()));
-		s.setTagCompound(tag);
-		return s;
-	}
-
+    override fun getPattern(): ItemStack {
+        val p = pattern!!.pattern ?: return null
+        val s = ItemStack(ItemEnum.CRAFTINGPATTERN.item, 1, 1)
+        val tag = NBTTagCompound()
+        tag.setTag("item", p.writeToNBT(NBTTagCompound()))
+        s.tagCompound = tag
+        return s
+    }
 }

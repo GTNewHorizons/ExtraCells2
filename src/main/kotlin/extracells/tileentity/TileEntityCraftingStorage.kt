@@ -1,38 +1,33 @@
-package extracells.tileentity;
+package extracells.tileentity
 
-import appeng.tile.crafting.TileCraftingStorageTile;
-import appeng.tile.crafting.TileCraftingTile;
-import net.minecraft.item.ItemStack;
+import appeng.tile.crafting.TileCraftingStorageTile
+import appeng.tile.crafting.TileCraftingTile
+import extracells.registries.BlockEnum
+import net.minecraft.item.ItemStack
 
-import static extracells.registries.BlockEnum.CRAFTINGSTORAGE;
+class TileEntityCraftingStorage : TileCraftingStorageTile() {
+    override fun getItemFromTile(obj: Any): ItemStack? {
+        val storage = (obj as TileCraftingTile).storageBytes / KILO_SCALAR
+        when (storage) {
+            256 -> return ItemStack(BlockEnum.CRAFTINGSTORAGE.block, 1, 0)
+            1024 -> return ItemStack(BlockEnum.CRAFTINGSTORAGE.block, 1, 1)
+            4096 -> return ItemStack(BlockEnum.CRAFTINGSTORAGE.block, 1, 2)
+            16384 -> return ItemStack(BlockEnum.CRAFTINGSTORAGE.block, 1, 3)
+        }
+        return super.getItemFromTile(obj)
+    }
 
-public class TileEntityCraftingStorage extends TileCraftingStorageTile {
+    override fun getStorageBytes(): Int {
+        return if (worldObj == null || notLoaded()) 0 else when (blockMetadata and 3) {
+            0 -> 256 * KILO_SCALAR
+            1 -> 1024 * KILO_SCALAR
+            2 -> 4096 * KILO_SCALAR
+            3 -> 16384 * KILO_SCALAR
+            else -> 0
+        }
+    }
 
-	private static final int KILO_SCALAR = 1024;
-
-	@Override
-	protected ItemStack getItemFromTile( final Object obj ){
-		final int storage = ((TileCraftingTile) obj).getStorageBytes() / KILO_SCALAR;
-
-		switch(storage){
-			case 256:  return new ItemStack(CRAFTINGSTORAGE.getBlock(), 1, 0);
-			case 1024: return new ItemStack(CRAFTINGSTORAGE.getBlock(), 1, 1);
-			case 4096: return new ItemStack(CRAFTINGSTORAGE.getBlock(), 1, 2);
-			case 16384: return new ItemStack(CRAFTINGSTORAGE.getBlock(), 1, 3);
-		}
-		return super.getItemFromTile(obj);
-	}
-
-	@Override
-	public int getStorageBytes(){
-		if (this.worldObj == null || this.notLoaded()) return 0;
-
-		switch (this.blockMetadata & 3) {
-            case 0: return 256 * KILO_SCALAR;
-            case 1: return 1024 * KILO_SCALAR;
-            case 2: return 4096 * KILO_SCALAR;
-            case 3: return 16384 * KILO_SCALAR;
-			default: return 0;
-		}
-	}
+    companion object {
+        private const val KILO_SCALAR = 1024
+    }
 }

@@ -1,115 +1,70 @@
-package extracells.integration;
+package extracells.integration
 
-import cpw.mods.fml.common.Loader;
-import cpw.mods.fml.common.ModAPIManager;
-import cpw.mods.fml.relauncher.Side;
-import extracells.Extracells;
-import extracells.integration.nei.Nei;
-import extracells.integration.opencomputers.OpenComputers;
-import extracells.integration.waila.Waila;
-import net.minecraftforge.common.config.Configuration;
+import cpw.mods.fml.common.Loader
+import cpw.mods.fml.common.ModAPIManager
+import cpw.mods.fml.relauncher.Side
+import extracells.Extracells.proxy
+import extracells.integration.nei.Nei
+import extracells.integration.opencomputers.OpenComputers
+import extracells.integration.waila.Waila
+import net.minecraftforge.common.config.Configuration
 
-public class Integration {
-	
-	public enum Mods{
-		WAILA("Waila"),
-		OPENCOMPUTERS("OpenComputers"),
-		BCFUEL("BuildCraftAPI|fuels", "BuildCraftFuel"),
-		NEI("NotEnoughItems", Side.CLIENT),
-		MEKANISMGAS("MekanismAPI|gas", "MekanismGas"),
-		IGW("IGWMod", "IngameWikiMod", Side.CLIENT),
-		THAUMATICENERGISTICS("thaumicenergistics", "Thaumatic Energistics"),
-		MEKANISM("Mekanism"),
-		WIRELESSCRAFTING("ae2wct", "AE2 Wireless Crafting Terminal");
-		
-		private final String modID;
-		
-		private boolean shouldLoad = true;
-		
-		private final String name;
+class Integration {
+    enum class Mods @JvmOverloads constructor(val modID: String, val modName: String = modID, private val side: Side? = null) {
+        WAILA("Waila"), OPENCOMPUTERS("OpenComputers"), BCFUEL("BuildCraftAPI|fuels", "BuildCraftFuel"), NEI(
+                "NotEnoughItems", Side.CLIENT),
+        MEKANISMGAS("MekanismAPI|gas", "MekanismGas"), IGW("IGWMod", "IngameWikiMod",
+                Side.CLIENT),
+        THAUMATICENERGISTICS("thaumicenergistics", "Thaumatic Energistics"), MEKANISM("Mekanism"), WIRELESSCRAFTING(
+                "ae2wct", "AE2 Wireless Crafting Terminal");
 
-		private final Side side;
+        private var shouldLoad = true
 
-		Mods(String modid){
-			this(modid, modid);
-		}
+        constructor(modid: String, side: Side) : this(modid, modid, side) {}
 
-		Mods(String modid, String modName, Side side) {
-			this.modID = modid;
-			this.name = modName;
-			this.side = side;
-		}
+        val isOnClient: Boolean
+            get() = side != Side.SERVER
+        val isOnServer: Boolean
+            get() = side != Side.CLIENT
 
-		Mods(String modid, String modName){
-			this(modid, modName, null);
-		}
+        fun loadConfig(config: Configuration) {
+            shouldLoad = config["Integration", "enable$modName", true, "Enable $modName Integration."].getBoolean(true)
+        }
 
-		Mods(String modid, Side side){
-			this(modid, modid, side);
-		}
-		
-		public String getModID(){
-			return modID;
-		}
+        val isEnabled: Boolean
+            get() = Loader.isModLoaded(modID) && shouldLoad && correctSide() || ModAPIManager.INSTANCE.hasAPI(
+                    modID) && shouldLoad && correctSide()
 
-		public String getModName() {
-			return name;
-		}
+        private fun correctSide(): Boolean {
+            return if (proxy.isClient) isOnClient else isOnServer
+        }
+    }
 
-		public boolean isOnClient(){
-			return side != Side.SERVER;
-		}
+    fun loadConfig(config: Configuration) {
+        for (mod in Mods.values()) {
+            mod.loadConfig(config)
+        }
+    }
 
-		public boolean isOnServer(){
-			return side != Side.CLIENT;
-		}
-
-		public void loadConfig(Configuration config){
-			shouldLoad = config.get("Integration", "enable" + getModName(), true, "Enable " + getModName() + " Integration.").getBoolean(true);
-		}
-		
-		public boolean isEnabled(){
-			return (Loader.isModLoaded(getModID()) && shouldLoad && correctSide()) || (ModAPIManager.INSTANCE.hasAPI(getModID()) && shouldLoad && correctSide());
-		}
-
-		private boolean correctSide(){
-			return Extracells.INSTANCE.getProxy().isClient() ? isOnClient() : isOnServer();
-		}
-		
-		
-	}
-	
-	
-	public void loadConfig(Configuration config){
-		for (Mods mod : Mods.values()){
-			mod.loadConfig(config);
-		}
-	}
-	
-	
-	public void preInit(){
+    fun preInit() {
 //		if (Mods.IGW.correctSide() && Mods.IGW.shouldLoad)
 //			IGW.initNotifier();
-	}
-	
-	public void init(){
-		if (Mods.WAILA.isEnabled())
-			Waila.init();
-		if (Mods.OPENCOMPUTERS.isEnabled())
-			OpenComputers.INSTANCE.init();
-		if (Mods.NEI.isEnabled())
-			Nei.INSTANCE.init();
-//		if (Mods.MEKANISMGAS.isEnabled())
+    }
+
+    fun init() {
+        if (Mods.WAILA.isEnabled) Waila.init()
+        if (Mods.OPENCOMPUTERS.isEnabled) OpenComputers.init()
+        if (Mods.NEI.isEnabled) Nei.init()
+        //		if (Mods.MEKANISMGAS.isEnabled())
 //			MekanismGas.init();
 //		if (Mods.IGW.isEnabled())
 //			IGW.init();
 //		if(Mods.MEKANISM.isEnabled())
 //			Mekanism.init();
-	}
-	
-	public void postInit(){
+    }
+
+    fun postInit() {
 //		if (Mods.MEKANISMGAS.isEnabled())
 //			MekanismGas.postInit();
-	}
-
+    }
 }

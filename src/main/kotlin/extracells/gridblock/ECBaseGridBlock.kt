@@ -1,92 +1,65 @@
-package extracells.gridblock;
+package extracells.gridblock
 
-import appeng.api.networking.*;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.parts.PartItemStack;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.util.AEColor;
-import appeng.api.util.DimensionalCoord;
-import extracells.part.PartECBase;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
+import appeng.api.networking.*
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.parts.PartItemStack
+import appeng.api.storage.IMEMonitor
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.util.AEColor
+import appeng.api.util.DimensionalCoord
+import extracells.part.PartECBase
+import net.minecraft.item.ItemStack
+import net.minecraftforge.common.util.ForgeDirection
+import java.util.*
 
-import java.util.EnumSet;
+class ECBaseGridBlock(protected var host: PartECBase) : IGridBlock {
+    protected var color: AEColor? = null
+    protected var grid: IGrid? = null
+    protected var usedChannels = 0
+    override fun getConnectableSides(): EnumSet<ForgeDirection> {
+        return EnumSet.noneOf(ForgeDirection::class.java)
+    }
 
-public class ECBaseGridBlock implements IGridBlock {
+    override fun getFlags(): EnumSet<GridFlags> {
+        return EnumSet.of(GridFlags.REQUIRE_CHANNEL)
+    }
 
-	protected AEColor color;
-	protected IGrid grid;
-	protected int usedChannels;
-	protected PartECBase host;
+    val fluidMonitor: IMEMonitor<IAEFluidStack>?
+        get() {
+            val node = host.gridNode ?: return null
+            val grid = node.grid ?: return null
+            val storageGrid = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return null
+            return storageGrid.fluidInventory
+        }
 
-	public ECBaseGridBlock(PartECBase _host) {
-		this.host = _host;
-	}
+    override fun getGridColor(): AEColor {
+        return if (color == null) AEColor.Transparent else color!!
+    }
 
-	@Override
-	public final EnumSet<ForgeDirection> getConnectableSides() {
-		return EnumSet.noneOf(ForgeDirection.class);
-	}
+    override fun getIdlePowerUsage(): Double {
+        return host.powerUsage
+    }
 
-	@Override
-	public EnumSet<GridFlags> getFlags() {
-		return EnumSet.of(GridFlags.REQUIRE_CHANNEL);
-	}
+    override fun getLocation(): DimensionalCoord {
+        return host.location
+    }
 
-	public IMEMonitor<IAEFluidStack> getFluidMonitor() {
-		IGridNode node = this.host.getGridNode();
-		if (node == null)
-			return null;
-		IGrid grid = node.getGrid();
-		if (grid == null)
-			return null;
-		IStorageGrid storageGrid = grid.getCache(IStorageGrid.class);
-		if (storageGrid == null)
-			return null;
-		return storageGrid.getFluidInventory();
+    override fun getMachine(): IGridHost {
+        return host
+    }
 
-	}
+    override fun getMachineRepresentation(): ItemStack {
+        return host.getItemStack(PartItemStack.Network)
+    }
 
-	@Override
-	public final AEColor getGridColor() {
-		return this.color == null ? AEColor.Transparent : this.color;
-	}
+    override fun gridChanged() {}
+    override fun isWorldAccessible(): Boolean {
+        return false
+    }
 
-	@Override
-	public double getIdlePowerUsage() {
-		return this.host.getPowerUsage();
-	}
-
-	@Override
-	public final DimensionalCoord getLocation() {
-		return this.host.getLocation();
-	}
-
-	@Override
-	public IGridHost getMachine() {
-		return this.host;
-	}
-
-	@Override
-	public ItemStack getMachineRepresentation() {
-		return this.host.getItemStack(PartItemStack.Network);
-	}
-
-	@Override
-	public void gridChanged() {}
-
-	@Override
-	public final boolean isWorldAccessible() {
-		return false;
-	}
-
-	@Override
-	public void onGridNotification(GridNotification notification) {}
-
-	@Override
-	public final void setNetworkStatus(IGrid _grid, int _usedChannels) {
-		this.grid = _grid;
-		this.usedChannels = _usedChannels;
-	}
+    override fun onGridNotification(notification: GridNotification) {}
+    override fun setNetworkStatus(_grid: IGrid, _usedChannels: Int) {
+        grid = _grid
+        usedChannels = _usedChannels
+    }
 }

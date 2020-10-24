@@ -1,55 +1,45 @@
-package extracells.item;
+package extracells.item
 
-import extracells.Extracells;
-import extracells.integration.Integration;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.MathHelper;
+import extracells.Extracells.ModTab
+import extracells.integration.Integration
+import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.util.IIcon
+import net.minecraft.util.MathHelper
 
-import java.util.List;
+class ItemStorageCasing : ItemECBase() {
+    private var icons: Array<IIcon>
+    val suffixes = arrayOf("physical", "fluid", "gas")
+    override fun getIconFromDamage(dmg: Int): IIcon {
+        val j = MathHelper.clamp_int(dmg, 0, icons.size - 1)
+        return icons[j]
+    }
 
-public class ItemStorageCasing extends ItemECBase {
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+        for (j in suffixes.indices) {
+            if (!(suffixes[j].contains("gas") && !Integration.Mods.MEKANISMGAS.isEnabled)) itemList.add(
+                    ItemStack(item, 1, j))
+        }
+    }
 
-	private IIcon[] icons;
-	public final String[] suffixes = { "physical", "fluid", "gas" };
+    override fun getUnlocalizedName(itemStack: ItemStack): String {
+        return ("extracells.item.storage.casing."
+                + suffixes[itemStack.itemDamage])
+    }
 
-	public ItemStorageCasing() {
-		setMaxDamage(0);
-		setHasSubtypes(true);
-		setCreativeTab(Extracells.getModTab());
-	}
+    override fun registerIcons(iconRegister: IIconRegister) {
+        icons = arrayOfNulls(suffixes.size)
+        for (i in suffixes.indices) {
+            icons[i] = iconRegister.registerIcon("extracells:"
+                    + "storage.casing." + suffixes[i])
+        }
+    }
 
-	@Override
-	public IIcon getIconFromDamage(int dmg) {
-		int j = MathHelper.clamp_int(dmg, 0, this.icons.length - 1);
-		return this.icons[j];
-	}
-
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public void getSubItems(Item item, CreativeTabs creativeTab, List itemList) {
-		for (int j = 0; j < this.suffixes.length; ++j) {
-			if(!(suffixes[j].contains("gas") && !Integration.Mods.MEKANISMGAS.isEnabled()))
-			itemList.add(new ItemStack(item, 1, j));
-		}
-	}
-
-	@Override
-	public String getUnlocalizedName(ItemStack itemStack) {
-		return "extracells.item.storage.casing."
-				+ this.suffixes[itemStack.getItemDamage()];
-	}
-
-	@Override
-	public void registerIcons(IIconRegister iconRegister) {
-		this.icons = new IIcon[this.suffixes.length];
-
-		for (int i = 0; i < this.suffixes.length; ++i) {
-			this.icons[i] = iconRegister.registerIcon("extracells:"
-					+ "storage.casing." + this.suffixes[i]);
-		}
-	}
+    init {
+        maxDamage = 0
+        setHasSubtypes(true)
+        creativeTab = ModTab
+    }
 }

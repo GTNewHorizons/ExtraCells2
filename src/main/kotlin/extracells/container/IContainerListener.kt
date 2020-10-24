@@ -1,7 +1,5 @@
-package extracells.container;
+package extracells.container
 
-public interface IContainerListener {
-
-	void updateContainer();
-
+interface IContainerListener {
+    fun updateContainer()
 }

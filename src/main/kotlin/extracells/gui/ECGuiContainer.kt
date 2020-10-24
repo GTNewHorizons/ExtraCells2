@@ -1,34 +1,26 @@
-package extracells.gui;
+package extracells.gui
 
-import extracells.gui.widget.fluid.WidgetFluidSlot;
-import net.minecraft.client.gui.inventory.GuiContainer;
-import net.minecraft.inventory.Container;
+import extracells.gui.widget.fluid.WidgetFluidSlot
+import net.minecraft.client.gui.inventory.GuiContainer
+import net.minecraft.inventory.Container
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
-
-abstract class ECGuiContainer extends GuiContainer {
-    List<WidgetFluidSlot> fluidSlotList = new ArrayList<WidgetFluidSlot>();
-    WidgetFluidSlot fluidSlot;
-
-    ECGuiContainer(Container p_i1072_1_) {
-        super(p_i1072_1_);
-    }
-
-    void showTooltip(int mouseX, int mouseY) {
+abstract class ECGuiContainer(p_i1072_1_: Container?) : GuiContainer(p_i1072_1_) {
+    var fluidSlotList: List<WidgetFluidSlot> = ArrayList()
+    var fluidSlot: WidgetFluidSlot? = null
+    fun showTooltip(mouseX: Int, mouseY: Int) {
         if (fluidSlot != null) {
             if (func_146978_c(fluidSlot.getPosX(), fluidSlot.getPosY(), 16, 16, mouseX, mouseY)) {
-                fluidSlot.drawTooltip(mouseX - this.guiLeft, mouseY - this.guiTop);
+                fluidSlot!!.drawTooltip(mouseX - guiLeft, mouseY - guiTop)
             }
         }
     }
 
-    void showTooltipList(int mouseX, int mouseY) {
-        for (WidgetFluidSlot fluidSlot : this.fluidSlotList) {
-            if (fluidSlot == null) continue;
-
-            if (func_146978_c(fluidSlot.getPosX(), fluidSlot.getPosY(), 16, 16, mouseX, mouseY)) {
-                fluidSlot.drawTooltip(mouseX - this.guiLeft, mouseY - this.guiTop);
+    fun showTooltipList(mouseX: Int, mouseY: Int) {
+        for (fluidSlot in fluidSlotList) {
+            if (fluidSlot == null) continue
+            if (func_146978_c(fluidSlot.posX, fluidSlot.posY, 16, 16, mouseX, mouseY)) {
+                fluidSlot.drawTooltip(mouseX - guiLeft, mouseY - guiTop)
             }
         }
     }

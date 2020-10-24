@@ -1,137 +1,100 @@
-package extracells.network.packet.part;
+package extracells.network.packet.part
 
-import appeng.api.config.RedstoneMode;
-import extracells.gui.GuiBusFluidIO;
-import extracells.network.AbstractPacket;
-import extracells.part.PartFluidIO;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.fluids.Fluid;
+import appeng.api.config.RedstoneMode
+import extracells.gui.GuiBusFluidIO
+import extracells.network.AbstractPacket
+import extracells.part.PartFluidIO
+import io.netty.buffer.ByteBuf
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Gui
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraftforge.fluids.Fluid
 
-import java.util.List;
+class PacketBusFluidIO : AbstractPacket {
+    private val filterFluids: List<Fluid>? = null
+    private var part: PartFluidIO? = null
+    private var action: Byte = 0
+    private var ordinal: Byte = 0
+    private var filterSize: Byte = 0
+    private var redstoneControlled = false
 
-public class PacketBusFluidIO extends AbstractPacket {
+    constructor() {}
+    constructor(_redstoneControlled: Boolean) : super() {
+        mode = 4
+        redstoneControlled = _redstoneControlled
+    }
 
-	private List<Fluid> filterFluids;
-	private PartFluidIO part;
-	private byte action;
-	private byte ordinal;
-	private byte filterSize;
-	private boolean redstoneControlled;
+    constructor(_filterSize: Byte) : super() {
+        mode = 3
+        filterSize = _filterSize
+    }
 
-	@SuppressWarnings("unused")
-	public PacketBusFluidIO() {}
+    constructor(_player: EntityPlayer?, _action: Byte,
+                _part: PartFluidIO?) : super(_player) {
+        mode = 0
+        action = _action
+        part = _part
+    }
 
-	public PacketBusFluidIO(boolean _redstoneControlled) {
-		super();
-		this.mode = 4;
-		this.redstoneControlled = _redstoneControlled;
-	}
+    constructor(_player: EntityPlayer?, _part: PartFluidIO?) : super(_player) {
+        mode = 2
+        part = _part
+    }
 
-	public PacketBusFluidIO(byte _filterSize) {
-		super();
-		this.mode = 3;
-		this.filterSize = _filterSize;
-	}
+    constructor(_redstoneMode: RedstoneMode) : super() {
+        mode = 1
+        ordinal = _redstoneMode.ordinal.toByte()
+    }
 
-	public PacketBusFluidIO(EntityPlayer _player, byte _action,
-			PartFluidIO _part) {
-		super(_player);
-		this.mode = 0;
-		this.action = _action;
-		this.part = _part;
-	}
+    override fun execute() {
+        val gui: Gui
+        when (mode) {
+            0 -> part!!.loopRedstoneMode(player)
+            1 -> {
+                gui = Minecraft.getMinecraft().currentScreen
+                if (gui is GuiBusFluidIO) {
+                    gui.updateRedstoneMode(RedstoneMode.values()[ordinal.toInt()])
+                }
+            }
+            2 -> part!!.sendInformation(player)
+            3 -> {
+                gui = Minecraft.getMinecraft().currentScreen
+                if (gui is GuiBusFluidIO) {
+                    gui.changeConfig(filterSize)
+                }
+            }
+            4 -> {
+                gui = Minecraft.getMinecraft().currentScreen
+                if (gui is GuiBusFluidIO) {
+                    gui.setRedstoneControlled(redstoneControlled)
+                }
+            }
+        }
+    }
 
-	public PacketBusFluidIO(EntityPlayer _player, PartFluidIO _part) {
-		super(_player);
-		this.mode = 2;
-		this.part = _part;
-	}
+    override fun readData(`in`: ByteBuf) {
+        when (mode) {
+            0 -> {
+                part = AbstractPacket.Companion.readPart(`in`) as PartFluidIO
+                action = `in`.readByte()
+            }
+            1 -> ordinal = `in`.readByte()
+            2 -> part = AbstractPacket.Companion.readPart(`in`) as PartFluidIO
+            3 -> filterSize = `in`.readByte()
+            4 -> redstoneControlled = `in`.readBoolean()
+        }
+    }
 
-	public PacketBusFluidIO(RedstoneMode _redstoneMode) {
-		super();
-		this.mode = 1;
-		this.ordinal = (byte) _redstoneMode.ordinal();
-	}
-
-	@Override
-	public void execute() {
-		Gui gui;
-		switch (this.mode) {
-		case 0:
-
-			this.part.loopRedstoneMode(this.player);
-			break;
-		case 1:
-			gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof GuiBusFluidIO) {
-				GuiBusFluidIO partGui = (GuiBusFluidIO) gui;
-				partGui.updateRedstoneMode(RedstoneMode.values()[this.ordinal]);
-			}
-			break;
-		case 2:
-			this.part.sendInformation(this.player);
-			break;
-		case 3:
-			gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof GuiBusFluidIO) {
-				GuiBusFluidIO partGui = (GuiBusFluidIO) gui;
-				partGui.changeConfig(this.filterSize);
-			}
-			break;
-		case 4:
-			gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof GuiBusFluidIO) {
-				GuiBusFluidIO partGui = (GuiBusFluidIO) gui;
-				partGui.setRedstoneControlled(this.redstoneControlled);
-			}
-			break;
-		}
-	}
-
-	@Override
-	public void readData(ByteBuf in) {
-		switch (this.mode) {
-		case 0:
-			this.part = (PartFluidIO) readPart(in);
-			this.action = in.readByte();
-			break;
-		case 1:
-			this.ordinal = in.readByte();
-			break;
-		case 2:
-			this.part = (PartFluidIO) readPart(in);
-			break;
-		case 3:
-			this.filterSize = in.readByte();
-			break;
-		case 4:
-			this.redstoneControlled = in.readBoolean();
-			break;
-		}
-	}
-
-	@Override
-	public void writeData(ByteBuf out) {
-		switch (this.mode) {
-		case 0:
-			writePart(this.part, out);
-			out.writeByte(this.action);
-			break;
-		case 1:
-			out.writeByte(this.ordinal);
-			break;
-		case 2:
-			writePart(this.part, out);
-			break;
-		case 3:
-			out.writeByte(this.filterSize);
-			break;
-		case 4:
-			out.writeBoolean(this.redstoneControlled);
-			break;
-		}
-	}
+    override fun writeData(out: ByteBuf) {
+        when (mode) {
+            0 -> {
+                AbstractPacket.Companion.writePart(part, out)
+                out.writeByte(action.toInt())
+            }
+            1 -> out.writeByte(ordinal.toInt())
+            2 -> AbstractPacket.Companion.writePart(part, out)
+            3 -> out.writeByte(filterSize.toInt())
+            4 -> out.writeBoolean(redstoneControlled)
+        }
+    }
 }

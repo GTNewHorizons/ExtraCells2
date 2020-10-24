@@ -1,5 +1,5 @@
-package extracells.gui;
+package extracells.gui
 
-public enum GuiTypes {
-	PART, BLOCK, TILEENTITY, ITEM, STORAGE
+enum class GuiTypes {
+    PART, BLOCK, TILEENTITY, ITEM, STORAGE
 }

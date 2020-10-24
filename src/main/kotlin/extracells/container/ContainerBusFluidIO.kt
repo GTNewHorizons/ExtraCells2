@@ -1,99 +1,84 @@
-package extracells.container;
+package extracells.container
 
-import appeng.api.AEApi;
-import appeng.api.implementations.guiobjects.IGuiItem;
-import appeng.api.implementations.guiobjects.INetworkTool;
-import appeng.api.util.DimensionalCoord;
-import extracells.container.slot.SlotNetworkTool;
-import extracells.container.slot.SlotRespective;
-import extracells.gui.GuiBusFluidIO;
-import extracells.part.PartFluidIO;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.ItemStack;
+import appeng.api.AEApi
+import appeng.api.implementations.guiobjects.IGuiItem
+import appeng.api.implementations.guiobjects.INetworkTool
+import extracells.container.slot.SlotNetworkTool
+import extracells.container.slot.SlotRespective
+import extracells.gui.GuiBusFluidIO
+import extracells.part.PartFluidIO
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.Container
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.Slot
+import net.minecraft.item.ItemStack
 
-public class ContainerBusFluidIO extends Container {
-	private final PartFluidIO part;
-	private GuiBusFluidIO guiBusFluidIO;
+class ContainerBusFluidIO(private val part: PartFluidIO, player: EntityPlayer) : Container() {
+    private var guiBusFluidIO: GuiBusFluidIO? = null
+    protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {
+        for (i in 0..2) {
+            for (j in 0..8) {
+                addSlotToContainer(Slot(inventoryPlayer, j + i * 9 + 9, 8 + j * 18, i * 18 + 102))
+            }
+        }
+        for (i in 0..8) {
+            addSlotToContainer(Slot(inventoryPlayer, i, 8 + i * 18, 160))
+        }
+    }
 
-	public ContainerBusFluidIO(PartFluidIO part, EntityPlayer player) {
-		this.part = part;
-		for (int i = 0; i < 4; i++)
-			addSlotToContainer(new SlotRespective(part.getUpgradeInventory(), i, 187, i * 18 + 8));
-		bindPlayerInventory(player.inventory);
+    override fun canInteractWith(entityplayer: EntityPlayer): Boolean {
+        return part.isValid
+    }
 
-		for (int i = 0; i < player.inventory.getSizeInventory(); i++) {
-			ItemStack stack = player.inventory.getStackInSlot(i);
-			if (stack != null && AEApi.instance().definitions().items().networkTool().isSameAs(stack)) {
-				DimensionalCoord coord = part.getHost().getLocation();
-				IGuiItem guiItem = (IGuiItem) stack.getItem();
-				INetworkTool networkTool = (INetworkTool) guiItem.getGuiObject(stack, coord.getWorld(), coord.x, coord.y, coord.z);
-				for (int j = 0; j < 3; j++) {
-					for (int k = 0; k < 3; k++) {
-						addSlotToContainer(new SlotNetworkTool(networkTool, j + k * 3, 187 + k * 18, j * 18 + 102));
-					}
-				}
-				return;
-			}
-		}
-	}
+    override fun retrySlotClick(par1: Int, par2: Int, par3: Boolean, par4EntityPlayer: EntityPlayer) {
+        // NOPE
+    }
 
-	protected void bindPlayerInventory(IInventory inventoryPlayer) {
-		for (int i = 0; i < 3; i++) {
-			for (int j = 0; j < 9; j++) {
-				addSlotToContainer(new Slot(inventoryPlayer, j + i * 9 + 9, 8 + j * 18, i * 18 + 102));
-			}
-		}
+    fun setGui(_guiBusFluidIO: GuiBusFluidIO?) {
+        guiBusFluidIO = _guiBusFluidIO
+    }
 
-		for (int i = 0; i < 9; i++) {
-			addSlotToContainer(new Slot(inventoryPlayer, i, 8 + i * 18, 160));
-		}
-	}
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+        if (guiBusFluidIO != null && guiBusFluidIO!!.shiftClick(
+                        getSlot(slotnumber).stack)) return (inventorySlots[slotnumber] as Slot).stack
+        var itemstack: ItemStack? = null
+        val slot = inventorySlots[slotnumber] as Slot?
+        if (slot != null && slot.hasStack) {
+            val itemstack1 = slot.stack
+            itemstack = itemstack1.copy()
+            if (slotnumber < 36) {
+                if (!mergeItemStack(itemstack1, 36, inventorySlots.size,
+                                true)) {
+                    return null
+                }
+            } else if (!mergeItemStack(itemstack1, 0, 36, false)) {
+                return itemstack1
+            }
+            if (itemstack1.stackSize == 0) {
+                slot.putStack(null)
+            } else {
+                slot.onSlotChanged()
+            }
+        }
+        return itemstack!!
+    }
 
-	@Override
-	public boolean canInteractWith(EntityPlayer entityplayer) {
-		return part.isValid();
-	}
-
-	@Override
-	protected void retrySlotClick(int par1, int par2, boolean par3, EntityPlayer par4EntityPlayer) {
-		// NOPE
-	}
-
-	public void setGui(GuiBusFluidIO _guiBusFluidIO) {
-		this.guiBusFluidIO = _guiBusFluidIO;
-	}
-
-	@Override
-	public ItemStack transferStackInSlot(EntityPlayer player, int slotnumber) {
-		if (this.guiBusFluidIO != null && this.guiBusFluidIO.shiftClick(getSlot(slotnumber).getStack()))
-			return ((Slot) this.inventorySlots.get(slotnumber)).getStack();
-
-		ItemStack itemstack = null;
-		Slot slot = (Slot) this.inventorySlots.get(slotnumber);
-
-		if (slot != null && slot.getHasStack()) {
-			ItemStack itemstack1 = slot.getStack();
-			itemstack = itemstack1.copy();
-
-			if (slotnumber < 36) {
-				if (!mergeItemStack(itemstack1, 36, this.inventorySlots.size(),
-						true)) {
-					return null;
-				}
-			} else if (!mergeItemStack(itemstack1, 0, 36, false)) {
-				return itemstack1;
-			}
-
-			if (itemstack1.stackSize == 0) {
-				slot.putStack(null);
-			} else {
-				slot.onSlotChanged();
-			}
-		}
-
-		return itemstack;
-	}
+    init {
+        for (i in 0..3) addSlotToContainer(SlotRespective(part.upgradeInventory, i, 187, i * 18 + 8))
+        bindPlayerInventory(player.inventory)
+        for (i in 0 until player.inventory.sizeInventory) {
+            val stack = player.inventory.getStackInSlot(i)
+            if (stack != null && AEApi.instance().definitions().items().networkTool().isSameAs(stack)) {
+                val coord = part.host.location
+                val guiItem = stack.item as IGuiItem
+                val networkTool = guiItem.getGuiObject(stack, coord.world, coord.x, coord.y, coord.z) as INetworkTool
+                for (j in 0..2) {
+                    for (k in 0..2) {
+                        addSlotToContainer(SlotNetworkTool(networkTool, j + k * 3, 187 + k * 18, j * 18 + 102))
+                    }
+                }
+                return
+            }
+        }
+    }
 }

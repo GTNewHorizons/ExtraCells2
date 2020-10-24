@@ -1,183 +1,153 @@
-package extracells.item;
+package extracells.item
 
-import appeng.api.AEApi;
-import appeng.api.config.FuzzyMode;
-import appeng.api.storage.IMEInventoryHandler;
-import appeng.api.storage.StorageChannel;
-import appeng.api.storage.data.IAEFluidStack;
-import extracells.api.IGasStorageCell;
-import extracells.api.IHandlerFluidStorage;
-import extracells.registries.ItemEnum;
-import extracells.util.inventory.ECFluidFilterInventory;
-import extracells.util.inventory.ECPrivateInventory;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.MathHelper;
-import net.minecraft.util.StatCollector;
-import net.minecraft.world.World;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
+import appeng.api.AEApi
+import appeng.api.config.FuzzyMode
+import appeng.api.storage.IMEInventoryHandler
+import appeng.api.storage.StorageChannel
+import appeng.api.storage.data.IAEFluidStack
+import extracells.api.IGasStorageCell
+import extracells.api.IHandlerFluidStorage
+import extracells.registries.ItemEnum
+import extracells.util.inventory.ECFluidFilterInventory
+import extracells.util.inventory.ECPrivateInventory
+import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.util.IIcon
+import net.minecraft.util.MathHelper
+import net.minecraft.util.StatCollector
+import net.minecraft.world.World
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidRegistry
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class ItemStorageGas : ItemECBase(), IGasStorageCell {
+    private var icons: Array<IIcon>
+    override fun addInformation(itemStack: ItemStack, player: EntityPlayer,
+                                list: MutableList<*>, par4: Boolean) {
+        val handler: IMEInventoryHandler<IAEFluidStack> = AEApi.instance().registries().cell().getCellInventory(
+                itemStack, null, StorageChannel.FLUIDS)
+        if (handler !is IHandlerFluidStorage) {
+            return
+        }
+        val cellHandler = handler as IHandlerFluidStorage
+        val partitioned = cellHandler.isFormatted
+        val usedBytes = cellHandler.usedBytes().toLong()
+        list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.bytes"), usedBytes / 250,
+                cellHandler.totalBytes() / 250))
+        list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.types"),
+                cellHandler.usedTypes(), cellHandler.totalTypes()))
+        if (usedBytes != 0L) {
+            list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.content"), usedBytes))
+        }
+        if (partitioned) {
+            list.add(StatCollector.translateToLocal(
+                    "gui.appliedenergistics2.Partitioned") + " - " + StatCollector.translateToLocal(
+                    "gui.appliedenergistics2.Precise"))
+        }
+    }
 
-public class ItemStorageGas extends ItemECBase implements IGasStorageCell {
+    override fun getConfigInventory(`is`: ItemStack): IInventory {
+        return ECFluidFilterInventory("configFluidCell", 63, `is`)
+    }
 
-	public static final String[] suffixes = { "1k", "4k", "16k", "64k", "256k", "1024k", "4096k" };
+    override fun getFilter(stack: ItemStack): ArrayList<Fluid>? {
+        val inventory = ECFluidFilterInventory("", 63, stack)
+        val stacks = inventory.slots
+        val filter = ArrayList<Fluid>()
+        if (stacks!!.size == 0) return null
+        for (s in stacks) {
+            if (s == null) continue
+            val f = FluidRegistry.getFluid(s.itemDamage)
+            if (f != null) filter.add(f)
+        }
+        return filter
+    }
 
-	public static final int[] spaces = { 1024, 4096, 16348, 65536, 262144, 1048576, 4194304 };
+    override fun getFuzzyMode(`is`: ItemStack): FuzzyMode {
+        if (`is` == null) return null
+        if (!`is`.hasTagCompound()) `is`.tagCompound = NBTTagCompound()
+        if (`is`.tagCompound.hasKey("fuzzyMode")) return FuzzyMode.valueOf(`is`.tagCompound.getString("fuzzyMode"))
+        `is`.tagCompound.setString("fuzzyMode", FuzzyMode.IGNORE_ALL.name)
+        return FuzzyMode.IGNORE_ALL
+    }
 
-	private IIcon[] icons;
+    override fun getIconFromDamage(dmg: Int): IIcon {
+        val j = MathHelper.clamp_int(dmg, 0, suffixes.size)
+        return icons[j]
+    }
 
-	public ItemStorageGas() {
-		setMaxStackSize(1);
-		setMaxDamage(0);
-		setHasSubtypes(true);
-	}
+    override fun getMaxBytes(`is`: ItemStack): Int {
+        return spaces[Math.max(0, `is`.itemDamage)]
+    }
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	@Override
-	public void addInformation(ItemStack itemStack, EntityPlayer player,
-			List list, boolean par4) {
-		IMEInventoryHandler<IAEFluidStack> handler = AEApi.instance().registries().cell().getCellInventory(itemStack, null, StorageChannel.FLUIDS);
-		if (!(handler instanceof IHandlerFluidStorage)) {
-			return;
-		}
-		IHandlerFluidStorage cellHandler = (IHandlerFluidStorage) handler;
-		boolean partitioned = cellHandler.isFormatted();
-		long usedBytes = cellHandler.usedBytes();
+    override fun getMaxTypes(unused: ItemStack?): Int {
+        return 5
+    }
 
-		list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.bytes"), usedBytes / 250, cellHandler.totalBytes() / 250));
-		list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.types"), cellHandler.usedTypes(), cellHandler.totalTypes()));
-		if (usedBytes != 0) {
-			list.add(String.format(StatCollector.translateToLocal("extracells.tooltip.storage.gas.content"), usedBytes));
-		}
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs,
+                             listSubItems: MutableList<*>) {
+        for (i in suffixes.indices) {
+            listSubItems.add(ItemStack(item, 1, i))
+        }
+    }
 
-		if (partitioned) {
-			list.add(StatCollector.translateToLocal("gui.appliedenergistics2.Partitioned") + " - " + StatCollector.translateToLocal("gui.appliedenergistics2.Precise"));
-		}
-	}
+    override fun getUnlocalizedName(itemStack: ItemStack): String {
+        return "extracells.item.storage.gas." + suffixes[itemStack.itemDamage]
+    }
 
-	@Override
-	public IInventory getConfigInventory(ItemStack is) {
-		return new ECFluidFilterInventory("configFluidCell", 63, is);
-	}
+    override fun getUpgradesInventory(`is`: ItemStack): IInventory {
+        return ECPrivateInventory("configInventory", 0, 64)
+    }
 
-	@Override
-	public ArrayList<Fluid> getFilter(ItemStack stack) {
-		ECFluidFilterInventory inventory = new ECFluidFilterInventory("", 63, stack);
-		ItemStack[] stacks = inventory.slots;
-		ArrayList<Fluid> filter = new ArrayList<Fluid>();
-		if (stacks.length == 0)
-			return null;
-		for (ItemStack s : stacks) {
-			if (s == null)
-				continue;
-			Fluid f = FluidRegistry.getFluid(s.getItemDamage());
-			if (f != null)
-				filter.add(f);
-		}
-		return filter;
-	}
+    override fun isEditable(`is`: ItemStack): Boolean {
+        return if (`is` == null) false else `is`.item === this
+    }
 
-	@Override
-	public FuzzyMode getFuzzyMode(ItemStack is) {
-		if (is == null)
-			return null;
-		if (!is.hasTagCompound())
-			is.setTagCompound(new NBTTagCompound());
-		if (is.getTagCompound().hasKey("fuzzyMode"))
-			return FuzzyMode.valueOf(is.getTagCompound().getString("fuzzyMode"));
-		is.getTagCompound().setString("fuzzyMode", FuzzyMode.IGNORE_ALL.name());
-		return FuzzyMode.IGNORE_ALL;
-	}
+    override fun onItemRightClick(itemStack: ItemStack, world: World,
+                                  entityPlayer: EntityPlayer): ItemStack {
+        if (!entityPlayer.isSneaking) {
+            return itemStack
+        }
+        val handler: IMEInventoryHandler<IAEFluidStack> = AEApi.instance().registries().cell().getCellInventory(
+                itemStack, null, StorageChannel.FLUIDS)
+        if (handler !is IHandlerFluidStorage) {
+            return itemStack
+        }
+        val cellHandler = handler as IHandlerFluidStorage
+        return if (cellHandler.usedBytes() == 0 && entityPlayer.inventory.addItemStackToInventory(
+                        ItemEnum.STORAGECASING.getDamagedStack(2))) {
+            ItemEnum.STORAGECOMPONENT.getDamagedStack(itemStack.itemDamage + 11)
+        } else itemStack
+    }
 
-	@Override
-	public IIcon getIconFromDamage(int dmg) {
-		int j = MathHelper.clamp_int(dmg, 0, suffixes.length);
-		return this.icons[j];
-	}
+    override fun registerIcons(iconRegister: IIconRegister) {
+        icons = arrayOfNulls(suffixes.size)
+        for (i in suffixes.indices) {
+            icons[i] = iconRegister.registerIcon("extracells:" + "storage.gas." + suffixes[i])
+        }
+    }
 
-	@Override
-	public int getMaxBytes(ItemStack is) {
-		return spaces[Math.max(0, is.getItemDamage())];
-	}
+    override fun setFuzzyMode(`is`: ItemStack, fzMode: FuzzyMode) {
+        if (`is` == null) return
+        val tag: NBTTagCompound
+        tag = if (`is`.hasTagCompound()) `is`.tagCompound else NBTTagCompound()
+        tag.setString("fuzzyMode", fzMode.name)
+        `is`.tagCompound = tag
+    }
 
-	@Override
-	public int getMaxTypes(ItemStack unused) {
-		return 5;
-	}
+    companion object {
+        val suffixes = arrayOf("1k", "4k", "16k", "64k", "256k", "1024k", "4096k")
+        val spaces = intArrayOf(1024, 4096, 16348, 65536, 262144, 1048576, 4194304)
+    }
 
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	@Override
-	public void getSubItems(Item item, CreativeTabs creativeTab,
-			List listSubItems) {
-		for (int i = 0; i < suffixes.length; ++i) {
-			listSubItems.add(new ItemStack(item, 1, i));
-		}
-	}
-
-	@Override
-	public String getUnlocalizedName(ItemStack itemStack) {
-		return "extracells.item.storage.gas." + suffixes[itemStack.getItemDamage()];
-	}
-
-	@Override
-	public IInventory getUpgradesInventory(ItemStack is) {
-		return new ECPrivateInventory("configInventory", 0, 64);
-	}
-
-	@Override
-	public boolean isEditable(ItemStack is) {
-		if (is == null)
-			return false;
-		return is.getItem() == this;
-	}
-
-	@SuppressWarnings({ "rawtypes", "unchecked" })
-	@Override
-	public ItemStack onItemRightClick(ItemStack itemStack, World world,
-			EntityPlayer entityPlayer) {
-		if (!entityPlayer.isSneaking()) {
-			return itemStack;
-		}
-		IMEInventoryHandler<IAEFluidStack> handler = AEApi.instance().registries().cell().getCellInventory(itemStack, null, StorageChannel.FLUIDS);
-		if (!(handler instanceof IHandlerFluidStorage)) {
-			return itemStack;
-		}
-		IHandlerFluidStorage cellHandler = (IHandlerFluidStorage) handler;
-		if (cellHandler.usedBytes() == 0 && entityPlayer.inventory.addItemStackToInventory(ItemEnum.STORAGECASING.getDamagedStack(2))) {
-			return ItemEnum.STORAGECOMPONENT.getDamagedStack(itemStack.getItemDamage() + 11);
-		}
-		return itemStack;
-	}
-
-	@Override
-	public void registerIcons(IIconRegister iconRegister) {
-		this.icons = new IIcon[suffixes.length];
-
-		for (int i = 0; i < suffixes.length; ++i) {
-			this.icons[i] = iconRegister.registerIcon("extracells:" + "storage.gas." + suffixes[i]);
-		}
-	}
-
-	@Override
-	public void setFuzzyMode(ItemStack is, FuzzyMode fzMode) {
-		if (is == null)
-			return;
-		NBTTagCompound tag;
-		if (is.hasTagCompound())
-			tag = is.getTagCompound();
-		else
-			tag = new NBTTagCompound();
-		tag.setString("fuzzyMode", fzMode.name());
-		is.setTagCompound(tag);
-
-	}
+    init {
+        setMaxStackSize(1)
+        maxDamage = 0
+        setHasSubtypes(true)
+    }
 }

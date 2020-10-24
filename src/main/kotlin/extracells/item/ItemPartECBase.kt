@@ -1,110 +1,93 @@
-package extracells.item;
+package extracells.item
 
-import appeng.api.AEApi;
-import appeng.api.config.Upgrades;
-import appeng.api.implementations.items.IItemGroup;
-import appeng.api.parts.IPart;
-import appeng.api.parts.IPartItem;
-import cpw.mods.fml.common.FMLLog;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.api.ECApi;
-import extracells.registries.PartEnum;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.MathHelper;
-import net.minecraft.world.World;
-import org.apache.logging.log4j.Level;
+import appeng.api.AEApi
+import appeng.api.implementations.items.IItemGroup
+import appeng.api.parts.IPart
+import appeng.api.parts.IPartItem
+import cpw.mods.fml.common.FMLLog
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.api.ECApi
+import extracells.registries.PartEnum
+import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.util.MathHelper
+import net.minecraft.world.World
+import org.apache.logging.log4j.Level
 
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+class ItemPartECBase : Item(), IPartItem, IItemGroup {
+    override fun createPartFromItemStack(itemStack: ItemStack): IPart? {
+        return try {
+            PartEnum.values()[MathHelper.clamp_int(
+                    itemStack.itemDamage, 0, PartEnum.values().size - 1)]
+                    .newInstance(itemStack)
+        } catch (ex: Throwable) {
+            FMLLog.log(
+                    Level.ERROR,
+                    ex,
+                    """
+                        ExtraCells2 severe error - could not create AE2 Part from ItemStack! This should not happen!
+                        [ExtraCells2 SEVERE] Contact Leonelf/M3gaFr3ak with the following stack trace.
+                        [ExtraCells2 SEVERE] Offending item: '%s'
+                        """.trimIndent(),
+                    itemStack.toString())
+            null
+        }
+    }
 
-public class ItemPartECBase extends Item implements IPartItem, IItemGroup {
+    override fun getItemStackDisplayName(stack: ItemStack): String {
+        if (stack == null) return super.getItemStackDisplayName(null)
+        return if (stack.itemDamage == PartEnum.INTERFACE.ordinal) ECApi.instance()!!.blocks().blockInterface().maybeItem().get().getItemStackDisplayName(
+                ECApi.instance()!!.blocks().blockInterface().maybeStack(1).get()) else super.getItemStackDisplayName(
+                stack)
+    }
 
-	public ItemPartECBase() {
-		setMaxDamage(0);
-		setHasSubtypes(true);
-		AEApi.instance().partHelper().setItemBusRenderer(this);
+    @SideOnly(Side.CLIENT)
+    override fun getSpriteNumber(): Int {
+        return 0
+    }
 
-		for (PartEnum part : PartEnum.values()) {
-			Map<Upgrades, Integer> possibleUpgradesList = part.getUpgrades();
-			for (Upgrades upgrade : possibleUpgradesList.keySet()) {
-				upgrade.registerItem(new ItemStack(this, 1, part.ordinal()),
-						possibleUpgradesList.get(upgrade));
-			}
-		}
-	}
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+        for (i in PartEnum.values().indices) {
+            val part = PartEnum.values()[i]
+            if (part.mod == null || part.mod.isEnabled) itemList.add(ItemStack(item, 1, i))
+        }
+    }
 
-	@Override
-	public IPart createPartFromItemStack(ItemStack itemStack) {
-		try {
-			return PartEnum.values()[MathHelper.clamp_int(
-					itemStack.getItemDamage(), 0, PartEnum.values().length - 1)]
-					.newInstance(itemStack);
-		} catch (Throwable ex) {
-			FMLLog.log(
-					Level.ERROR,
-					ex,
-					"ExtraCells2 severe error - could not create AE2 Part from ItemStack! This should not happen!\n"
-							+ "[ExtraCells2 SEVERE] Contact Leonelf/M3gaFr3ak with the following stack trace.\n"
-							+ "[ExtraCells2 SEVERE] Offending item: '%s'",
-					itemStack.toString());
-			return null;
-		}
-	}
+    override fun getUnlocalizedGroupName(otherItems: Set<ItemStack>,
+                                         itemStack: ItemStack): String {
+        return PartEnum.values()[MathHelper.clamp_int(
+                itemStack.itemDamage, 0, PartEnum.values().size - 1)]
+                .groupName
+    }
 
-	@Override
-	public String getItemStackDisplayName(ItemStack stack) {
-		if (stack == null)
-			return super.getItemStackDisplayName(null);
-		if (stack.getItemDamage() == PartEnum.INTERFACE.ordinal())
-			return ECApi.instance().blocks().blockInterface().maybeItem().get().getItemStackDisplayName(
-							ECApi.instance().blocks().blockInterface().maybeStack(1).get());
-		return super.getItemStackDisplayName(stack);
-	}
+    override fun getUnlocalizedName(itemStack: ItemStack): String {
+        return PartEnum.values()[MathHelper.clamp_int(
+                itemStack.itemDamage, 0, PartEnum.values().size - 1)]
+                .unlocalizedName
+    }
 
-	@Override
-	@SideOnly(Side.CLIENT)
-	public int getSpriteNumber() {
-		return 0;
-	}
+    override fun onItemUse(`is`: ItemStack, player: EntityPlayer, world: World,
+                           x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float, hitZ: Float): Boolean {
+        return AEApi.instance().partHelper()
+                .placeBus(`is`, x, y, z, side, player, world)
+    }
 
-	@Override
-	@SuppressWarnings("unchecked")
-	public void getSubItems(Item item, CreativeTabs creativeTab, List itemList) {
-		for (int i = 0; i < PartEnum.values().length; i++) {
-			PartEnum part = PartEnum.values()[i];
-			if(part.getMod() == null || part.getMod().isEnabled())
-				itemList.add(new ItemStack(item, 1, i));
-		}
-	}
+    override fun registerIcons(_iconRegister: IIconRegister) {}
 
-	@Override
-	public String getUnlocalizedGroupName(Set<ItemStack> otherItems,
-			ItemStack itemStack) {
-		return PartEnum.values()[MathHelper.clamp_int(
-				itemStack.getItemDamage(), 0, PartEnum.values().length - 1)]
-				.getGroupName();
-	}
-
-	@Override
-	public String getUnlocalizedName(ItemStack itemStack) {
-		return PartEnum.values()[MathHelper.clamp_int(
-				itemStack.getItemDamage(), 0, PartEnum.values().length - 1)]
-				.getUnlocalizedName();
-	}
-
-	@Override
-	public boolean onItemUse(ItemStack is, EntityPlayer player, World world,
-			int x, int y, int z, int side, float hitX, float hitY, float hitZ) {
-		return AEApi.instance().partHelper()
-				.placeBus(is, x, y, z, side, player, world);
-	}
-
-	@Override
-	public void registerIcons(IIconRegister _iconRegister) {}
+    init {
+        maxDamage = 0
+        setHasSubtypes(true)
+        AEApi.instance().partHelper().setItemBusRenderer(this)
+        for (part in PartEnum.values()) {
+            val possibleUpgradesList = part.upgrades
+            for (upgrade in possibleUpgradesList!!.keys) {
+                upgrade!!.registerItem(ItemStack(this, 1, part.ordinal),
+                        possibleUpgradesList[upgrade]!!)
+            }
+        }
+    }
 }

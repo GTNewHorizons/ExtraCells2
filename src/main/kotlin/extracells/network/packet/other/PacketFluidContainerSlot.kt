@@ -1,59 +1,52 @@
-package extracells.network.packet.other;
+package extracells.network.packet.other
 
-import cpw.mods.fml.common.network.ByteBufUtils;
-import extracells.network.AbstractPacket;
-import extracells.tileentity.TileEntityFluidFiller;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
+import cpw.mods.fml.common.network.ByteBufUtils
+import extracells.network.AbstractPacket
+import extracells.tileentity.TileEntityFluidFiller
+import io.netty.buffer.ByteBuf
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemStack
 
-public class PacketFluidContainerSlot extends AbstractPacket {
+class PacketFluidContainerSlot : AbstractPacket {
+    private var container: ItemStack? = null
+    private var fluidFiller: TileEntityFluidFiller? = null
 
-	private ItemStack container;
-	private TileEntityFluidFiller fluidFiller;
+    constructor() {}
+    constructor(_fluidFiller: TileEntityFluidFiller?,
+                _container: ItemStack?, _player: EntityPlayer?) : super(_player) {
+        mode = 0
+        fluidFiller = _fluidFiller
+        container = _container
+    }
 
-	public PacketFluidContainerSlot() {}
+    override fun execute() {
+        when (mode) {
+            0 -> {
+                container!!.stackSize = 1
+                fluidFiller!!.containerItem = container
+                if (fluidFiller!!.hasWorldObj()) fluidFiller!!.worldObj.markBlockForUpdate(
+                        fluidFiller!!.xCoord, fluidFiller!!.yCoord,
+                        fluidFiller!!.zCoord)
+                fluidFiller!!.postUpdateEvent()
+            }
+        }
+    }
 
-	public PacketFluidContainerSlot(TileEntityFluidFiller _fluidFiller,
-			ItemStack _container, EntityPlayer _player) {
-		super(_player);
-		this.mode = 0;
-		this.fluidFiller = _fluidFiller;
-		this.container = _container;
-	}
+    override fun readData(`in`: ByteBuf) {
+        when (mode) {
+            0 -> {
+                fluidFiller = AbstractPacket.Companion.readTileEntity(`in`) as TileEntityFluidFiller
+                container = ByteBufUtils.readItemStack(`in`)
+            }
+        }
+    }
 
-	@Override
-	public void execute() {
-		switch (this.mode) {
-		case 0:
-			this.container.stackSize = 1;
-			this.fluidFiller.containerItem = this.container;
-			if (this.fluidFiller.hasWorldObj())
-				this.fluidFiller.getWorldObj().markBlockForUpdate(
-						this.fluidFiller.xCoord, this.fluidFiller.yCoord,
-						this.fluidFiller.zCoord);
-			this.fluidFiller.postUpdateEvent();
-			break;
-		}
-	}
-
-	@Override
-	public void readData(ByteBuf in) {
-		switch (this.mode) {
-		case 0:
-			this.fluidFiller = (TileEntityFluidFiller) readTileEntity(in);
-			this.container = ByteBufUtils.readItemStack(in);
-			break;
-		}
-	}
-
-	@Override
-	public void writeData(ByteBuf out) {
-		switch (this.mode) {
-		case 0:
-			writeTileEntity(this.fluidFiller, out);
-			ByteBufUtils.writeItemStack(out, this.container);
-			break;
-		}
-	}
+    override fun writeData(out: ByteBuf) {
+        when (mode) {
+            0 -> {
+                AbstractPacket.Companion.writeTileEntity(fluidFiller, out)
+                ByteBufUtils.writeItemStack(out, container)
+            }
+        }
+    }
 }

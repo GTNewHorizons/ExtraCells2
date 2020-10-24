@@ -1,12 +1,9 @@
-package extracells.api.crafting;
+package extracells.api.crafting
 
-import appeng.api.networking.crafting.ICraftingPatternDetails;
-import appeng.api.storage.data.IAEFluidStack;
+import appeng.api.networking.crafting.ICraftingPatternDetails
+import appeng.api.storage.data.IAEFluidStack
 
-public interface IFluidCraftingPatternDetails extends ICraftingPatternDetails {
-
-	IAEFluidStack[] getCondensedFluidInputs();
-
-	IAEFluidStack[] getFluidInputs();
-
+interface IFluidCraftingPatternDetails : ICraftingPatternDetails {
+    val condensedFluidInputs: Array<IAEFluidStack?>?
+    val fluidInputs: Array<IAEFluidStack?>?
 }

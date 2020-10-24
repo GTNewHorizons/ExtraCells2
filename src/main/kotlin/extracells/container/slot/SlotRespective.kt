@@ -1,20 +1,16 @@
-package extracells.container.slot;
+package extracells.container.slot
 
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.ItemStack;
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.Slot
+import net.minecraft.item.ItemStack
 
-public class SlotRespective extends Slot {
+class SlotRespective(inventory: IInventory?, index: Int, x: Int, y: Int) : Slot(inventory, index, x, y) {
+    var inventory: IInventory
+    override fun isItemValid(itemstack: ItemStack): Boolean {
+        return this.inventory.isItemValidForSlot(slotNumber, itemstack)
+    }
 
-	IInventory inventory;
-
-	public SlotRespective(IInventory inventory, int index, int x, int y) {
-		super(inventory, index, x, y);
-		this.inventory = inventory;
-	}
-
-	@Override
-	public boolean isItemValid(ItemStack itemstack) {
-		return this.inventory.isItemValidForSlot(this.slotNumber, itemstack);
-	}
+    init {
+        this.inventory = inventory
+    }
 }

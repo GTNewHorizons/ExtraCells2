@@ -1,15 +1,9 @@
-package extracells.api;
+package extracells.api
 
-public interface IHandlerFluidStorage {
-
-	boolean isFormatted();
-
-	int totalBytes();
-
-	int totalTypes();
-
-	int usedBytes();
-
-	int usedTypes();
-
+interface IHandlerFluidStorage {
+    val isFormatted: Boolean
+    fun totalBytes(): Int
+    fun totalTypes(): Int
+    fun usedBytes(): Int
+    fun usedTypes(): Int
 }

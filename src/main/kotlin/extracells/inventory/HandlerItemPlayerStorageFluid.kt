@@ -1,47 +1,38 @@
-package extracells.inventory;
+package extracells.inventory
 
-import appeng.api.storage.ISaveProvider;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import appeng.api.storage.ISaveProvider
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import java.util.*
 
-import java.util.ArrayList;
+class HandlerItemPlayerStorageFluid : HandlerItemStorageFluid {
+    private val player: EntityPlayer
 
-public class HandlerItemPlayerStorageFluid extends HandlerItemStorageFluid {
+    constructor(_storageStack: ItemStack,
+                _saveProvider: ISaveProvider?, _filter: ArrayList<Fluid?>?,
+                _player: EntityPlayer) : super(_storageStack, _saveProvider, _filter) {
+        player = _player
+    }
 
-	private final EntityPlayer player;
+    constructor(_storageStack: ItemStack,
+                _saveProvider: ISaveProvider?, _player: EntityPlayer) : super(_storageStack, _saveProvider) {
+        player = _player
+    }
 
-	public HandlerItemPlayerStorageFluid(ItemStack _storageStack,
-			ISaveProvider _saveProvider, ArrayList<Fluid> _filter,
-			EntityPlayer _player) {
-		super(_storageStack, _saveProvider, _filter);
-		this.player = _player;
-	}
-
-	public HandlerItemPlayerStorageFluid(ItemStack _storageStack,
-			ISaveProvider _saveProvider, EntityPlayer _player) {
-		super(_storageStack, _saveProvider);
-		this.player = _player;
-	}
-
-	@Override
-	protected void writeFluidToSlot(int i, FluidStack fluidStack) {
-		if (this.player.getCurrentEquippedItem() == null)
-			return;
-		ItemStack item = this.player.getCurrentEquippedItem();
-		if (!item.hasTagCompound())
-			item.setTagCompound(new NBTTagCompound());
-		NBTTagCompound fluidTag = new NBTTagCompound();
-		if (fluidStack != null && fluidStack.getFluidID() > 0
-				&& fluidStack.amount > 0) {
-			fluidStack.writeToNBT(fluidTag);
-			item.getTagCompound().setTag("Fluid#" + i, fluidTag);
-		} else {
-			item.getTagCompound().removeTag("Fluid#" + i);
-		}
-		this.fluidStacks.set(i, fluidStack);
-	}
-
+    override fun writeFluidToSlot(i: Int, fluidStack: FluidStack?) {
+        if (player.currentEquippedItem == null) return
+        val item = player.currentEquippedItem
+        if (!item.hasTagCompound()) item.tagCompound = NBTTagCompound()
+        val fluidTag = NBTTagCompound()
+        if (fluidStack != null && fluidStack.fluidID > 0 && fluidStack.amount > 0) {
+            fluidStack.writeToNBT(fluidTag)
+            item.tagCompound.setTag("Fluid#$i", fluidTag)
+        } else {
+            item.tagCompound.removeTag("Fluid#$i")
+        }
+        fluidStacks[i] = fluidStack
+    }
 }

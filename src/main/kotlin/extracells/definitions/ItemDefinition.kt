@@ -1,155 +1,128 @@
-package extracells.definitions;
+package extracells.definitions
 
-import extracells.api.definitions.IItemDefinition;
-import extracells.registries.ItemEnum;
+import extracells.api.definitions.IItemDefinition
+import extracells.registries.ItemEnum
 
-public class ItemDefinition implements IItemDefinition {
+class ItemDefinition : IItemDefinition {
+    override fun cell1024kPart(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 1)
+    }
 
-	public static final ItemDefinition instance = new ItemDefinition();
+    override fun cell1024kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 9)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell1024kPart() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 1);
-	}
+    override fun cell16384kPart(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 3)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell1024kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 9);
-	}
+    override fun cell16kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 6)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell16384kPart() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 3);
-	}
+    // Fluid Storage Components
+    override fun cell1kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 4)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell16kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 6);
-	}
+    // Physical Storage Components
+    override fun cell256kPart(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item)
+    }
 
-	// Fluid Storage Components
-	@Override
-	public appeng.api.definitions.IItemDefinition cell1kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 4);
-	}
+    override fun cell256kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 8)
+    }
 
-	// Physical Storage Components
-	@Override
-	public appeng.api.definitions.IItemDefinition cell256kPart() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem());
-	}
+    override fun cell4096kPart(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 2)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell256kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 8);
-	}
+    override fun cell4096kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 10)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell4096kPart() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 2);
-	}
+    override fun cell4kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 5)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell4096kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 10);
-	}
+    override fun cell64kPartFluid(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 7)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell4kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 5);
-	}
+    // Fluid Storage
+    override fun fluidCasing(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECASING.item, 1)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition cell64kPartFluid() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.getItem(), 7);
-	}
+    override fun fluidCell1024k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 5)
+    }
 
-	// Fluid Storage
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCasing() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECASING.getItem(), 1);
-	}
+    override fun fluidCell16k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 2)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell1024k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 5);
-	}
+    // Fluid Cells
+    override fun fluidCell1k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell16k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 2);
-	}
+    override fun fluidCell256k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 4)
+    }
 
-	// Fluid Cells
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell1k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem());
-	}
+    override fun fluidCell4096k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 6)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell256k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 4);
-	}
+    override fun fluidCell4k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 1)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell4096k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 6);
-	}
+    override fun fluidCell64k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.item, 3)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell4k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 1);
-	}
+    override fun fluidCellPortable(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDSTORAGEPORTABLE.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCell64k() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGE.getItem(), 3);
-	}
+    // Physical Storage Casing
+    override fun physCasing(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.STORAGECASING.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition fluidCellPortable() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDSTORAGEPORTABLE.getItem());
-	}
+    override fun physCell1024k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.item, 1)
+    }
 
-	// Physical Storage Casing
-	@Override
-	public appeng.api.definitions.IItemDefinition physCasing() {
-		return new ItemItemDefinitions(ItemEnum.STORAGECASING.getItem());
-	}
+    override fun physCell16384k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.item, 3)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition physCell1024k() {
-		return new ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.getItem(), 1);
-	}
+    // Physical Cells
+    override fun physCell256k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition physCell16384k() {
-		return new ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.getItem(), 3);
-	}
+    override fun physCell4096k(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.item, 2)
+    }
 
-	// Physical Cells
-	@Override
-	public appeng.api.definitions.IItemDefinition physCell256k() {
-		return new ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.getItem());
-	}
+    override fun physCellContainer(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.item, 4)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition physCell4096k() {
-		return new ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.getItem(), 2);
-	}
+    override fun wirelessFluidTerminal(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDWIRELESSTERMINAL.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition physCellContainer() {
-		return new ItemItemDefinitions(ItemEnum.PHYSICALSTORAGE.getItem(), 4);
-	}
+    override fun itemFluidPattern(): appeng.api.definitions.IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.FLUIDPATTERN.item)
+    }
 
-	@Override
-	public appeng.api.definitions.IItemDefinition wirelessFluidTerminal() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDWIRELESSTERMINAL.getItem());
-	}
-
-	@Override
-	public appeng.api.definitions.IItemDefinition itemFluidPattern() {
-		return new ItemItemDefinitions(ItemEnum.FLUIDPATTERN.getItem());
-	}
+    companion object {
+        val instance = ItemDefinition()
+    }
 }

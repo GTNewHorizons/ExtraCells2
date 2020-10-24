@@ -1,90 +1,77 @@
-package extracells.definitions;
+package extracells.definitions
 
-import appeng.api.definitions.IItemDefinition;
-import extracells.api.definitions.IPartDefinition;
-import extracells.registries.ItemEnum;
-import extracells.registries.PartEnum;
+import appeng.api.definitions.IItemDefinition
+import extracells.api.definitions.IPartDefinition
+import extracells.registries.ItemEnum
+import extracells.registries.PartEnum
 
-public class PartDefinition implements IPartDefinition {
+class PartDefinition : IPartDefinition {
+    override fun partBattery(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.BATTERY.ordinal)
+    }
 
-	public static final PartDefinition instance = new PartDefinition();
+    override fun partConversionMonitor(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDCONVERSIONMONITOR.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partBattery() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.BATTERY.ordinal());
-	}
+    override fun partDrive(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.DRIVE.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partConversionMonitor() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDCONVERSIONMONITOR.ordinal());
-	}
+    override fun partFluidAnnihilationPlane(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDPANEANNIHILATION.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partDrive() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.DRIVE.ordinal());
-	}
+    override fun partFluidExportBus(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDIMPORT.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidAnnihilationPlane() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDPANEANNIHILATION.ordinal());
-	}
+    override fun partFluidFormationPlane(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDPANEFORMATION.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidExportBus() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDIMPORT.ordinal());
-	}
+    override fun partFluidImportBus(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDEXPORT.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidFormationPlane() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDPANEFORMATION.ordinal());
-	}
+    override fun partFluidLevelEmitter(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDLEVELEMITTER.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidImportBus() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDEXPORT.ordinal());
-	}
+    override fun partFluidStorageBus(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDSTORAGE.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidLevelEmitter() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDLEVELEMITTER.ordinal());
-	}
+    override fun partFluidTerminal(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDTERMINAL.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidStorageBus() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDSTORAGE.ordinal());
-	}
+    override fun partInterface(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.INTERFACE.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partFluidTerminal() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDTERMINAL.ordinal());
-	}
+    override fun partOreDictExportBus(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.OREDICTEXPORTBUS.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partInterface() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.INTERFACE.ordinal());
-	}
+    override fun partStorageMonitor(): IItemDefinition {
+        return ItemItemDefinitions(ItemEnum.PARTITEM.item,
+                PartEnum.FLUIDMONITOR.ordinal)
+    }
 
-	@Override
-	public IItemDefinition partOreDictExportBus() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.OREDICTEXPORTBUS.ordinal());
-	}
-
-	@Override
-	public IItemDefinition partStorageMonitor() {
-		return new ItemItemDefinitions(ItemEnum.PARTITEM.getItem(),
-				PartEnum.FLUIDMONITOR.ordinal());
-	}
-
+    companion object {
+        val instance = PartDefinition()
+    }
 }

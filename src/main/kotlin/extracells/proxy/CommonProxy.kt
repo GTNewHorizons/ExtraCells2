@@ -1,100 +1,95 @@
-package extracells.proxy;
+package extracells.proxy
 
-import appeng.api.AEApi;
-import appeng.api.IAppEngApi;
-import appeng.api.recipes.IRecipeHandler;
-import appeng.api.recipes.IRecipeLoader;
-import cpw.mods.fml.common.registry.GameRegistry;
-import extracells.registries.BlockEnum;
-import extracells.registries.ItemEnum;
-import extracells.tileentity.*;
-import extracells.util.FuelBurnTime;
-import extracells.util.recipe.RecipeUniversalTerminal;
-import net.minecraftforge.fluids.FluidRegistry;
+import appeng.api.AEApi
+import appeng.api.recipes.IRecipeLoader
+import cpw.mods.fml.common.registry.GameRegistry
+import extracells.registries.BlockEnum
+import extracells.registries.ItemEnum
+import extracells.tileentity.*
+import extracells.util.FuelBurnTime.registerFuel
+import extracells.util.recipe.RecipeUniversalTerminal
+import net.minecraftforge.fluids.FluidRegistry
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.io.InputStreamReader
+import java.nio.charset.StandardCharsets
 
-import java.io.*;
-import java.nio.charset.StandardCharsets;
+open class CommonProxy {
+    private inner class ExternalRecipeLoader : IRecipeLoader {
+        @Throws(Exception::class)
+        override fun getFile(path: String): BufferedReader {
+            return BufferedReader(FileReader(File(path)))
+        }
+    }
 
-public class CommonProxy {
+    private inner class InternalRecipeLoader : IRecipeLoader {
+        @Throws(Exception::class)
+        override fun getFile(path: String): BufferedReader {
+            val resourceAsStream = javaClass.getResourceAsStream("/assets/extracells/recipes/$path")
+            val reader = InputStreamReader(resourceAsStream, StandardCharsets.UTF_8)
+            return BufferedReader(reader)
+        }
+    }
 
-	private class ExternalRecipeLoader implements IRecipeLoader {
+    fun addRecipes(configFolder: File) {
+        val recipeHandler = AEApi.instance().registries().recipes().createNewRecipehandler()
+        val externalRecipe = File(
+                configFolder.path + File.separator + "AppliedEnergistics2" + File.separator + "extracells.recipe")
+        if (externalRecipe.exists()) {
+            recipeHandler.parseRecipes(ExternalRecipeLoader(), externalRecipe.path)
+        } else {
+            recipeHandler.parseRecipes(InternalRecipeLoader(), "main.recipe")
+        }
+        recipeHandler.injectRecipes()
+        GameRegistry.addRecipe(RecipeUniversalTerminal)
+    }
 
-		@Override
-		public BufferedReader getFile(String path) throws Exception {
-			return new BufferedReader(new FileReader(new File(path)));
-		}
-	}
+    fun registerBlocks() {
+        for (current in BlockEnum.values()) {
+            GameRegistry.registerBlock(current.block, current.itemBlockClass, current.internalName)
+        }
+    }
 
-	private class InternalRecipeLoader implements IRecipeLoader {
+    fun registerItems() {
+        for (current in ItemEnum.values()) {
+            GameRegistry.registerItem(current.item, current.internalName)
+        }
+    }
 
-		@Override
-		public BufferedReader getFile(String path) throws Exception {
-			InputStream resourceAsStream = getClass().getResourceAsStream("/assets/extracells/recipes/" + path);
-			InputStreamReader reader = new InputStreamReader(resourceAsStream, StandardCharsets.UTF_8);
-			return new BufferedReader(reader);
-		}
-	}
+    fun registerMovables() {
+        val api = AEApi.instance()
+        api.registries().movable().whiteListTileEntity(TileEntityCertusTank::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityWalrus::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityFluidCrafter::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityFluidInterface::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityFluidFiller::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityHardMeDrive::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityVibrationChamberFluid::class.java)
+        api.registries().movable().whiteListTileEntity(TileEntityCraftingStorage::class.java)
+    }
 
-	public void addRecipes(File configFolder) {
-		IRecipeHandler recipeHandler = AEApi.instance().registries().recipes().createNewRecipehandler();
-		File externalRecipe = new File(configFolder.getPath() + File.separator + "AppliedEnergistics2" + File.separator + "extracells.recipe");
-		if (externalRecipe.exists()) {
-			recipeHandler.parseRecipes(new ExternalRecipeLoader(), externalRecipe.getPath());
-		} else {
-			recipeHandler.parseRecipes(new InternalRecipeLoader(), "main.recipe");
-		}
-		recipeHandler.injectRecipes();
-		GameRegistry.addRecipe(RecipeUniversalTerminal.INSTANCE);
-	}
+    open fun registerRenderers() {
+        // Only Clientside
+    }
 
-	public void registerBlocks() {
-		for (BlockEnum current : BlockEnum.values()) {
-			GameRegistry.registerBlock(current.getBlock(), current.getItemBlockClass(), current.getInternalName());
-		}
-	}
+    fun registerTileEntities() {
+        GameRegistry.registerTileEntity(TileEntityCertusTank::class.java, "tileEntityCertusTank")
+        GameRegistry.registerTileEntity(TileEntityWalrus::class.java, "tileEntityWalrus")
+        GameRegistry.registerTileEntity(TileEntityFluidCrafter::class.java, "tileEntityFluidCrafter")
+        GameRegistry.registerTileEntity(TileEntityFluidInterface::class.java, "tileEntityFluidInterface")
+        GameRegistry.registerTileEntity(TileEntityFluidFiller::class.java, "tileEntityFluidFiller")
+        GameRegistry.registerTileEntity(TileEntityHardMeDrive::class.java, "tileEntityHardMEDrive")
+        GameRegistry.registerTileEntity(TileEntityVibrationChamberFluid::class.java, "tileEntityVibrationChamberFluid")
+        GameRegistry.registerTileEntity(TileEntityCraftingStorage::class.java, "tileEntityCraftingStorage")
+    }
 
-	public void registerItems() {
-		for (ItemEnum current : ItemEnum.values()) {
-			GameRegistry.registerItem(current.getItem(), current.getInternalName());
-		}
-	}
+    fun registerFluidBurnTimes() {
+        registerFuel(FluidRegistry.LAVA, 800)
+    }
 
-	public void registerMovables() {
-		IAppEngApi api = AEApi.instance();
-		api.registries().movable().whiteListTileEntity(TileEntityCertusTank.class);
-		api.registries().movable().whiteListTileEntity(TileEntityWalrus.class);
-		api.registries().movable().whiteListTileEntity(TileEntityFluidCrafter.class);
-		api.registries().movable().whiteListTileEntity(TileEntityFluidInterface.class);
-		api.registries().movable().whiteListTileEntity(TileEntityFluidFiller.class);
-		api.registries().movable().whiteListTileEntity(TileEntityHardMeDrive.class);
-		api.registries().movable().whiteListTileEntity(TileEntityVibrationChamberFluid.class);
-		api.registries().movable().whiteListTileEntity(TileEntityCraftingStorage.class);
-	}
-
-	public void registerRenderers() {
-		// Only Clientside
-	}
-
-	public void registerTileEntities() {
-		GameRegistry.registerTileEntity(TileEntityCertusTank.class, "tileEntityCertusTank");
-		GameRegistry.registerTileEntity(TileEntityWalrus.class, "tileEntityWalrus");
-		GameRegistry.registerTileEntity(TileEntityFluidCrafter.class, "tileEntityFluidCrafter");
-		GameRegistry.registerTileEntity(TileEntityFluidInterface.class, "tileEntityFluidInterface");
-		GameRegistry.registerTileEntity(TileEntityFluidFiller.class, "tileEntityFluidFiller");
-		GameRegistry.registerTileEntity(TileEntityHardMeDrive.class, "tileEntityHardMEDrive");
-		GameRegistry.registerTileEntity(TileEntityVibrationChamberFluid.class, "tileEntityVibrationChamberFluid");
-		GameRegistry.registerTileEntity(TileEntityCraftingStorage.class, "tileEntityCraftingStorage");
-	}
-
-	public void registerFluidBurnTimes() {
-		FuelBurnTime.registerFuel(FluidRegistry.LAVA, 800);
-	}
-
-	public boolean isClient(){
-		return false;
-	}
-
-	public boolean isServer(){
-		return true;
-	}
+    open val isClient: Boolean
+        get() = false
+    open val isServer: Boolean
+        get() = true
 }

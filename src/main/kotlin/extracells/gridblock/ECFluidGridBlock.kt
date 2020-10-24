@@ -1,94 +1,71 @@
-package extracells.gridblock;
+package extracells.gridblock
 
-import appeng.api.networking.*;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.util.AEColor;
-import appeng.api.util.DimensionalCoord;
-import extracells.api.IECTileEntity;
-import extracells.tileentity.IListenerTile;
-import extracells.tileentity.TileEntityFluidFiller;
-import net.minecraft.item.ItemStack;
-import net.minecraftforge.common.util.ForgeDirection;
+import appeng.api.networking.*
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.util.AEColor
+import appeng.api.util.DimensionalCoord
+import extracells.api.IECTileEntity
+import extracells.tileentity.IListenerTile
+import extracells.tileentity.TileEntityFluidFiller
+import net.minecraft.item.ItemStack
+import net.minecraftforge.common.util.ForgeDirection
+import java.util.*
 
-import java.util.EnumSet;
+class ECFluidGridBlock(protected var host: IECTileEntity) : IGridBlock {
+    protected var grid: IGrid? = null
+    protected var usedChannels = 0
+    override fun getConnectableSides(): EnumSet<ForgeDirection> {
+        return EnumSet.of(ForgeDirection.DOWN, ForgeDirection.UP,
+                ForgeDirection.NORTH, ForgeDirection.EAST,
+                ForgeDirection.SOUTH, ForgeDirection.WEST)
+    }
 
-public class ECFluidGridBlock implements IGridBlock {
+    override fun getFlags(): EnumSet<GridFlags> {
+        return EnumSet.of(GridFlags.REQUIRE_CHANNEL)
+    }
 
-	protected IGrid grid;
-	protected int usedChannels;
-	protected IECTileEntity host;
+    override fun getGridColor(): AEColor {
+        return AEColor.Transparent
+    }
 
-	public ECFluidGridBlock(IECTileEntity _host) {
-		this.host = _host;
-	}
+    override fun getIdlePowerUsage(): Double {
+        return host.powerUsage
+    }
 
-	@Override
-	public final EnumSet<ForgeDirection> getConnectableSides() {
-		return EnumSet.of(ForgeDirection.DOWN, ForgeDirection.UP,
-				ForgeDirection.NORTH, ForgeDirection.EAST,
-				ForgeDirection.SOUTH, ForgeDirection.WEST);
-	}
+    override fun getLocation(): DimensionalCoord {
+        return host.location
+    }
 
-	@Override
-	public EnumSet<GridFlags> getFlags() {
-		return EnumSet.of(GridFlags.REQUIRE_CHANNEL);
-	}
+    override fun getMachine(): IGridHost {
+        return host
+    }
 
-	@Override
-	public final AEColor getGridColor() {
-		return AEColor.Transparent;
-	}
+    override fun getMachineRepresentation(): ItemStack {
+        val loc = location ?: return null
+        return ItemStack(loc.world.getBlock(loc.x, loc.y, loc.z), 1,
+                loc.world.getBlockMetadata(loc.x, loc.y, loc.z))
+    }
 
-	@Override
-	public double getIdlePowerUsage() {
-		return this.host.getPowerUsage();
-	}
+    override fun gridChanged() {}
+    override fun isWorldAccessible(): Boolean {
+        return true
+    }
 
-	@Override
-	public final DimensionalCoord getLocation() {
-		return this.host.getLocation();
-	}
-
-	@Override
-	public IGridHost getMachine() {
-		return this.host;
-	}
-
-	@Override
-	public ItemStack getMachineRepresentation() {
-		DimensionalCoord loc = getLocation();
-		if (loc == null)
-			return null;
-		return new ItemStack(loc.getWorld().getBlock(loc.x, loc.y, loc.z), 1,
-				loc.getWorld().getBlockMetadata(loc.x, loc.y, loc.z));
-	}
-
-	@Override
-	public void gridChanged() {}
-
-	@Override
-	public final boolean isWorldAccessible() {
-		return true;
-	}
-
-	@Override
-	public void onGridNotification(GridNotification notification) {}
-
-	@Override
-	public final void setNetworkStatus(IGrid _grid, int _usedChannels) {
-		if (this.grid != null && this.host instanceof IListenerTile
-				&& this.grid != _grid) {
-			((IListenerTile) this.host).updateGrid(this.grid, _grid);
-			this.grid = _grid;
-			this.usedChannels = _usedChannels;
-			if (this.host instanceof TileEntityFluidFiller
-					&& this.grid.getCache(IStorageGrid.class) != null)
-				((TileEntityFluidFiller) this.host).postChange(
-						((IStorageGrid) this.grid.getCache(IStorageGrid.class))
-								.getFluidInventory(), null, null);
-		} else {
-			this.grid = _grid;
-			this.usedChannels = _usedChannels;
-		}
-	}
+    override fun onGridNotification(notification: GridNotification) {}
+    override fun setNetworkStatus(_grid: IGrid, _usedChannels: Int) {
+        if (grid != null && host is IListenerTile
+                && grid !== _grid) {
+            (host as IListenerTile).updateGrid(grid, _grid)
+            grid = _grid
+            usedChannels = _usedChannels
+            if (host is TileEntityFluidFiller
+                    && grid!!.getCache<IGridCache?>(
+                            IStorageGrid::class.java) != null) (host as TileEntityFluidFiller).postChange(
+                    (grid!!.getCache<IGridCache>(IStorageGrid::class.java) as IStorageGrid)
+                            .fluidInventory, null, null)
+        } else {
+            grid = _grid
+            usedChannels = _usedChannels
+        }
+    }
 }

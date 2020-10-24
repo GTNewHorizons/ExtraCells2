@@ -1,13 +1,9 @@
-package extracells.tileentity;
+package extracells.tileentity
 
-import appeng.api.networking.IGrid;
+import appeng.api.networking.IGrid
 
-public interface IListenerTile {
-
-	void registerListener();
-
-	void removeListener();
-
-	void updateGrid(IGrid oldGrid, IGrid newGrid);
-
+interface IListenerTile {
+    fun registerListener()
+    fun removeListener()
+    fun updateGrid(oldGrid: IGrid?, newGrid: IGrid?)
 }

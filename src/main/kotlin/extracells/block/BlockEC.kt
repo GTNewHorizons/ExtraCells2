@@ -1,19 +1,13 @@
-package extracells.block;
+package extracells.block
 
-import net.minecraft.block.BlockContainer;
-import net.minecraft.block.material.Material;
+import net.minecraft.block.BlockContainer
+import net.minecraft.block.material.Material
 
-
-public abstract class BlockEC extends BlockContainer {
-
-    protected BlockEC(Material material, float hardness, float resistance) {
-        super(material);
-        setHardness(hardness);
-        setResistance(resistance);
+abstract class BlockEC : BlockContainer {
+    protected constructor(material: Material?, hardness: Float, resistance: Float) : super(material) {
+        setHardness(hardness)
+        setResistance(resistance)
     }
 
-    protected BlockEC(Material material) {
-        super(material);
-    }
-
+    protected constructor(material: Material?) : super(material) {}
 }

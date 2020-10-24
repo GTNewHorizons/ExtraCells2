@@ -1,12 +1,9 @@
-package extracells.api;
+package extracells.api
 
-import appeng.api.networking.IGridHost;
-import appeng.api.util.DimensionalCoord;
+import appeng.api.networking.IGridHost
+import appeng.api.util.DimensionalCoord
 
-public interface IECTileEntity extends IGridHost {
-
-	DimensionalCoord getLocation();
-
-	double getPowerUsage();
-
+interface IECTileEntity : IGridHost {
+    val location: DimensionalCoord
+    val powerUsage: Double
 }

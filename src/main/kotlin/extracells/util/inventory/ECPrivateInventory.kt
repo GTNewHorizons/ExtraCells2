@@ -1,172 +1,144 @@
-package extracells.util.inventory;
+package extracells.util.inventory
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagList
 
-public class ECPrivateInventory implements IInventory {
+open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _size: Int, _stackLimit: Int,
+                                                        _receiver: IInventoryUpdateReceiver? = null) : IInventory {
+    var slots: Array<ItemStack>
+    var customName: String
+    private val stackLimit: Int
+    private val receiver: IInventoryUpdateReceiver?
+    override fun closeInventory() {
+        // NOBODY needs this!
+    }
 
-	public ItemStack[] slots;
-	public String customName;
-	private final int stackLimit;
-	private final IInventoryUpdateReceiver receiver;
+    override fun decrStackSize(slotId: Int, amount: Int): ItemStack {
+        if (slots[slotId] == null) return null
+        val itemstack: ItemStack
+        return if (slots[slotId].stackSize <= amount) {
+            itemstack = slots[slotId]
+            slots[slotId] = null
+            markDirty()
+            itemstack
+        } else {
+            val temp = slots[slotId]
+            itemstack = temp.splitStack(amount)
+            slots[slotId] = temp
+            if (temp.stackSize == 0) {
+                slots[slotId] = null
+            } else {
+                slots[slotId] = temp
+            }
+            markDirty()
+            itemstack
+        }
+    }
 
-	public ECPrivateInventory(String _customName, int _size, int _stackLimit) {
-		this(_customName, _size, _stackLimit, null);
-	}
+    override fun getInventoryName(): String {
+        return customName
+    }
 
-	public ECPrivateInventory(String _customName, int _size, int _stackLimit,
-			IInventoryUpdateReceiver _receiver) {
-		this.slots = new ItemStack[_size];
-		this.customName = _customName;
-		this.stackLimit = _stackLimit;
-		this.receiver = _receiver;
-	}
+    override fun getInventoryStackLimit(): Int {
+        return stackLimit
+    }
 
-	@Override
-	public void closeInventory() {
-		// NOBODY needs this!
-	}
+    override fun getSizeInventory(): Int {
+        return slots.size
+    }
 
-	@Override
-	public ItemStack decrStackSize(int slotId, int amount) {
-		if (this.slots[slotId] == null)
-			return null;
-		ItemStack itemstack;
-		if (this.slots[slotId].stackSize <= amount) {
-			itemstack = this.slots[slotId];
-			this.slots[slotId] = null;
-			markDirty();
-			return itemstack;
-		} else {
-			ItemStack temp = this.slots[slotId];
-			itemstack = temp.splitStack(amount);
-			this.slots[slotId] = temp;
-			if (temp.stackSize == 0) {
-				this.slots[slotId] = null;
-			} else {
-				this.slots[slotId] = temp;
-			}
-			markDirty();
-			return itemstack;
-		}
-	}
+    override fun getStackInSlot(i: Int): ItemStack {
+        return slots[i]
+    }
 
-	@Override
-	public String getInventoryName() {
-		return this.customName;
-	}
+    override fun getStackInSlotOnClosing(slotId: Int): ItemStack {
+        return slots[slotId]
+    }
 
-	@Override
-	public int getInventoryStackLimit() {
-		return this.stackLimit;
-	}
+    override fun hasCustomInventoryName(): Boolean {
+        return false
+    }
 
-	@Override
-	public int getSizeInventory() {
-		return this.slots.length;
-	}
+    /**
+     * Increases the stack size of a slot.
+     *
+     * @param slotId
+     * ID of the slot
+     * @param amount
+     * amount to be drained
+     *
+     * @return the added Stack
+     */
+    fun incrStackSize(slotId: Int, amount: Int): ItemStack? {
+        val slot = slots[slotId] ?: return null
+        var stackLimit = inventoryStackLimit
+        if (stackLimit > slot.maxStackSize) stackLimit = slot.maxStackSize
+        val added = slot.copy()
+        added.stackSize = if (slot.stackSize + amount > stackLimit) stackLimit else amount
+        slot.stackSize += added.stackSize
+        return added
+    }
 
-	@Override
-	public ItemStack getStackInSlot(int i) {
-		return this.slots[i];
-	}
+    override fun isItemValidForSlot(i: Int, itemstack: ItemStack): Boolean {
+        return true
+    }
 
-	@Override
-	public ItemStack getStackInSlotOnClosing(int slotId) {
-		return this.slots[slotId];
-	}
+    override fun isUseableByPlayer(entityplayer: EntityPlayer): Boolean {
+        return true
+    }
 
-	@Override
-	public boolean hasCustomInventoryName() {
-		return false;
-	}
+    override fun markDirty() {
+        if (receiver != null) receiver.onInventoryChanged()
+    }
 
-	/**
-	 * Increases the stack size of a slot.
-	 *
-	 * @param slotId
-	 *        ID of the slot
-	 * @param amount
-	 *        amount to be drained
-	 *
-	 * @return the added Stack
-	 */
-	public ItemStack incrStackSize(int slotId, int amount) {
-		ItemStack slot = this.slots[slotId];
-		if (slot == null)
-			return null;
-		int stackLimit = getInventoryStackLimit();
-		if (stackLimit > slot.getMaxStackSize())
-			stackLimit = slot.getMaxStackSize();
-		ItemStack added = slot.copy();
-		added.stackSize = slot.stackSize + amount > stackLimit ? stackLimit
-				: amount;
-		slot.stackSize += added.stackSize;
-		return added;
-	}
+    override fun openInventory() {
+        // NOBODY needs this!
+    }
 
-	@Override
-	public boolean isItemValidForSlot(int i, ItemStack itemstack) {
-		return true;
-	}
+    fun readFromNBT(nbtList: NBTTagList?) {
+        if (nbtList == null) {
+            for (i in slots.indices) {
+                slots[i] = null
+            }
+            return
+        }
+        for (i in 0 until nbtList.tagCount()) {
+            val nbttagcompound = nbtList.getCompoundTagAt(i)
+            val j: Int = nbttagcompound.getByte("Slot") and 255
+            if (j >= 0 && j < slots.size) {
+                slots[j] = ItemStack.loadItemStackFromNBT(nbttagcompound)
+            }
+        }
+    }
 
-	@Override
-	public boolean isUseableByPlayer(EntityPlayer entityplayer) {
-		return true;
-	}
+    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack) {
+        if (itemstack != null && itemstack.stackSize > inventoryStackLimit) {
+            itemstack.stackSize = inventoryStackLimit
+        }
+        slots[slotId] = itemstack
+        markDirty()
+    }
 
-	@Override
-	public void markDirty() {
-		if (this.receiver != null)
-			this.receiver.onInventoryChanged();
-	}
+    fun writeToNBT(): NBTTagList {
+        val nbtList = NBTTagList()
+        for (i in slots.indices) {
+            if (slots[i] != null) {
+                val nbttagcompound = NBTTagCompound()
+                nbttagcompound.setByte("Slot", i.toByte())
+                slots[i].writeToNBT(nbttagcompound)
+                nbtList.appendTag(nbttagcompound)
+            }
+        }
+        return nbtList
+    }
 
-	@Override
-	public void openInventory() {
-		// NOBODY needs this!
-	}
-
-	public void readFromNBT(NBTTagList nbtList) {
-		if(nbtList == null){
-			for(int i = 0; i < slots.length; i++){
-				slots[i] = null;
-			}
-			return;
-		}
-		for (int i = 0; i < nbtList.tagCount(); ++i) {
-			NBTTagCompound nbttagcompound = nbtList.getCompoundTagAt(i);
-			int j = nbttagcompound.getByte("Slot") & 255;
-
-			if (j >= 0 && j < this.slots.length) {
-				this.slots[j] = ItemStack.loadItemStackFromNBT(nbttagcompound);
-			}
-		}
-	}
-
-	@Override
-	public void setInventorySlotContents(int slotId, ItemStack itemstack) {
-		if (itemstack != null && itemstack.stackSize > getInventoryStackLimit()) {
-			itemstack.stackSize = getInventoryStackLimit();
-		}
-		this.slots[slotId] = itemstack;
-
-		markDirty();
-	}
-
-	public NBTTagList writeToNBT() {
-		NBTTagList nbtList = new NBTTagList();
-
-		for (int i = 0; i < this.slots.length; ++i) {
-			if (this.slots[i] != null) {
-				NBTTagCompound nbttagcompound = new NBTTagCompound();
-				nbttagcompound.setByte("Slot", (byte) i);
-				this.slots[i].writeToNBT(nbttagcompound);
-				nbtList.appendTag(nbttagcompound);
-			}
-		}
-		return nbtList;
-	}
+    init {
+        slots = arrayOfNulls(_size)
+        customName = _customName
+        stackLimit = _stackLimit
+        receiver = _receiver
+    }
 }

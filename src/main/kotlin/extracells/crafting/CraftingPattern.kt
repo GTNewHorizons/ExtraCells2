@@ -1,233 +1,197 @@
-package extracells.crafting;
+package extracells.crafting
 
-import appeng.api.AEApi;
-import appeng.api.networking.crafting.ICraftingPatternDetails;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IAEItemStack;
-import extracells.api.crafting.IFluidCraftingPatternDetails;
-import extracells.registries.ItemEnum;
-import net.minecraft.inventory.InventoryCrafting;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.world.World;
-import net.minecraftforge.fluids.FluidContainerRegistry;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidContainerItem;
+import appeng.api.AEApi
+import appeng.api.networking.crafting.ICraftingPatternDetails
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IAEItemStack
+import extracells.api.crafting.IFluidCraftingPatternDetails
+import extracells.registries.ItemEnum
+import net.minecraft.inventory.InventoryCrafting
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.world.World
+import net.minecraftforge.fluids.FluidContainerRegistry
+import net.minecraftforge.fluids.FluidStack
+import net.minecraftforge.fluids.IFluidContainerItem
 
-public class CraftingPattern implements IFluidCraftingPatternDetails,
-		Comparable<CraftingPattern> {
+open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCraftingPatternDetails, Comparable<CraftingPattern> {
+    private var fluidsCondensed: Array<IAEFluidStack?>? = null
+    private var fluids: Array<IAEFluidStack?>? = null
+    override fun canSubstitute(): Boolean {
+        return pattern!!.canSubstitute()
+    }
 
-	protected final ICraftingPatternDetails pattern;
+    fun compareInt(int1: Int, int2: Int): Int {
+        if (int1 == int2) return 0
+        return if (int1 < int2) -1 else 1
+    }
 
-	private IAEFluidStack[] fluidsCondensed = null;
-	private IAEFluidStack[] fluids = null;
+    override fun compareTo(o: CraftingPattern): Int {
+        return compareInt(o.priority, this.priority)
+    }
 
-	public CraftingPattern(ICraftingPatternDetails _pattern) {
-		this.pattern = _pattern;
-	}
+    override fun equals(obj: Any?): Boolean {
+        if (obj == null) return false
+        if (this.javaClass != obj.javaClass) return false
+        val other = obj as CraftingPattern
+        return if (pattern != null && other.pattern != null) pattern == other.pattern else false
+    }
 
-	@Override
-	public boolean canSubstitute() {
-		return this.pattern.canSubstitute();
-	}
+    override val condensedFluidInputs: Array<IAEFluidStack?>?
+        get() {
+            if (fluidsCondensed == null) {
+                condensedInputs
+            }
+            return fluidsCondensed
+        }
 
-	public int compareInt(int int1, int int2) {
-		if (int1 == int2)
-			return 0;
-		if (int1 < int2)
-			return -1;
-		return 1;
-	}
+    override fun getCondensedInputs(): Array<IAEItemStack> {
+        return removeFluidContainers(pattern!!.condensedInputs, true)
+    }
 
-	@Override
-	public int compareTo(CraftingPattern o) {
-		return compareInt(o.getPriority(), this.getPriority());
-	}
+    override fun getCondensedOutputs(): Array<IAEItemStack> {
+        return pattern!!.condensedOutputs
+    }
 
-	@Override
-	public boolean equals(Object obj) {
-		if (obj == null)
-			return false;
-		if (this.getClass() != obj.getClass())
-			return false;
-		CraftingPattern other = (CraftingPattern) obj;
-		if (this.pattern != null && other.pattern != null)
-			return this.pattern.equals(other.pattern);
-		return false;
-	}
+    override val fluidInputs: Array<IAEFluidStack?>?
+        get() {
+            if (fluids == null) {
+                inputs
+            }
+            return fluids
+        }
 
-	@Override
-	public IAEFluidStack[] getCondensedFluidInputs() {
-		if (this.fluidsCondensed == null) {
-			getCondensedInputs();
-		}
-		return this.fluidsCondensed;
-	}
+    override fun getInputs(): Array<IAEItemStack> {
+        return removeFluidContainers(pattern!!.inputs, false)
+    }
 
-	@Override
-	public IAEItemStack[] getCondensedInputs() {
-		return removeFluidContainers(this.pattern.getCondensedInputs(), true);
-	}
+    override fun getOutput(craftingInv: InventoryCrafting, world: World): ItemStack {
+        val input = pattern!!.inputs
+        for (i in input.indices) {
+            val stack = input[i]
+            if (stack != null
+                    && FluidContainerRegistry.isFilledContainer(stack
+                            .itemStack)) {
+                try {
+                    craftingInv.setInventorySlotContents(i,
+                            input[i].itemStack)
+                } catch (e: Throwable) {
+                }
+            } else if (stack != null
+                    && stack.item is IFluidContainerItem) {
+                try {
+                    craftingInv.setInventorySlotContents(i,
+                            input[i].itemStack)
+                } catch (e: Throwable) {
+                }
+            }
+        }
+        val returnStack = pattern.getOutput(craftingInv, world)
+        for (i in input.indices) {
+            val stack = input[i]
+            if (stack != null
+                    && FluidContainerRegistry.isFilledContainer(stack
+                            .itemStack)) {
+                craftingInv.setInventorySlotContents(i, null)
+            } else if (stack != null
+                    && stack.item is IFluidContainerItem) {
+                craftingInv.setInventorySlotContents(i, null)
+            }
+        }
+        return returnStack
+    }
 
-	@Override
-	public IAEItemStack[] getCondensedOutputs() {
-		return this.pattern.getCondensedOutputs();
-	}
+    override fun getOutputs(): Array<IAEItemStack> {
+        return pattern!!.outputs
+    }
 
-	@Override
-	public IAEFluidStack[] getFluidInputs() {
-		if (this.fluids == null) {
-			getInputs();
-		}
-		return this.fluids;
-	}
+    override fun getPattern(): ItemStack {
+        val p = pattern!!.pattern ?: return null
+        val s = ItemStack(ItemEnum.CRAFTINGPATTERN.item)
+        val tag = NBTTagCompound()
+        tag.setTag("item", p.writeToNBT(NBTTagCompound()))
+        s.tagCompound = tag
+        return s
+    }
 
-	@Override
-	public IAEItemStack[] getInputs() {
-		return removeFluidContainers(this.pattern.getInputs(), false);
-	}
+    override fun getPriority(): Int {
+        return pattern!!.priority
+    }
 
-	@Override
-	public ItemStack getOutput(InventoryCrafting craftingInv, World world) {
-		IAEItemStack[] input = this.pattern.getInputs();
-		for (int i = 0; i < input.length; i++) {
-			IAEItemStack stack = input[i];
-			if (stack != null
-					&& FluidContainerRegistry.isFilledContainer(stack
-							.getItemStack())) {
-				try {
-					craftingInv.setInventorySlotContents(i,
-							input[i].getItemStack());
-				} catch (Throwable e) {}
-			} else if (stack != null
-					&& stack.getItem() instanceof IFluidContainerItem) {
-				try {
-					craftingInv.setInventorySlotContents(i,
-							input[i].getItemStack());
-				} catch (Throwable e) {}
-			}
-		}
-		ItemStack returnStack = this.pattern.getOutput(craftingInv, world);
-		for (int i = 0; i < input.length; i++) {
-			IAEItemStack stack = input[i];
-			if (stack != null
-					&& FluidContainerRegistry.isFilledContainer(stack
-							.getItemStack())) {
-				craftingInv.setInventorySlotContents(i, null);
-			} else if (stack != null
-					&& stack.getItem() instanceof IFluidContainerItem) {
-				craftingInv.setInventorySlotContents(i, null);
-			}
-		}
-		return returnStack;
-	}
+    override fun isCraftable(): Boolean {
+        return pattern!!.isCraftable
+    }
 
-	@Override
-	public IAEItemStack[] getOutputs() {
-		return this.pattern.getOutputs();
-	}
+    override fun isValidItemForSlot(slotIndex: Int, itemStack: ItemStack,
+                                    world: World): Boolean {
+        return pattern!!.isValidItemForSlot(slotIndex, itemStack, world)
+    }
 
-	@Override
-	public ItemStack getPattern() {
-		ItemStack p = this.pattern.getPattern();
-		if (p == null)
-			return null;
-		ItemStack s = new ItemStack(ItemEnum.CRAFTINGPATTERN.getItem());
-		NBTTagCompound tag = new NBTTagCompound();
-		tag.setTag("item", p.writeToNBT(new NBTTagCompound()));
-		s.setTagCompound(tag);
-		return s;
-	}
+    fun removeFluidContainers(requirements: Array<IAEItemStack?>,
+                              isCondenced: Boolean): Array<IAEItemStack> {
+        var returnStack = arrayOfNulls<IAEItemStack>(requirements.size)
+        val fluidStacks = arrayOfNulls<IAEFluidStack>(requirements.size)
+        var removed = 0
+        var i = 0
+        for (currentRequirement in requirements) {
+            if (currentRequirement != null) {
+                val current = currentRequirement.itemStack
+                current.stackSize = 1
+                var fluid: FluidStack? = null
+                if (FluidContainerRegistry.isFilledContainer(current)) {
+                    fluid = FluidContainerRegistry
+                            .getFluidForFilledItem(current)
+                } else if (currentRequirement.item is IFluidContainerItem) {
+                    fluid = (currentRequirement.item as IFluidContainerItem)
+                            .getFluid(current)
+                }
+                if (fluid == null) {
+                    returnStack[i] = currentRequirement
+                } else {
+                    removed++
+                    fluidStacks[i] = AEApi
+                            .instance()
+                            .storage()
+                            .createFluidStack(
+                                    FluidStack(
+                                            fluid.getFluid(),
+                                            (fluid.amount * currentRequirement
+                                                    .stackSize).toInt()))
+                }
+            }
+            i++
+        }
+        if (isCondenced) {
+            var i2 = 0
+            val fluids = arrayOfNulls<IAEFluidStack>(removed)
+            for (fluid in fluidStacks) {
+                if (fluid != null) {
+                    fluids[i2] = fluid
+                    i2++
+                }
+            }
+            var i3 = 0
+            val items = arrayOfNulls<IAEItemStack>(requirements.size
+                    - removed)
+            for (item in returnStack) {
+                if (item != null) {
+                    items[i3] = item
+                    i3++
+                }
+            }
+            returnStack = items
+            fluidsCondensed = fluids
+        } else {
+            fluids = fluidStacks
+        }
+        return returnStack
+    }
 
-	@Override
-	public int getPriority() {
-		return this.pattern.getPriority();
-	}
+    override fun setPriority(priority: Int) {
+        pattern!!.priority = priority
+    }
 
-	@Override
-	public boolean isCraftable() {
-		return this.pattern.isCraftable();
-	}
-
-	@Override
-	public boolean isValidItemForSlot(int slotIndex, ItemStack itemStack,
-			World world) {
-		return this.pattern.isValidItemForSlot(slotIndex, itemStack, world);
-	}
-
-	public IAEItemStack[] removeFluidContainers(IAEItemStack[] requirements,
-			boolean isCondenced) {
-
-		IAEItemStack[] returnStack = new IAEItemStack[requirements.length];
-
-		IAEFluidStack[] fluidStacks = new IAEFluidStack[requirements.length];
-
-		int removed = 0;
-		int i = 0;
-		for (IAEItemStack currentRequirement : requirements) {
-
-			if (currentRequirement != null) {
-				ItemStack current = currentRequirement.getItemStack();
-				current.stackSize = 1;
-				FluidStack fluid = null;
-				if (FluidContainerRegistry.isFilledContainer(current)) {
-					fluid = FluidContainerRegistry
-							.getFluidForFilledItem(current);
-				} else if (currentRequirement.getItem() instanceof IFluidContainerItem) {
-					fluid = ((IFluidContainerItem) currentRequirement.getItem())
-							.getFluid(current);
-				}
-				if (fluid == null) {
-					returnStack[i] = currentRequirement;
-				} else {
-					removed++;
-					fluidStacks[i] = AEApi
-							.instance()
-							.storage()
-							.createFluidStack(
-									new FluidStack(
-											fluid.getFluid(),
-											(int) (fluid.amount * currentRequirement
-													.getStackSize())));
-				}
-			}
-			i++;
-		}
-
-		if (isCondenced) {
-			int i2 = 0;
-			IAEFluidStack[] fluids = new IAEFluidStack[removed];
-			for (IAEFluidStack fluid : fluidStacks) {
-				if (fluid != null) {
-					fluids[i2] = fluid;
-					i2++;
-				}
-			}
-			int i3 = 0;
-			IAEItemStack[] items = new IAEItemStack[requirements.length
-					- removed];
-			for (IAEItemStack item : returnStack) {
-				if (item != null) {
-					items[i3] = item;
-					i3++;
-				}
-			}
-			returnStack = items;
-			this.fluidsCondensed = fluids;
-		} else {
-			this.fluids = fluidStacks;
-		}
-		return returnStack;
-	}
-
-	@Override
-	public void setPriority(int priority) {
-		this.pattern.setPriority(priority);
-	}
-
-	@Override
-	public int hashCode(){
-		return this.pattern.hashCode();
-	}
-
+    override fun hashCode(): Int {
+        return pattern.hashCode()
+    }
 }

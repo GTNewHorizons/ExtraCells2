@@ -1,136 +1,108 @@
-package extracells.util.inventory;
+package extracells.util.inventory
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
 
-public class ECCellInventory implements IInventory {
+class ECCellInventory(private val storage: ItemStack, private val tagId: String, private val size: Int,
+                      private val stackLimit: Int) : IInventory {
+    private val tagCompound: NBTTagCompound
+    private var slots: Array<ItemStack>
+    private var dirty = false
+    override fun closeInventory() {
+        if (dirty) {
+            for (i in slots.indices) {
+                tagCompound.removeTag("ItemStack#$i")
+                val content = slots[i]
+                if (content != null) {
+                    tagCompound.setTag("ItemStack#$i",
+                            NBTTagCompound())
+                    content.writeToNBT(tagCompound
+                            .getCompoundTag("ItemStack#$i"))
+                }
+            }
+        }
+    }
 
-	private final ItemStack storage;
-	private final String tagId;
-	private final NBTTagCompound tagCompound;
-	private final int size;
-	private final int stackLimit;
-	private ItemStack[] slots;
-	private boolean dirty = false;
+    override fun decrStackSize(slotId: Int, amount: Int): ItemStack {
+        val slotContent = slots[slotId] ?: return null
+        val stackSize = slotContent.stackSize
+        if (stackSize <= 0) return null
+        val newAmount: Int
+        if (amount >= stackSize) {
+            newAmount = stackSize
+            slots[slotId] = null
+        } else {
+            slots[slotId].stackSize -= amount
+            newAmount = amount
+        }
+        val toReturn = slotContent.copy()
+        toReturn.stackSize = amount
+        markDirty()
+        return toReturn
+    }
 
-	public ECCellInventory(ItemStack _storage, String _tagId, int _size,
-			int _stackLimit) {
-		this.storage = _storage;
-		this.tagId = _tagId;
-		this.size = _size;
-		this.stackLimit = _stackLimit;
-		if (!this.storage.hasTagCompound())
-			this.storage.setTagCompound(new NBTTagCompound());
-		this.storage.getTagCompound().setTag(this.tagId,
-				this.storage.getTagCompound().getCompoundTag(this.tagId));
-		this.tagCompound = this.storage.getTagCompound().getCompoundTag(
-				this.tagId);
-		openInventory();
-	}
+    override fun getInventoryName(): String {
+        return ""
+    }
 
-	@Override
-	public void closeInventory() {
-		if (this.dirty) {
-			for (int i = 0; i < this.slots.length; i++) {
-				this.tagCompound.removeTag("ItemStack#" + i);
-				ItemStack content = this.slots[i];
-				if (content != null) {
-					this.tagCompound.setTag("ItemStack#" + i,
-							new NBTTagCompound());
-					content.writeToNBT(this.tagCompound
-							.getCompoundTag("ItemStack#" + i));
-				}
-			}
-		}
-	}
+    override fun getInventoryStackLimit(): Int {
+        return stackLimit
+    }
 
-	@Override
-	public ItemStack decrStackSize(int slotId, int amount) {
-		ItemStack slotContent = this.slots[slotId];
-		if (slotContent == null)
-			return null;
-		int stackSize = slotContent.stackSize;
-		if (stackSize <= 0)
-			return null;
-		int newAmount;
-		if (amount >= stackSize) {
-			newAmount = stackSize;
-			this.slots[slotId] = null;
-		} else {
-			this.slots[slotId].stackSize -= amount;
-			newAmount = amount;
-		}
-		ItemStack toReturn = slotContent.copy();
-		toReturn.stackSize = amount;
-		markDirty();
+    override fun getSizeInventory(): Int {
+        return size
+    }
 
-		return toReturn;
-	}
+    override fun getStackInSlot(slotId: Int): ItemStack {
+        return slots[slotId]
+    }
 
-	@Override
-	public String getInventoryName() {
-		return "";
-	}
+    override fun getStackInSlotOnClosing(slotId: Int): ItemStack {
+        return getStackInSlot(slotId)
+    }
 
-	@Override
-	public int getInventoryStackLimit() {
-		return this.stackLimit;
-	}
+    override fun hasCustomInventoryName(): Boolean {
+        return false
+    }
 
-	@Override
-	public int getSizeInventory() {
-		return this.size;
-	}
+    override fun isItemValidForSlot(slotId: Int, itemStack: ItemStack): Boolean {
+        return true
+    }
 
-	@Override
-	public ItemStack getStackInSlot(int slotId) {
-		return this.slots[slotId];
-	}
+    override fun isUseableByPlayer(entityPlayer: EntityPlayer): Boolean {
+        return true
+    }
 
-	@Override
-	public ItemStack getStackInSlotOnClosing(int slotId) {
-		return getStackInSlot(slotId);
-	}
+    override fun markDirty() {
+        dirty = true
+        closeInventory()
+        dirty = false
+    }
 
-	@Override
-	public boolean hasCustomInventoryName() {
-		return false;
-	}
+    override fun openInventory() {
+        slots = arrayOfNulls(size)
+        for (i in slots.indices) {
+            slots[i] = ItemStack.loadItemStackFromNBT(tagCompound
+                    .getCompoundTag("ItemStack#$i"))
+        }
+    }
 
-	@Override
-	public boolean isItemValidForSlot(int slotId, ItemStack itemStack) {
-		return true;
-	}
+    override fun setInventorySlotContents(slotId: Int, content: ItemStack) {
+        val slotContent = slots[slotId]
+        if (slotContent != content) {
+            slots[slotId] = content
+            markDirty()
+        }
+    }
 
-	@Override
-	public boolean isUseableByPlayer(EntityPlayer entityPlayer) {
-		return true;
-	}
-
-	@Override
-	public void markDirty() {
-		this.dirty = true;
-		closeInventory();
-		this.dirty = false;
-	}
-
-	@Override
-	public void openInventory() {
-		this.slots = new ItemStack[this.size];
-		for (int i = 0; i < this.slots.length; i++) {
-			this.slots[i] = ItemStack.loadItemStackFromNBT(this.tagCompound
-					.getCompoundTag("ItemStack#" + i));
-		}
-	}
-
-	@Override
-	public void setInventorySlotContents(int slotId, ItemStack content) {
-		ItemStack slotContent = this.slots[slotId];
-		if (slotContent != content) {
-			this.slots[slotId] = content;
-			markDirty();
-		}
-	}
+    init {
+        if (!storage.hasTagCompound()) storage.tagCompound = NBTTagCompound()
+        storage.tagCompound.setTag(tagId,
+                storage.tagCompound.getCompoundTag(tagId))
+        tagCompound = storage.tagCompound.getCompoundTag(
+                tagId)
+        openInventory()
+    }
 }

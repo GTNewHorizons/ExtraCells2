@@ -1,29 +1,22 @@
-package extracells.container.slot;
+package extracells.container.slot
 
-import appeng.api.implementations.guiobjects.INetworkTool;
-import appeng.api.implementations.items.IUpgradeModule;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import appeng.api.implementations.guiobjects.INetworkTool
+import appeng.api.implementations.items.IUpgradeModule
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.Slot
+import net.minecraft.item.ItemStack
 
-public class SlotNetworkTool extends Slot {
+class SlotNetworkTool(inventory: INetworkTool?, index: Int, x: Int, y: Int) : Slot(inventory, index, x, y) {
+    var inventory: IInventory
+    override fun isItemValid(itemStack: ItemStack): Boolean {
+        if (itemStack == null) return false
+        val item = itemStack.item
+        if (item !is IUpgradeModule) return false
+        val upgradeModule = item as IUpgradeModule
+        return upgradeModule.getType(itemStack) != null
+    }
 
-	IInventory inventory;
-
-	public SlotNetworkTool(INetworkTool inventory, int index, int x, int y) {
-		super(inventory, index, x, y);
-		this.inventory = inventory;
-	}
-
-	@Override
-	public boolean isItemValid(ItemStack itemStack) {
-		if (itemStack == null)
-			return false;
-		Item item = itemStack.getItem();
-		if (!(item instanceof IUpgradeModule))
-			return false;
-		IUpgradeModule upgradeModule = (IUpgradeModule) item;
-		return upgradeModule.getType(itemStack) != null;
-	}
+    init {
+        this.inventory = inventory
+    }
 }

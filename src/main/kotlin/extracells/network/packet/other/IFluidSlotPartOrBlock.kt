@@ -1,9 +1,8 @@
-package extracells.network.packet.other;
+package extracells.network.packet.other
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.fluids.Fluid;
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraftforge.fluids.Fluid
 
-public interface IFluidSlotPartOrBlock {
-
-	void setFluid(int _index, Fluid _fluid, EntityPlayer _player);
+interface IFluidSlotPartOrBlock {
+    fun setFluid(_index: Int, _fluid: Fluid?, _player: EntityPlayer?)
 }

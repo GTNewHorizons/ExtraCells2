@@ -1,12 +1,9 @@
-package extracells.api;
+package extracells.api
 
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.ItemStack;
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.ItemStack
 
-public interface IPortableFluidStorageCell extends IFluidStorageCell {
-
-	boolean hasPower(EntityPlayer player, double amount, ItemStack is);
-
-	boolean usePower(EntityPlayer player, double amount, ItemStack is);
-
+interface IPortableFluidStorageCell : IFluidStorageCell {
+    fun hasPower(player: EntityPlayer?, amount: Double, `is`: ItemStack?): Boolean
+    fun usePower(player: EntityPlayer?, amount: Double, `is`: ItemStack?): Boolean
 }

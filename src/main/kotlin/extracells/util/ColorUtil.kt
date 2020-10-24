@@ -1,22 +1,21 @@
-package extracells.util;
+package extracells.util
 
-import java.awt.*;
+import java.awt.Color
 
-public class ColorUtil {
+object ColorUtil {
+    fun getInvertedColor(color: Color): Color {
+        return Color(0xFFFFFF - color.rgb)
+    }
 
-	public static Color getInvertedColor(Color color) {
-		return new Color(0xFFFFFF - color.getRGB());
-	}
+    fun getInvertedColor(colorCode: Int): Color {
+        return getInvertedColor(Color(colorCode))
+    }
 
-	public static Color getInvertedColor(int colorCode) {
-		return getInvertedColor(new Color(colorCode));
-	}
+    fun getInvertedInt(color: Color): Int {
+        return getInvertedColor(color).rgb
+    }
 
-	public static int getInvertedInt(Color color) {
-		return getInvertedColor(color).getRGB();
-	}
-
-	public static int getInvertedInt(int colorCode) {
-		return getInvertedColor(colorCode).getRGB();
-	}
+    fun getInvertedInt(colorCode: Int): Int {
+        return getInvertedColor(colorCode).rgb
+    }
 }

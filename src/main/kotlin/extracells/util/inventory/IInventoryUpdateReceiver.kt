@@ -1,6 +1,5 @@
-package extracells.util.inventory;
+package extracells.util.inventory
 
-public interface IInventoryUpdateReceiver {
-
-	void onInventoryChanged();
+interface IInventoryUpdateReceiver {
+    fun onInventoryChanged()
 }

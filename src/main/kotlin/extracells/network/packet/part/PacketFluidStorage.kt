@@ -1,156 +1,128 @@
-package extracells.network.packet.part;
+package extracells.network.packet.part
 
-import appeng.api.AEApi;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IItemList;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.container.ContainerFluidStorage;
-import extracells.gui.GuiFluidStorage;
-import extracells.network.AbstractPacket;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import appeng.api.AEApi
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IItemList
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.container.ContainerFluidStorage
+import extracells.gui.GuiFluidStorage
+import extracells.network.AbstractPacket
+import io.netty.buffer.ByteBuf
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Gui
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
 
-public class PacketFluidStorage extends AbstractPacket {
+class PacketFluidStorage : AbstractPacket {
+    private var fluidStackList: IItemList<IAEFluidStack?>? = null
+    private var currentFluid: Fluid? = null
+    private var hasTermHandler = false
 
-	private IItemList<IAEFluidStack> fluidStackList;
-	private Fluid currentFluid;
-	private boolean hasTermHandler;
+    constructor() {}
+    constructor(_player: EntityPlayer?) : super(_player) {
+        mode = 2
+    }
 
-	@SuppressWarnings("unused")
-	public PacketFluidStorage() {}
+    constructor(_player: EntityPlayer?, _hasTermHandler: Boolean) : super(_player) {
+        mode = 3
+        hasTermHandler = _hasTermHandler
+    }
 
-	public PacketFluidStorage(EntityPlayer _player) {
-		super(_player);
-		this.mode = 2;
-	}
+    constructor(_player: EntityPlayer?, _currentFluid: Fluid?) : super(_player) {
+        mode = 1
+        currentFluid = _currentFluid
+    }
 
-	public PacketFluidStorage(EntityPlayer _player, boolean _hasTermHandler) {
-		super(_player);
-		this.mode = 3;
-		this.hasTermHandler = _hasTermHandler;
-	}
+    constructor(_player: EntityPlayer?, _list: IItemList<IAEFluidStack?>?) : super(_player) {
+        mode = 0
+        fluidStackList = _list
+    }
 
-	public PacketFluidStorage(EntityPlayer _player, Fluid _currentFluid) {
-		super(_player);
-		this.mode = 1;
-		this.currentFluid = _currentFluid;
-	}
-
-	public PacketFluidStorage(EntityPlayer _player, IItemList<IAEFluidStack> _list) {
-		super(_player);
-		this.mode = 0;
-		this.fluidStackList = _list;
-	}
-
-	@Override
-	public void execute() {
-		switch (this.mode) {
-		case 0:
-			case0();
-			break;
-		case 1:
-			if (this.player != null && this.player.openContainer instanceof ContainerFluidStorage) {
-				((ContainerFluidStorage) this.player.openContainer).receiveSelectedFluid(this.currentFluid);
-//			}else if (this.player != null && Integration.Mods.MEKANISMGAS.isEnabled() && this.player.openContainer instanceof ContainerGasStorage) {
+    override fun execute() {
+        when (mode) {
+            0 -> case0()
+            1 -> if (player != null && player!!.openContainer is ContainerFluidStorage) {
+                (player!!.openContainer as ContainerFluidStorage).receiveSelectedFluid(currentFluid)
+                //			}else if (this.player != null && Integration.Mods.MEKANISMGAS.isEnabled() && this.player.openContainer instanceof ContainerGasStorage) {
 //				((ContainerGasStorage) this.player.openContainer).receiveSelectedFluid(this.currentFluid);
-			}
-			break;
-		case 2:
-			if (this.player != null) {
-				if (!this.player.worldObj.isRemote) {
-					if (this.player.openContainer instanceof ContainerFluidStorage) {
-						((ContainerFluidStorage) this.player.openContainer).forceFluidUpdate();
-						((ContainerFluidStorage) this.player.openContainer).doWork();
-//					}else if (this.player.openContainer instanceof ContainerGasStorage && Integration.Mods.MEKANISMGAS.isEnabled()) {
+            }
+            2 -> if (player != null) {
+                if (!player!!.worldObj.isRemote) {
+                    if (player!!.openContainer is ContainerFluidStorage) {
+                        (player!!.openContainer as ContainerFluidStorage).forceFluidUpdate()
+                        (player!!.openContainer as ContainerFluidStorage).doWork()
+                        //					}else if (this.player.openContainer instanceof ContainerGasStorage && Integration.Mods.MEKANISMGAS.isEnabled()) {
 //						((ContainerGasStorage) this.player.openContainer).forceFluidUpdate();
 //						((ContainerGasStorage) this.player.openContainer).doWork();
-					}
-				}
-			}
-			break;
-		case 3:
-			case3();
-			break;
-		}
-	}
+                    }
+                }
+            }
+            3 -> case3()
+        }
+    }
 
-	@SideOnly(Side.CLIENT)
-	private void case0(){
-		if (this.player != null && this.player.isClientWorld()) {
-			Gui gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof GuiFluidStorage) {
-				ContainerFluidStorage container = (ContainerFluidStorage) ((GuiFluidStorage) gui).inventorySlots;
-				container.updateFluidList(this.fluidStackList);
-//			}else if (gui instanceof GuiGasStorage  && Integration.Mods.MEKANISMGAS.isEnabled()) {
+    @SideOnly(Side.CLIENT)
+    private fun case0() {
+        if (player != null && player!!.isClientWorld) {
+            val gui: Gui = Minecraft.getMinecraft().currentScreen
+            if (gui is GuiFluidStorage) {
+                val container = gui.inventorySlots as ContainerFluidStorage
+                container.updateFluidList(fluidStackList)
+                //			}else if (gui instanceof GuiGasStorage  && Integration.Mods.MEKANISMGAS.isEnabled()) {
 //				ContainerGasStorage container = (ContainerGasStorage) ((GuiGasStorage) gui).inventorySlots;
 //				container.updateFluidList(this.fluidStackList);
-			}
-		}
-	}
+            }
+        }
+    }
 
-	@SideOnly(Side.CLIENT)
-	private void case3(){
-		if (this.player != null && this.player.isClientWorld()) {
-			Gui gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof GuiFluidStorage) {
-				ContainerFluidStorage container = (ContainerFluidStorage) ((GuiFluidStorage) gui).inventorySlots;
-				container.hasWirelessTermHandler = this.hasTermHandler;
-//			}else if (gui instanceof GuiGasStorage && Integration.Mods.MEKANISMGAS.isEnabled()) {
+    @SideOnly(Side.CLIENT)
+    private fun case3() {
+        if (player != null && player!!.isClientWorld) {
+            val gui: Gui = Minecraft.getMinecraft().currentScreen
+            if (gui is GuiFluidStorage) {
+                val container = gui.inventorySlots as ContainerFluidStorage
+                container.hasWirelessTermHandler = hasTermHandler
+                //			}else if (gui instanceof GuiGasStorage && Integration.Mods.MEKANISMGAS.isEnabled()) {
 //				ContainerGasStorage container = (ContainerGasStorage) ((GuiGasStorage) gui).inventorySlots;
 //				container.hasWirelessTermHandler = this.hasTermHandler;
-			}
-		}
-	}
+            }
+        }
+    }
 
-	@Override
-	public void readData(ByteBuf in) {
-		switch (this.mode) {
-		case 0:
-			this.fluidStackList = AEApi.instance().storage().createFluidList();
-			while (in.readableBytes() > 0) {
-				Fluid fluid = readFluid(in);
-				long fluidAmount = in.readLong();
-				if (fluid != null) {
-					IAEFluidStack stack = AEApi.instance().storage().createFluidStack(new FluidStack(fluid, 1));
-					stack.setStackSize(fluidAmount);
-					this.fluidStackList.add(stack);
-				}
-			}
-			break;
-		case 1:
-			this.currentFluid = readFluid(in);
-			break;
-		case 2:
-			break;
-		case 3:
-			this.hasTermHandler = in.readBoolean();
-			break;
-		}
-	}
+    override fun readData(`in`: ByteBuf) {
+        when (mode) {
+            0 -> {
+                fluidStackList = AEApi.instance().storage().createFluidList()
+                while (`in`.readableBytes() > 0) {
+                    val fluid: Fluid = AbstractPacket.Companion.readFluid(`in`)
+                    val fluidAmount = `in`.readLong()
+                    if (fluid != null) {
+                        val stack = AEApi.instance().storage().createFluidStack(FluidStack(fluid, 1))
+                        stack.stackSize = fluidAmount
+                        fluidStackList.add(stack)
+                    }
+                }
+            }
+            1 -> currentFluid = AbstractPacket.Companion.readFluid(`in`)
+            2 -> {
+            }
+            3 -> hasTermHandler = `in`.readBoolean()
+        }
+    }
 
-	@Override
-	public void writeData(ByteBuf out) {
-		switch (this.mode) {
-		case 0:
-			for (IAEFluidStack stack : this.fluidStackList) {
-				FluidStack fluidStack = stack.getFluidStack();
-				writeFluid(fluidStack.getFluid(), out);
-				out.writeLong(fluidStack.amount);
-			}
-			break;
-		case 1:
-			writeFluid(this.currentFluid, out);
-			break;
-		case 2:
-			break;
-		case 3:
-			out.writeBoolean(this.hasTermHandler);
-			break;
-		}
-	}
+    override fun writeData(out: ByteBuf) {
+        when (mode) {
+            0 -> for (stack in fluidStackList!!) {
+                val fluidStack = stack!!.fluidStack
+                AbstractPacket.Companion.writeFluid(fluidStack.getFluid(), out)
+                out.writeLong(fluidStack.amount.toLong())
+            }
+            1 -> AbstractPacket.Companion.writeFluid(currentFluid, out)
+            2 -> {
+            }
+            3 -> out.writeBoolean(hasTermHandler)
+        }
+    }
 }

@@ -1,137 +1,115 @@
-package extracells.part;
+package extracells.part
 
-import appeng.api.config.Actionable;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.events.MENetworkChannelsChanged;
-import appeng.api.networking.events.MENetworkEventSubscribe;
-import appeng.api.networking.events.MENetworkPowerStatusChange;
-import appeng.api.networking.security.MachineSource;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.networking.ticking.IGridTickable;
-import appeng.api.networking.ticking.TickRateModulation;
-import appeng.api.networking.ticking.TickingRequest;
-import appeng.api.parts.IPartCollisionHelper;
-import appeng.api.parts.IPartRenderHelper;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.data.IAEItemStack;
-import appeng.api.util.AEColor;
-import appeng.util.item.AEItemStack;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.container.ContainerOreDictExport;
-import extracells.gui.GuiOreDictExport;
-import extracells.render.TextureManager;
-import extracells.util.ItemUtils;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.StatCollector;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.oredict.OreDictionary;
-import org.apache.commons.lang3.StringUtils;
+import appeng.api.config.Actionable
+import appeng.api.networking.IGridNode
+import appeng.api.networking.events.MENetworkChannelsChanged
+import appeng.api.networking.events.MENetworkEventSubscribe
+import appeng.api.networking.events.MENetworkPowerStatusChange
+import appeng.api.networking.security.MachineSource
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.networking.ticking.IGridTickable
+import appeng.api.networking.ticking.TickRateModulation
+import appeng.api.networking.ticking.TickingRequest
+import appeng.api.parts.IPartCollisionHelper
+import appeng.api.parts.IPartRenderHelper
+import appeng.api.storage.data.IAEItemStack
+import appeng.api.util.AEColor
+import appeng.util.item.AEItemStack
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.container.ContainerOreDictExport
+import extracells.gui.GuiOreDictExport
+import extracells.render.TextureManager
+import extracells.util.ItemUtils
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.ISidedInventory
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.util.StatCollector
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.oredict.OreDictionary
+import org.apache.commons.lang3.StringUtils
+import java.util.*
+import java.util.function.Predicate
+import java.util.regex.Pattern
+import java.util.stream.IntStream
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.function.Predicate;
-import java.util.regex.Pattern;
-import java.util.stream.IntStream;
-
-public class PartOreDictExporter extends PartECBase implements IGridTickable {
-
-    private String filter = "";
-
+class PartOreDictExporter : PartECBase(), IGridTickable {
+    private var filter: String? = ""
     // disabled
     // private Predicate<ItemStack> filterPredicate = null;
     /**
      * White list of itemstacks to extract. OreDict only mode.
      */
-    private ItemStack[] oreDictFilteredItems = new ItemStack[0];
-
-    @Override
-    public int cableConnectionRenderTo() {
-        return 5;
+    private var oreDictFilteredItems = arrayOfNulls<ItemStack>(0)
+    override fun cableConnectionRenderTo(): Int {
+        return 5
     }
 
-    public String getFilter() {
-        return filter;
+    fun getFilter(): String? {
+        return filter
     }
 
-    public void setFilter(String filter) {
-        this.filter = filter;
-        updateFilter();
-        saveData();
+    fun setFilter(filter: String?) {
+        this.filter = filter
+        updateFilter()
+        saveData()
     }
 
     /**
      * Call when the filter string has changed to parse and recompile the filter.
      */
-    private void updateFilter() {
-        if (!this.filter.trim().isEmpty()) {
+    private fun updateFilter() {
+        if (!filter!!.trim { it <= ' ' }.isEmpty()) {
             //ArrayList<String> matchingNames = new ArrayList<>();
-            Predicate<ItemStack> matcher = null;
-
-            String[] filters = this.filter.split("[&|]");
-            String lastFilter = null;
-
-            for (String filter : filters) {
-                filter = filter.trim();
-                boolean negated = filter.startsWith("!");
-                if (negated)
-                    filter = filter.substring(1);
-
-                Predicate<ItemStack> test = filterToItemStackPredicate(filter);
-
-                if (negated)
-                    test = test.negate();
-
+            var matcher: Predicate<ItemStack?>? = null
+            val filters = filter!!.split("[&|]".toRegex()).toTypedArray()
+            var lastFilter: String? = null
+            for (filter in filters) {
+                filter = filter.trim { it <= ' ' }
+                val negated = filter.startsWith("!")
+                if (negated) filter = filter.substring(1)
+                var test = filterToItemStackPredicate(filter)
+                if (negated) test = test.negate()
                 if (matcher == null) {
-                    matcher = test;
-                    lastFilter = filter;
+                    matcher = test
+                    lastFilter = filter
                 } else {
-                    int endLast = this.filter.indexOf(lastFilter) + lastFilter.length();
-                    int startThis = this.filter.indexOf(filter);
-                    boolean or = this.filter.substring(endLast, startThis).contains("|");
-
-                    if (or) {
-                        matcher = matcher.or(test);
+                    val endLast = this.filter!!.indexOf(lastFilter!!) + lastFilter.length
+                    val startThis = this.filter!!.indexOf(filter)
+                    val or = this.filter!!.substring(endLast, startThis).contains("|")
+                    matcher = if (or) {
+                        matcher.or(test)
                     } else {
-                        matcher = matcher.and(test);
+                        matcher.and(test)
                     }
                 }
             }
-
             if (matcher == null) {
                 //filterPredicate = null;
-                oreDictFilteredItems = new ItemStack[0];
-                return;
+                oreDictFilteredItems = arrayOfNulls(0)
+                return
             }
 
             //Mod name and path evaluation can only be done during tick, can't precompile whitelist for this.
-            if (!this.filter.contains("@") && !this.filter.contains("~")) {
+            if (!filter!!.contains("@") && !filter!!.contains("~")) {
                 //Precompiled whitelist of oredict itemstacks.
-                ArrayList<ItemStack> filtered = new ArrayList<>();
-                for (String name : OreDictionary.getOreNames())
-                    for (ItemStack s : OreDictionary.getOres(name))
-                        if (matcher.test(s)) {
-                            filtered.add(s);
-                        }
-                oreDictFilteredItems = filtered.toArray(oreDictFilteredItems);
-
+                val filtered = ArrayList<ItemStack>()
+                for (name in OreDictionary.getOreNames()) for (s in OreDictionary.getOres(name)) if (matcher.test(s)) {
+                    filtered.add(s)
+                }
+                oreDictFilteredItems = filtered.toArray(oreDictFilteredItems)
             } else {
                 // mod filtering disabled
                 //filterPredicate = matcher;
-                this.oreDictFilteredItems = new ItemStack[0];
+                oreDictFilteredItems = arrayOfNulls(0)
             }
         } else {
             //this.filterPredicate = null;
-            this.oreDictFilteredItems = new ItemStack[0];
+            oreDictFilteredItems = arrayOfNulls(0)
         }
     }
 
@@ -141,8 +119,8 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
      * @param filter Filter string.
      * @return Predicate for filter string.
      */
-    private Predicate<ItemStack> filterToItemStackPredicate(String filter) {
-		/*if (filter.startsWith("@")) {
+    private fun filterToItemStackPredicate(filter: String): Predicate<ItemStack?> {
+        /*if (filter.startsWith("@")) {
 			final Predicate<String> test = filterToPredicate(filter.substring(1));
 			return (is) -> is != null &&
 					Optional.ofNullable(is.getItem(). getRegistryName())
@@ -157,11 +135,13 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
 							.map(test::test)
 							.orElse(false);
 		} else {*/
-        final Predicate<String> test = filterToPredicate(filter);
-        return (is) -> is != null &&
-                IntStream.of(OreDictionary.getOreIDs(is))
-                        .mapToObj(OreDictionary::getOreName)
-                        .anyMatch(test);
+        val test = filterToPredicate(filter)
+        return Predicate { `is`: ItemStack? ->
+            `is` != null &&
+                    IntStream.of(*OreDictionary.getOreIDs(`is`))
+                            .mapToObj { id: Int -> OreDictionary.getOreName(id) }
+                            .anyMatch(test)
+        }
         //}
     }
 
@@ -171,35 +151,34 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
      * @param filter Filter string
      * @return Predicate for filter string.
      */
-    private Predicate<String> filterToPredicate(String filter) {
-        int numStars = StringUtils.countMatches(filter, "*");
-        if (numStars == filter.length()) {
-            return (str) -> true;
-        } else if (filter.length() > 2 && filter.startsWith("*") && filter.endsWith("*") && numStars == 2) {
-            final String pattern = filter.substring(1, filter.length() - 1);
-            return (str) -> str.contains(pattern);
-        } else if (filter.length() >= 2 && filter.startsWith("*") && numStars == 1) {
-            final String pattern = filter.substring(1);
-            return (str) -> str.endsWith(pattern);
-        } else if (filter.length() >= 2 && filter.endsWith("*") && numStars == 1) {
-            final String pattern = filter.substring(0, filter.length() - 1);
-            return (str) -> str.startsWith(pattern);
+    private fun filterToPredicate(filter: String): Predicate<String> {
+        val numStars = StringUtils.countMatches(filter, "*")
+        return if (numStars == filter.length) {
+            Predicate { str: String? -> true }
+        } else if (filter.length > 2 && filter.startsWith("*") && filter.endsWith("*") && numStars == 2) {
+            val pattern = filter.substring(1, filter.length - 1)
+            Predicate { str: String -> str.contains(pattern) }
+        } else if (filter.length >= 2 && filter.startsWith("*") && numStars == 1) {
+            val pattern = filter.substring(1)
+            Predicate { str: String -> str.endsWith(pattern) }
+        } else if (filter.length >= 2 && filter.endsWith("*") && numStars == 1) {
+            val pattern = filter.substring(0, filter.length - 1)
+            Predicate { str: String -> str.startsWith(pattern) }
         } else if (numStars == 0) {
-            return (str) -> str.equals(filter);
+            Predicate { str: String -> str == filter }
         } else {
-            String filterRegexFragment = filter.replace("*", ".*");
-            String regexPattern = "^" + filterRegexFragment + "$";
-            final Pattern pattern = Pattern.compile(regexPattern);
-            return pattern.asPredicate();
+            val filterRegexFragment = filter.replace("*", ".*")
+            val regexPattern = "^$filterRegexFragment$"
+            val pattern = Pattern.compile(regexPattern)
+            pattern.asPredicate()
         }
     }
 
-    public boolean doWork(int rate, int ticksSinceLastCall) {
-        int amount = Math.min(rate * ticksSinceLastCall, 64);
-        IStorageGrid storage = getStorageGrid();
-        assert storage != null;
-        IMEMonitor<IAEItemStack> inv = storage.getItemInventory();
-        MachineSource src = new MachineSource(this);
+    fun doWork(rate: Int, ticksSinceLastCall: Int): Boolean {
+        val amount = Math.min(rate * ticksSinceLastCall, 64)
+        val storage = storageGrid!!
+        val inv = storage.itemInventory
+        val src = MachineSource(this)
 
 /*		if (this.filterPredicate != null) {
 			//Tick-time filter evaluation.
@@ -223,268 +202,228 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
 			return false;
 		} else {*/
         //Precompiled oredict whitelist
-        for (ItemStack is : this.oreDictFilteredItems) {
-            if (is == null || amount == 0)
-                continue;
-
-            ItemStack toExtract = is.copy();
-            toExtract.stackSize = amount;
-
-            IAEItemStack extracted = inv.extractItems(AEItemStack.create(toExtract), Actionable.SIMULATE, src);
+        for (`is` in oreDictFilteredItems) {
+            if (`is` == null || amount == 0) continue
+            val toExtract = `is`.copy()
+            toExtract.stackSize = amount
+            val extracted = inv.extractItems(AEItemStack.create(toExtract), Actionable.SIMULATE, src)
             if (extracted != null) {
-                IAEItemStack exported = exportStack(extracted.copy());
+                val exported = exportStack(extracted.copy())
                 if (exported != null) {
-                    inv.extractItems(exported, Actionable.MODULATE, src);
-                    return true;
+                    inv.extractItems(exported, Actionable.MODULATE, src)
+                    return true
                 }
             }
         }
-        return false;
+        return false
         //}
     }
 
-    public IAEItemStack exportStack(IAEItemStack stack0) {
-        if (this.tile == null || !this.tile.hasWorldObj() || stack0 == null)
-            return null;
-        ForgeDirection dir = getSide();
-        TileEntity tile = this.tile.getWorldObj().getTileEntity(
-                this.tile.xCoord + dir.offsetX, this.tile.yCoord + dir.offsetY,
-                this.tile.zCoord + dir.offsetZ);
-        if (tile == null)
-            return null;
-        IAEItemStack stack = stack0.copy();
-        if (tile instanceof IInventory) {
-            if (tile instanceof ISidedInventory) {
-                ISidedInventory inv = (ISidedInventory) tile;
-                for (int i : inv.getAccessibleSlotsFromSide(dir.getOpposite()
-                        .ordinal())) {
-                    if (inv.canInsertItem(i, stack.getItemStack(), dir
-                            .getOpposite().ordinal())) {
+    fun exportStack(stack0: IAEItemStack?): IAEItemStack? {
+        if (tile == null || !tile!!.hasWorldObj() || stack0 == null) return null
+        val dir = side
+        val tile = tile!!.worldObj.getTileEntity(
+                tile!!.xCoord + dir!!.offsetX, tile!!.yCoord + dir.offsetY,
+                tile!!.zCoord + dir.offsetZ)
+                ?: return null
+        val stack = stack0.copy()
+        if (tile is IInventory) {
+            if (tile is ISidedInventory) {
+                val inv = tile as ISidedInventory
+                for (i in inv.getAccessibleSlotsFromSide(dir.opposite
+                        .ordinal)) {
+                    if (inv.canInsertItem(i, stack.itemStack, dir
+                                    .opposite.ordinal)) {
                         if (inv.getStackInSlot(i) == null) {
                             inv.setInventorySlotContents(i,
-                                    stack.getItemStack());
-                            return stack0;
+                                    stack.itemStack)
+                            return stack0
                         } else if (ItemUtils.areItemEqualsIgnoreStackSize(
-                                inv.getStackInSlot(i), stack.getItemStack())) {
-                            int max = inv.getInventoryStackLimit();
-                            int current = inv.getStackInSlot(i).stackSize;
-                            int outStack = (int) stack.getStackSize();
-                            if (max == current)
-                                continue;
-                            ItemStack s = inv.getStackInSlot(i).copy();
-                            if (current + outStack <= max) {
-                                s.stackSize = s.stackSize + outStack;
-                                inv.setInventorySlotContents(i, s);
-                                return stack0;
+                                        inv.getStackInSlot(i), stack.itemStack)) {
+                            val max = inv.inventoryStackLimit
+                            val current = inv.getStackInSlot(i).stackSize
+                            val outStack = stack.stackSize.toInt()
+                            if (max == current) continue
+                            val s = inv.getStackInSlot(i).copy()
+                            return if (current + outStack <= max) {
+                                s.stackSize = s.stackSize + outStack
+                                inv.setInventorySlotContents(i, s)
+                                stack0
                             } else {
-                                s.stackSize = max;
-                                inv.setInventorySlotContents(i, s);
-                                stack.setStackSize(max - current);
-                                return stack;
+                                s.stackSize = max
+                                inv.setInventorySlotContents(i, s)
+                                stack.stackSize = max - current.toLong()
+                                stack
                             }
                         }
                     }
                 }
             } else {
-                IInventory inv = (IInventory) tile;
-                for (int i = 0; i < inv.getSizeInventory(); i++) {
-                    if (inv.isItemValidForSlot(i, stack.getItemStack())) {
+                val inv = tile as IInventory
+                for (i in 0 until inv.sizeInventory) {
+                    if (inv.isItemValidForSlot(i, stack.itemStack)) {
                         if (inv.getStackInSlot(i) == null) {
                             inv.setInventorySlotContents(i,
-                                    stack.getItemStack());
-                            return stack0;
+                                    stack.itemStack)
+                            return stack0
                         } else if (ItemUtils.areItemEqualsIgnoreStackSize(
-                                inv.getStackInSlot(i), stack.getItemStack())) {
-                            int max = inv.getInventoryStackLimit();
-                            int current = inv.getStackInSlot(i).stackSize;
-                            int outStack = (int) stack.getStackSize();
-                            if (max == current)
-                                continue;
-                            ItemStack s = inv.getStackInSlot(i).copy();
-                            if (current + outStack <= max) {
-                                s.stackSize = s.stackSize + outStack;
-                                inv.setInventorySlotContents(i, s);
-                                return stack0;
+                                        inv.getStackInSlot(i), stack.itemStack)) {
+                            val max = inv.inventoryStackLimit
+                            val current = inv.getStackInSlot(i).stackSize
+                            val outStack = stack.stackSize.toInt()
+                            if (max == current) continue
+                            val s = inv.getStackInSlot(i).copy()
+                            return if (current + outStack <= max) {
+                                s.stackSize = s.stackSize + outStack
+                                inv.setInventorySlotContents(i, s)
+                                stack0
                             } else {
-                                s.stackSize = max;
-                                inv.setInventorySlotContents(i, s);
-                                stack.setStackSize(max - current);
-                                return stack;
+                                s.stackSize = max
+                                inv.setInventorySlotContents(i, s)
+                                stack.stackSize = max - current.toLong()
+                                stack
                             }
                         }
                     }
                 }
             }
         }
-        return null;
+        return null
     }
 
-    @Override
-    public void getBoxes(IPartCollisionHelper bch) {
-        bch.addBox(6, 6, 12, 10, 10, 13);
-        bch.addBox(4, 4, 13, 12, 12, 14);
-        bch.addBox(5, 5, 14, 11, 11, 15);
-        bch.addBox(6, 6, 15, 10, 10, 16);
-        bch.addBox(6, 6, 11, 10, 10, 12);
+    override fun getBoxes(bch: IPartCollisionHelper) {
+        bch.addBox(6.0, 6.0, 12.0, 10.0, 10.0, 13.0)
+        bch.addBox(4.0, 4.0, 13.0, 12.0, 12.0, 14.0)
+        bch.addBox(5.0, 5.0, 14.0, 11.0, 11.0, 15.0)
+        bch.addBox(6.0, 6.0, 15.0, 10.0, 10.0, 16.0)
+        bch.addBox(6.0, 6.0, 11.0, 10.0, 10.0, 12.0)
     }
 
-    @Override
-    public Object getClientGuiElement(EntityPlayer player) {
-        return new GuiOreDictExport(player, this);
+    override fun getClientGuiElement(player: EntityPlayer): Any? {
+        return GuiOreDictExport(player, this)
     }
 
-    @Override
-    public double getPowerUsage() {
-        return 10.0D;
+    override val powerUsage: Double
+        get() = 10.0
+
+    override fun getServerGuiElement(player: EntityPlayer): Any? {
+        return ContainerOreDictExport(player, this)
     }
 
-    @Override
-    public Object getServerGuiElement(EntityPlayer player) {
-        return new ContainerOreDictExport(player, this);
+    private val storageGrid: IStorageGrid?
+        private get() {
+            val node = gridNode ?: return null
+            val grid = node.grid ?: return null
+            return grid.getCache(IStorageGrid::class.java)
+        }
+
+    override fun getTickingRequest(node: IGridNode): TickingRequest {
+        return TickingRequest(1, 20, false, false)
     }
 
-    private IStorageGrid getStorageGrid() {
-        IGridNode node = getGridNode();
-        if (node == null)
-            return null;
-        IGrid grid = node.getGrid();
-        if (grid == null)
-            return null;
-        return grid.getCache(IStorageGrid.class);
+    override fun getWailaBodey(data: NBTTagCompound, list: MutableList<String>): List<String> {
+        super.getWailaBodey(data, list)
+        if (data.hasKey("name")) list.add(StatCollector
+                .translateToLocal("extracells.tooltip.oredict")
+                + ": "
+                + data.getString("name")) else list.add(StatCollector
+                .translateToLocal("extracells.tooltip.oredict") + ":")
+        return list
     }
 
-    @Override
-    public final TickingRequest getTickingRequest(IGridNode node) {
-        return new TickingRequest(1, 20, false, false);
-    }
-
-    @Override
-    public List<String> getWailaBodey(NBTTagCompound data, List<String> list) {
-        super.getWailaBodey(data, list);
-        if (data.hasKey("name"))
-            list.add(StatCollector
-                    .translateToLocal("extracells.tooltip.oredict")
-                    + ": "
-                    + data.getString("name"));
-        else
-            list.add(StatCollector
-                    .translateToLocal("extracells.tooltip.oredict") + ":");
-        return list;
-    }
-
-    @Override
-    public NBTTagCompound getWailaTag(NBTTagCompound tag) {
-        super.getWailaTag(tag);
-        tag.setString("name", this.filter);
-        return tag;
+    override fun getWailaTag(tag: NBTTagCompound): NBTTagCompound {
+        super.getWailaTag(tag)
+        tag.setString("name", filter)
+        return tag
     }
 
     @MENetworkEventSubscribe
-    public void powerChange(MENetworkPowerStatusChange event) {
-        IGridNode node = getGridNode();
+    fun powerChange(event: MENetworkPowerStatusChange?) {
+        val node = gridNode
         if (node != null) {
-            boolean isNowActive = node.isActive();
-            if (isNowActive != isActive()) {
-                setActive(isNowActive);
-                onNeighborChanged();
-                getHost().markForUpdate();
+            val isNowActive = node.isActive
+            if (isNowActive != isActive) {
+                isActive = isNowActive
+                onNeighborChanged()
+                host.markForUpdate()
             }
         }
     }
 
-    @Override
-    public void readFromNBT(NBTTagCompound data) {
-        super.readFromNBT(data);
-        if (data.hasKey("filter"))
-            this.filter = data.getString("filter");
-        updateFilter();
+    override fun readFromNBT(data: NBTTagCompound) {
+        super.readFromNBT(data)
+        if (data.hasKey("filter")) filter = data.getString("filter")
+        updateFilter()
     }
 
     @SideOnly(Side.CLIENT)
-    @Override
-    public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-        Tessellator ts = Tessellator.instance;
-        rh.setTexture(TextureManager.EXPORT_SIDE.getTexture());
-        rh.setBounds(6, 6, 12, 10, 10, 13);
-        rh.renderInventoryBox(renderer);
-
-        rh.setBounds(4, 4, 13, 12, 12, 14);
-        rh.renderInventoryBox(renderer);
-
-        rh.setBounds(5, 5, 14, 11, 11, 15);
-        rh.renderInventoryBox(renderer);
-
-        IIcon side = TextureManager.EXPORT_SIDE.getTexture();
+    override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        rh.setTexture(TextureManager.EXPORT_SIDE.texture)
+        rh.setBounds(6f, 6f, 12f, 10f, 10f, 13f)
+        rh.renderInventoryBox(renderer)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderInventoryBox(renderer)
+        rh.setBounds(5f, 5f, 14f, 11f, 11f, 15f)
+        rh.renderInventoryBox(renderer)
+        val side = TextureManager.EXPORT_SIDE.texture
         rh.setTexture(side, side, side,
-                TextureManager.EXPORT_FRONT.getTexture(), side, side);
-        rh.setBounds(6, 6, 15, 10, 10, 16);
-        rh.renderInventoryBox(renderer);
-
-        rh.setInvColor(AEColor.Black.mediumVariant);
-        ts.setBrightness(15 << 20 | 15 << 4);
-        rh.renderInventoryFace(TextureManager.EXPORT_FRONT.getTextures()[1],
-                ForgeDirection.SOUTH, renderer);
-
-        rh.setBounds(6, 6, 11, 10, 10, 12);
-        renderInventoryBusLights(rh, renderer);
+                TextureManager.EXPORT_FRONT.texture, side, side)
+        rh.setBounds(6f, 6f, 15f, 10f, 10f, 16f)
+        rh.renderInventoryBox(renderer)
+        rh.setInvColor(AEColor.Black.mediumVariant)
+        ts.setBrightness(15 shl 20 or 15 shl 4)
+        rh.renderInventoryFace(TextureManager.EXPORT_FRONT.textures[1],
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(6f, 6f, 11f, 10f, 10f, 12f)
+        renderInventoryBusLights(rh, renderer)
     }
 
     @SideOnly(Side.CLIENT)
-    @Override
-    public void renderStatic(int x, int y, int z, IPartRenderHelper rh,
-                             RenderBlocks renderer) {
-        Tessellator ts = Tessellator.instance;
-        rh.setTexture(TextureManager.EXPORT_SIDE.getTexture());
-        rh.setBounds(6, 6, 12, 10, 10, 13);
-        rh.renderBlock(x, y, z, renderer);
-
-        rh.setBounds(4, 4, 13, 12, 12, 14);
-        rh.renderBlock(x, y, z, renderer);
-
-        rh.setBounds(5, 5, 14, 11, 11, 15);
-        rh.renderBlock(x, y, z, renderer);
-
-        IIcon side = TextureManager.EXPORT_SIDE.getTexture();
+    override fun renderStatic(x: Int, y: Int, z: Int, rh: IPartRenderHelper,
+                              renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        rh.setTexture(TextureManager.EXPORT_SIDE.texture)
+        rh.setBounds(6f, 6f, 12f, 10f, 10f, 13f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setBounds(5f, 5f, 14f, 11f, 11f, 15f)
+        rh.renderBlock(x, y, z, renderer)
+        val side = TextureManager.EXPORT_SIDE.texture
         rh.setTexture(side, side, side,
-                TextureManager.EXPORT_FRONT.getTextures()[0], side, side);
-        rh.setBounds(6, 6, 15, 10, 10, 16);
-        rh.renderBlock(x, y, z, renderer);
-
-        ts.setColorOpaque_I(AEColor.Black.mediumVariant);
-        if (isActive())
-            ts.setBrightness(15 << 20 | 15 << 4);
-        rh.renderFace(x, y, z, TextureManager.EXPORT_FRONT.getTextures()[1],
-                ForgeDirection.SOUTH, renderer);
-
-        rh.setBounds(6, 6, 11, 10, 10, 12);
-        renderStaticBusLights(x, y, z, rh, renderer);
+                TextureManager.EXPORT_FRONT.textures[0], side, side)
+        rh.setBounds(6f, 6f, 15f, 10f, 10f, 16f)
+        rh.renderBlock(x, y, z, renderer)
+        ts.setColorOpaque_I(AEColor.Black.mediumVariant)
+        if (isActive) ts.setBrightness(15 shl 20 or 15 shl 4)
+        rh.renderFace(x, y, z, TextureManager.EXPORT_FRONT.textures[1],
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(6f, 6f, 11f, 10f, 10f, 12f)
+        renderStaticBusLights(x, y, z, rh, renderer)
     }
 
-    @Override
-    public final TickRateModulation tickingRequest(IGridNode node,
-                                                   int TicksSinceLastCall) {
-        if (isActive())
-            return doWork(10, TicksSinceLastCall) ? TickRateModulation.FASTER
-                    : TickRateModulation.SLOWER;
-        return TickRateModulation.SLOWER;
+    override fun tickingRequest(node: IGridNode,
+                                TicksSinceLastCall: Int): TickRateModulation {
+        return if (isActive) if (doWork(10,
+                        TicksSinceLastCall)) TickRateModulation.FASTER else TickRateModulation.SLOWER else TickRateModulation.SLOWER
     }
 
     @MENetworkEventSubscribe
-    public void updateChannels(MENetworkChannelsChanged channel) {
-        IGridNode node = getGridNode();
+    fun updateChannels(channel: MENetworkChannelsChanged?) {
+        val node = gridNode
         if (node != null) {
-            boolean isNowActive = node.isActive();
-            if (isNowActive != isActive()) {
-                setActive(isNowActive);
-                onNeighborChanged();
-                getHost().markForUpdate();
+            val isNowActive = node.isActive
+            if (isNowActive != isActive) {
+                isActive = isNowActive
+                onNeighborChanged()
+                host.markForUpdate()
             }
         }
     }
 
-    @Override
-    public void writeToNBT(NBTTagCompound data) {
-        super.writeToNBT(data);
-        data.setString("filter", this.filter);
+    override fun writeToNBT(data: NBTTagCompound) {
+        super.writeToNBT(data)
+        data.setString("filter", filter)
     }
 }

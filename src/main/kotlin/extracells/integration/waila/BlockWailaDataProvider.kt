@@ -1,61 +1,51 @@
-package extracells.integration.waila;
+package extracells.integration.waila
 
-import mcp.mobius.waila.api.IWailaConfigHandler;
-import mcp.mobius.waila.api.IWailaDataAccessor;
-import mcp.mobius.waila.api.IWailaDataProvider;
-import net.minecraft.entity.player.EntityPlayerMP;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.World;
+import mcp.mobius.waila.api.IWailaConfigHandler
+import mcp.mobius.waila.api.IWailaDataAccessor
+import mcp.mobius.waila.api.IWailaDataProvider
+import net.minecraft.entity.player.EntityPlayerMP
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.tileentity.TileEntity
+import net.minecraft.world.World
 
-import java.util.List;
+class BlockWailaDataProvider : IWailaDataProvider {
+    override fun getNBTData(player: EntityPlayerMP, te: TileEntity,
+                            tag: NBTTagCompound, world: World, x: Int, y: Int, z: Int): NBTTagCompound {
+        if (te != null && te is IWailaTile) {
+            tag.setTag("WailaTile",
+                    (te as IWailaTile).getWailaTag(NBTTagCompound()))
+        }
+        return tag
+    }
 
-public class BlockWailaDataProvider implements IWailaDataProvider {
+    override fun getWailaBody(itemStack: ItemStack,
+                              currenttip: MutableList<String>, accessor: IWailaDataAccessor,
+                              config: IWailaConfigHandler): List<String> {
+        val tile = accessor.tileEntity
+        val tag = accessor.nbtData
+        if (tile != null && tile is IWailaTile && tag != null && tag.hasKey("WailaTile")) {
+            val t = tile as IWailaTile
+            return t.getWailaBody(currenttip, tag.getCompoundTag("WailaTile"),
+                    accessor.side)
+        }
+        return currenttip
+    }
 
-	@Override
-	public NBTTagCompound getNBTData(EntityPlayerMP player, TileEntity te,
-			NBTTagCompound tag, World world, int x, int y, int z) {
-		if (te != null && te instanceof IWailaTile) {
-			tag.setTag("WailaTile",
-					((IWailaTile) te).getWailaTag(new NBTTagCompound()));
-		}
-		return tag;
-	}
+    override fun getWailaHead(itemStack: ItemStack,
+                              currenttip: List<String>, accessor: IWailaDataAccessor,
+                              config: IWailaConfigHandler): List<String> {
+        return currenttip
+    }
 
-	@Override
-	public List<String> getWailaBody(ItemStack itemStack,
-			List<String> currenttip, IWailaDataAccessor accessor,
-			IWailaConfigHandler config) {
-		TileEntity tile = accessor.getTileEntity();
-		NBTTagCompound tag = accessor.getNBTData();
-		if (tile != null && tile instanceof IWailaTile && tag != null
-				&& tag.hasKey("WailaTile")) {
-			IWailaTile t = (IWailaTile) tile;
-			return t.getWailaBody(currenttip, tag.getCompoundTag("WailaTile"),
-					accessor.getSide());
-		}
-		return currenttip;
-	}
+    override fun getWailaStack(accessor: IWailaDataAccessor,
+                               config: IWailaConfigHandler): ItemStack {
+        return accessor.stack
+    }
 
-	@Override
-	public List<String> getWailaHead(ItemStack itemStack,
-			List<String> currenttip, IWailaDataAccessor accessor,
-			IWailaConfigHandler config) {
-		return currenttip;
-	}
-
-	@Override
-	public ItemStack getWailaStack(IWailaDataAccessor accessor,
-			IWailaConfigHandler config) {
-		return accessor.getStack();
-	}
-
-	@Override
-	public List<String> getWailaTail(ItemStack itemStack,
-			List<String> currenttip, IWailaDataAccessor accessor,
-			IWailaConfigHandler config) {
-		return currenttip;
-	}
-
+    override fun getWailaTail(itemStack: ItemStack,
+                              currenttip: List<String>, accessor: IWailaDataAccessor,
+                              config: IWailaConfigHandler): List<String> {
+        return currenttip
+    }
 }

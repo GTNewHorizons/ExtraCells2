@@ -1,262 +1,223 @@
-package extracells.inventory;
+package extracells.inventory
 
-import appeng.api.AEApi;
-import appeng.api.config.AccessRestriction;
-import appeng.api.config.Actionable;
-import appeng.api.networking.security.BaseActionSource;
-import appeng.api.storage.IMEInventoryHandler;
-import appeng.api.storage.ISaveProvider;
-import appeng.api.storage.StorageChannel;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IItemList;
-import com.google.common.collect.Lists;
-import extracells.api.ECApi;
-import extracells.api.IFluidStorageCell;
-import extracells.api.IHandlerFluidStorage;
-import extracells.container.ContainerFluidStorage;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
+import appeng.api.AEApi
+import appeng.api.config.AccessRestriction
+import appeng.api.config.Actionable
+import appeng.api.networking.security.BaseActionSource
+import appeng.api.storage.IMEInventoryHandler
+import appeng.api.storage.ISaveProvider
+import appeng.api.storage.StorageChannel
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IItemList
+import com.google.common.collect.Lists
+import extracells.api.ECApi
+import extracells.api.IFluidStorageCell
+import extracells.api.IHandlerFluidStorage
+import extracells.container.ContainerFluidStorage
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+open class HandlerItemStorageFluid(_storageStack: ItemStack,
+                                   _saveProvider: ISaveProvider?) : IMEInventoryHandler<IAEFluidStack?>, IHandlerFluidStorage {
+    private val stackTag: NBTTagCompound
+    protected var fluidStacks = ArrayList<FluidStack?>()
+    private var prioritizedFluids = ArrayList<Fluid?>()
+    private val totalTypes: Int
+    private val totalBytes: Int
+    private val containers: List<ContainerFluidStorage> = ArrayList()
+    private val saveProvider: ISaveProvider?
 
-public class HandlerItemStorageFluid implements IMEInventoryHandler<IAEFluidStack>, IHandlerFluidStorage {
+    constructor(_storageStack: ItemStack, _saveProvider: ISaveProvider?, _filter: ArrayList<Fluid?>?) : this(
+            _storageStack, _saveProvider) {
+        if (_filter != null) prioritizedFluids = _filter
+    }
 
-	private final NBTTagCompound stackTag;
-	protected ArrayList<FluidStack> fluidStacks = new ArrayList<FluidStack>();
-	private ArrayList<Fluid> prioritizedFluids = new ArrayList<Fluid>();
-	private final int totalTypes;
-	private final int totalBytes;
-	private final List<ContainerFluidStorage> containers = new ArrayList<ContainerFluidStorage>();
-	private final ISaveProvider saveProvider;
+    private fun allowedByFormat(fluid: Fluid): Boolean {
+        return !isFormatted || prioritizedFluids.contains(fluid)
+    }
 
-	public HandlerItemStorageFluid(ItemStack _storageStack,
-			ISaveProvider _saveProvider) {
-		if (!_storageStack.hasTagCompound()) _storageStack.setTagCompound(new NBTTagCompound());
-		this.stackTag = _storageStack.getTagCompound();
-		this.totalTypes = ((IFluidStorageCell) _storageStack.getItem()).getMaxTypes(_storageStack);
-		this.totalBytes = ((IFluidStorageCell) _storageStack.getItem()).getMaxBytes(_storageStack) * 250;
+    override fun canAccept(input: IAEFluidStack?): Boolean {
+        if (input == null) return false
+        if (!ECApi.instance()!!.canStoreFluid(input.fluid)) return false
+        for (fluidStack in fluidStacks) {
+            if (fluidStack == null || fluidStack.getFluid() === input.fluid) return allowedByFormat(input.fluid)
+        }
+        return false
+    }
 
-		for (int i = 0; i < this.totalTypes; i++)
-			this.fluidStacks.add(FluidStack.loadFluidStackFromNBT(this.stackTag.getCompoundTag("Fluid#" + i)));
+    override fun extractItems(request: IAEFluidStack, mode: Actionable,
+                              src: BaseActionSource): IAEFluidStack? {
+        if (request == null || !allowedByFormat(request.fluid)) return null
+        val removedStack: IAEFluidStack?
+        val currentFluids: MutableList<FluidStack?> = Lists.newArrayList(fluidStacks)
+        for (i in fluidStacks.indices) {
+            val currentStack = fluidStacks[i]
+            if (currentStack != null && currentStack.fluidID == request.fluid.id) {
+                val endAmount = currentStack.amount - request.stackSize
+                if (endAmount >= 0) {
+                    removedStack = request.copy()
+                    val toWrite = FluidStack(currentStack.getFluid(), endAmount.toInt())
+                    currentFluids[i] = toWrite
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, toWrite)
+                    }
+                } else {
+                    removedStack = AEApi.instance().storage().createFluidStack(currentStack.copy())
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, null)
+                    }
+                }
+                if (removedStack != null && removedStack.stackSize > 0) requestSave()
+                return removedStack
+            }
+        }
+        return null
+    }
 
-		this.saveProvider = _saveProvider;
-	}
+    fun freeBytes(): Int {
+        var i = 0
+        for (stack in fluidStacks) if (stack != null) i += stack.amount
+        return totalBytes - i
+    }
 
-	public HandlerItemStorageFluid(ItemStack _storageStack, ISaveProvider _saveProvider, ArrayList<Fluid> _filter) {
-		this(_storageStack, _saveProvider);
-		if (_filter != null)
-			this.prioritizedFluids = _filter;
-	}
+    override fun getAccess(): AccessRestriction {
+        return AccessRestriction.READ_WRITE
+    }
 
-	private boolean allowedByFormat(Fluid fluid) {
-		return !isFormatted() || this.prioritizedFluids.contains(fluid);
-	}
+    override fun getAvailableItems(
+            out: IItemList<IAEFluidStack>): IItemList<IAEFluidStack> {
+        for (fluidStack in fluidStacks) if (fluidStack != null) out.add(
+                AEApi.instance().storage().createFluidStack(fluidStack))
+        return out
+    }
 
-	@Override
-	public boolean canAccept(IAEFluidStack input) {
-		if (input == null)
-			return false;
-		if (!ECApi.instance().canStoreFluid(input.getFluid()))
-			return false;
-		for (FluidStack fluidStack : this.fluidStacks) {
-			if (fluidStack == null || fluidStack.getFluid() == input.getFluid())
-				return allowedByFormat(input.getFluid());
-		}
-		return false;
-	}
+    override fun getChannel(): StorageChannel {
+        return StorageChannel.FLUIDS
+    }
 
-	@Override
-	public IAEFluidStack extractItems(IAEFluidStack request, Actionable mode,
-			BaseActionSource src) {
-		if (request == null || !allowedByFormat(request.getFluid()))
-			return null;
+    override fun getPriority(): Int {
+        return 0
+    }
 
-		IAEFluidStack removedStack;
-		List<FluidStack> currentFluids = Lists.newArrayList(this.fluidStacks);
-		for (int i = 0; i < this.fluidStacks.size(); i++) {
-			FluidStack currentStack = this.fluidStacks.get(i);
-			if (currentStack != null && currentStack.getFluidID() == request.getFluid().getID()) {
-				long endAmount = currentStack.amount - request.getStackSize();
-				if (endAmount >= 0) {
-					removedStack = request.copy();
-					FluidStack toWrite = new FluidStack(currentStack.getFluid(), (int) endAmount);
-					currentFluids.set(i, toWrite);
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, toWrite);
-					}
-				} else {
-					removedStack = AEApi.instance().storage().createFluidStack(currentStack.copy());
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, null);
-					}
-				}
-				if (removedStack != null && removedStack.getStackSize() > 0)
-					requestSave();
-				return removedStack;
-			}
-		}
+    override fun getSlot(): Int {
+        return 0
+    }
 
-		return null;
-	}
+    override fun injectItems(input: IAEFluidStack, mode: Actionable,
+                             src: BaseActionSource): IAEFluidStack? {
+        if (input == null || !allowedByFormat(input.fluid)) return input
+        var notAdded = input.copy()
+        val currentFluids: MutableList<FluidStack?> = Lists.newArrayList(fluidStacks)
+        for (i in currentFluids.indices) {
+            val currentStack = currentFluids[i]
+            if (notAdded != null && currentStack != null && input.fluid === currentStack.getFluid()) {
+                if (notAdded.stackSize <= freeBytes()) {
+                    val toWrite = FluidStack(currentStack.getFluid(),
+                            currentStack.amount + notAdded.stackSize.toInt())
+                    currentFluids[i] = toWrite
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, toWrite)
+                    }
+                    notAdded = null
+                } else {
+                    val toWrite = FluidStack(currentStack.getFluid(), currentStack.amount + freeBytes())
+                    currentFluids[i] = toWrite
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, toWrite)
+                    }
+                    notAdded.stackSize = notAdded.stackSize - freeBytes()
+                }
+            }
+        }
+        for (i in currentFluids.indices) {
+            val currentStack = currentFluids[i]
+            if (notAdded != null && currentStack == null) {
+                if (input.stackSize <= freeBytes()) {
+                    val toWrite = notAdded.fluidStack
+                    currentFluids[i] = toWrite
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, toWrite)
+                    }
+                    notAdded = null
+                } else {
+                    val toWrite = FluidStack(notAdded.fluid, freeBytes())
+                    currentFluids[i] = toWrite
+                    if (mode == Actionable.MODULATE) {
+                        writeFluidToSlot(i, toWrite)
+                    }
+                    notAdded.stackSize = notAdded.stackSize - freeBytes()
+                }
+            }
+        }
+        if (notAdded == null || notAdded != input) requestSave()
+        return notAdded
+    }
 
-	public int freeBytes() {
-		int i = 0;
-		for (FluidStack stack : this.fluidStacks)
-			if (stack != null)
-				i += stack.amount;
-		return this.totalBytes - i;
-	}
+    // Common case
+    override val isFormatted: Boolean
+        get() {
+            // Common case
+            if (prioritizedFluids.isEmpty()) {
+                return false
+            }
+            for (currentFluid in prioritizedFluids) {
+                if (currentFluid != null) return true
+            }
+            return false
+        }
 
-	@Override
-	public AccessRestriction getAccess() {
-		return AccessRestriction.READ_WRITE;
-	}
+    override fun isPrioritized(input: IAEFluidStack?): Boolean {
+        return (input != null
+                && prioritizedFluids.contains(input.fluid))
+    }
 
-	@Override
-	public IItemList<IAEFluidStack> getAvailableItems(
-			IItemList<IAEFluidStack> out) {
-		for (FluidStack fluidStack : this.fluidStacks)
-			if (fluidStack != null)
-				out.add(AEApi.instance().storage().createFluidStack(fluidStack));
-		return out;
-	}
+    private fun requestSave() {
+        if (saveProvider != null) saveProvider.saveChanges(this)
+    }
 
-	@Override
-	public StorageChannel getChannel() {
-		return StorageChannel.FLUIDS;
-	}
+    override fun totalBytes(): Int {
+        return totalBytes
+    }
 
-	@Override
-	public int getPriority() {
-		return 0;
-	}
+    override fun totalTypes(): Int {
+        return totalTypes
+    }
 
-	@Override
-	public int getSlot() {
-		return 0;
-	}
+    override fun usedBytes(): Int {
+        return totalBytes - freeBytes()
+    }
 
-	@Override
-	public IAEFluidStack injectItems(IAEFluidStack input, Actionable mode,
-			BaseActionSource src) {
-		if (input == null || !allowedByFormat(input.getFluid()))
-			return input;
-		IAEFluidStack notAdded = input.copy();
-		List<FluidStack> currentFluids = Lists.newArrayList(this.fluidStacks);
-		for (int i = 0; i < currentFluids.size(); i++) {
-			FluidStack currentStack = currentFluids.get(i);
-			if (notAdded != null && currentStack != null
-					&& input.getFluid() == currentStack.getFluid()) {
-				if (notAdded.getStackSize() <= freeBytes()) {
-					FluidStack toWrite = new FluidStack(currentStack.getFluid(),
-							currentStack.amount + (int) notAdded.getStackSize());
-					currentFluids.set(i, toWrite);
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, toWrite);
-					}
-					notAdded = null;
-				} else {
-					FluidStack toWrite = new FluidStack(currentStack.getFluid(), currentStack.amount + freeBytes());
-					currentFluids.set(i, toWrite);
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, toWrite);
-					}
-					notAdded.setStackSize(notAdded.getStackSize() - freeBytes());
-				}
-			}
-		}
-		for (int i = 0; i < currentFluids.size(); i++) {
-			FluidStack currentStack = currentFluids.get(i);
-			if (notAdded != null && currentStack == null) {
-				if (input.getStackSize() <= freeBytes()) {
-					FluidStack toWrite = notAdded.getFluidStack();
-					currentFluids.set(i, toWrite);
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, toWrite);
-					}
-					notAdded = null;
-				} else {
-					FluidStack toWrite = new FluidStack(notAdded.getFluid(), freeBytes());
-					currentFluids.set(i, toWrite);
-					if (mode == Actionable.MODULATE) {
-						writeFluidToSlot(i, toWrite);
-					}
-					notAdded.setStackSize(notAdded.getStackSize() - freeBytes());
-				}
-			}
-		}
-		if (notAdded == null || !notAdded.equals(input))
-			requestSave();
-		return notAdded;
-	}
+    override fun usedTypes(): Int {
+        var i = 0
+        for (stack in fluidStacks) if (stack != null) i++
+        return i
+    }
 
-	@Override
-	public boolean isFormatted() {
-		// Common case
-		if (this.prioritizedFluids.isEmpty()) {
-			return false;
-		}
+    override fun validForPass(i: Int): Boolean {
+        return true // TODO
+    }
 
-		for (Fluid currentFluid : this.prioritizedFluids) {
-			if (currentFluid != null)
-				return true;
-		}
+    protected open fun writeFluidToSlot(i: Int, fluidStack: FluidStack?) {
+        val fluidTag = NBTTagCompound()
+        if (fluidStack != null && fluidStack.fluidID > 0 && fluidStack.amount > 0) {
+            fluidStack.writeToNBT(fluidTag)
+            stackTag.setTag("Fluid#$i", fluidTag)
+        } else {
+            stackTag.removeTag("Fluid#$i")
+        }
+        fluidStacks[i] = fluidStack
+    }
 
-		return false;
-	}
-
-	@Override
-	public boolean isPrioritized(IAEFluidStack input) {
-		return input != null
-				&& this.prioritizedFluids.contains(input.getFluid());
-	}
-
-	private void requestSave() {
-		if (this.saveProvider != null)
-			this.saveProvider.saveChanges(this);
-	}
-
-	@Override
-	public int totalBytes() {
-		return this.totalBytes;
-	}
-
-	@Override
-	public int totalTypes() {
-		return this.totalTypes;
-	}
-
-	@Override
-	public int usedBytes() {
-		return this.totalBytes - freeBytes();
-	}
-
-	@Override
-	public int usedTypes() {
-		int i = 0;
-		for (FluidStack stack : this.fluidStacks)
-			if (stack != null)
-				i++;
-		return i;
-	}
-
-	@Override
-	public boolean validForPass(int i) {
-		return true; // TODO
-	}
-
-	protected void writeFluidToSlot(int i, FluidStack fluidStack) {
-		NBTTagCompound fluidTag = new NBTTagCompound();
-		if (fluidStack != null && fluidStack.getFluidID() > 0
-				&& fluidStack.amount > 0) {
-			fluidStack.writeToNBT(fluidTag);
-			this.stackTag.setTag("Fluid#" + i, fluidTag);
-		} else {
-			this.stackTag.removeTag("Fluid#" + i);
-		}
-		this.fluidStacks.set(i, fluidStack);
-	}
+    init {
+        if (!_storageStack.hasTagCompound()) _storageStack.tagCompound = NBTTagCompound()
+        stackTag = _storageStack.tagCompound
+        totalTypes = (_storageStack.item as IFluidStorageCell).getMaxTypes(_storageStack)
+        totalBytes = (_storageStack.item as IFluidStorageCell).getMaxBytes(_storageStack) * 250
+        for (i in 0 until totalTypes) fluidStacks.add(FluidStack.loadFluidStackFromNBT(stackTag.getCompoundTag(
+                "Fluid#$i")))
+        saveProvider = _saveProvider
+    }
 }

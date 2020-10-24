@@ -1,78 +1,50 @@
-package extracells.definitions;
+package extracells.definitions
 
-import appeng.api.definitions.ITileDefinition;
-import com.google.common.base.Optional;
-import net.minecraft.block.Block;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemBlock;
-import net.minecraft.item.ItemStack;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockAccess;
+import appeng.api.definitions.ITileDefinition
+import com.google.common.base.Optional
+import net.minecraft.block.Block
+import net.minecraft.item.Item
+import net.minecraft.item.ItemBlock
+import net.minecraft.item.ItemStack
+import net.minecraft.tileentity.TileEntity
+import net.minecraft.world.IBlockAccess
 
-public class BlockItemDefinitions implements ITileDefinition {
+class BlockItemDefinitions @JvmOverloads constructor(private val block: Block?, private val meta: Int = 0,
+                                                     private val blockTileEntity: Class<out TileEntity?>? = null) : ITileDefinition {
+    constructor(_block: Block?,
+                _blockTileEntity: Class<out TileEntity?>?) : this(_block, 0, _blockTileEntity) {
+    }
 
-	private final Block block;
-	private final int meta;
-	private final Class<? extends TileEntity> blockTileEntity;
+    override fun maybeBlock(): Optional<Block> {
+        return Optional.fromNullable(block)
+    }
 
-	public BlockItemDefinitions(Block _block) {
-		this(_block, 0);
-	}
+    override fun maybeItemBlock(): Optional<ItemBlock> {
+        return Optional.absent()
+    }
 
-	public BlockItemDefinitions(Block _block,
-			Class<? extends TileEntity> _blockTileEntity) {
-		this(_block, 0, _blockTileEntity);
-	}
+    override fun isSameAs(comparableStack: ItemStack): Boolean {
+        return comparableStack != null && ItemStack.areItemStacksEqual(maybeStack(1).orNull(), comparableStack)
+    }
 
-	public BlockItemDefinitions(Block _block, int _meta) {
-		this(_block, _meta, null);
-	}
+    override fun isSameAs(world: IBlockAccess, x: Int, y: Int, z: Int): Boolean {
+        val block = world.getBlock(x, y, z)
+        return !maybeBlock().isPresent && block === this.block
+    }
 
-	public BlockItemDefinitions(Block _block, int _meta,
-			Class<? extends TileEntity> _blockTileEntity) {
-		this.block = _block;
-		this.meta = _meta;
-		this.blockTileEntity = _blockTileEntity;
-	}
+    override fun maybeItem(): Optional<Item> {
+        return Optional.fromNullable(Item.getItemFromBlock(block))
+    }
 
-	@Override
-	public Optional<Block> maybeBlock() {
-		return Optional.fromNullable(block);
-	}
+    override fun maybeStack(stackSize: Int): Optional<ItemStack> {
+        return Optional.of(ItemStack(block, stackSize, meta))
+    }
 
-	@Override
-	public Optional<ItemBlock> maybeItemBlock() {
-		return Optional.absent();
-	}
+    override fun isEnabled(): Boolean {
+        return true
+    }
 
-	@Override
-	public boolean isSameAs(ItemStack comparableStack) {
-		return comparableStack != null && ItemStack.areItemStacksEqual(maybeStack(1).orNull(), comparableStack);
-	}
-
-	@Override
-	public boolean isSameAs(IBlockAccess world, int x, int y, int z) {
-		Block block = world.getBlock(x, y, z);
-		return !maybeBlock().isPresent() && block == this.block;
-	}
-
-	@Override
-	public Optional<Item> maybeItem() {
-		return Optional.fromNullable(Item.getItemFromBlock(block));
-	}
-
-	@Override
-	public Optional<ItemStack> maybeStack(int stackSize) {
-		return Optional.of(new ItemStack(this.block, stackSize, this.meta));
-	}
-
-	@Override
-	public boolean isEnabled() {
-		return true;
-	}
-
-	@Override
-	public Optional<? extends Class<? extends TileEntity>> maybeEntity() {
-		return Optional.fromNullable(this.blockTileEntity);
-	}
+    override fun maybeEntity(): Optional<out Class<out TileEntity>> {
+        return Optional.fromNullable(blockTileEntity)
+    }
 }

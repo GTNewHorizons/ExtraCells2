@@ -1,53 +1,48 @@
-package extracells.render.item;
+package extracells.render.item
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.client.IItemRenderer;
-import net.minecraftforge.client.model.AdvancedModelLoader;
-import net.minecraftforge.client.model.IModelCustom;
-import org.lwjgl.opengl.GL11;
+import net.minecraft.client.Minecraft
+import net.minecraft.item.ItemStack
+import net.minecraft.util.ResourceLocation
+import net.minecraftforge.client.IItemRenderer
+import net.minecraftforge.client.IItemRenderer.ItemRenderType
+import net.minecraftforge.client.IItemRenderer.ItemRendererHelper
+import net.minecraftforge.client.model.AdvancedModelLoader
+import org.lwjgl.opengl.GL11
 
-public class ItemRendererWalrus implements IItemRenderer {
+class ItemRendererWalrus : IItemRenderer {
+    var modelWalrus = AdvancedModelLoader
+            .loadModel(ResourceLocation("extracells", "models/walrus.obj"))
+    var textureWalrus = ResourceLocation("extracells",
+            "textures/blocks/walrus.png")
 
-	IModelCustom modelWalrus = AdvancedModelLoader
-			.loadModel(new ResourceLocation("extracells", "models/walrus.obj"));
-	ResourceLocation textureWalrus = new ResourceLocation("extracells",
-			"textures/blocks/walrus.png");
+    override fun handleRenderType(item: ItemStack, type: ItemRenderType): Boolean {
+        return true
+    }
 
-	@Override
-	public boolean handleRenderType(ItemStack item, ItemRenderType type) {
-		return true;
-	}
+    override fun renderItem(type: ItemRenderType, item: ItemStack, vararg data: Any) {
+        Minecraft.getMinecraft().renderEngine.bindTexture(textureWalrus)
+        GL11.glPushMatrix()
+        when (type) {
+            ItemRenderType.ENTITY -> {
+            }
+            ItemRenderType.EQUIPPED -> {
+            }
+            ItemRenderType.EQUIPPED_FIRST_PERSON -> {
+                GL11.glRotated(180.0, 0.0, 1.0, 0.0)
+                GL11.glTranslatef(-1f, 0.5f, -0.5f)
+            }
+            ItemRenderType.FIRST_PERSON_MAP -> {
+            }
+            ItemRenderType.INVENTORY -> GL11.glTranslatef(-0.5f, -0.5f, -0.1f)
+            else -> {
+            }
+        }
+        modelWalrus.renderAll()
+        GL11.glPopMatrix()
+    }
 
-	@Override
-	public void renderItem(ItemRenderType type, ItemStack item, Object... data) {
-		Minecraft.getMinecraft().renderEngine.bindTexture(this.textureWalrus);
-		GL11.glPushMatrix();
-		switch (type) {
-		case ENTITY:
-			break;
-		case EQUIPPED:
-			break;
-		case EQUIPPED_FIRST_PERSON:
-			GL11.glRotated(180, 0, 1, 0);
-			GL11.glTranslatef(-1F, 0.5F, -0.5F);
-			break;
-		case FIRST_PERSON_MAP:
-			break;
-		case INVENTORY:
-			GL11.glTranslatef(-0.5F, -0.5F, -0.1F);
-			break;
-		default:
-			break;
-		}
-		this.modelWalrus.renderAll();
-		GL11.glPopMatrix();
-	}
-
-	@Override
-	public boolean shouldUseRenderHelper(ItemRenderType type, ItemStack item,
-			ItemRendererHelper helper) {
-		return true;
-	}
+    override fun shouldUseRenderHelper(type: ItemRenderType, item: ItemStack,
+                                       helper: ItemRendererHelper): Boolean {
+        return true
+    }
 }

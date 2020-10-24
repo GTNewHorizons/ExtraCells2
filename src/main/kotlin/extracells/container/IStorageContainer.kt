@@ -1,8 +1,5 @@
-package extracells.container;
+package extracells.container
 
-
-public interface IStorageContainer {
-
-    boolean hasWirelessTermHandler();
-
+interface IStorageContainer {
+    fun hasWirelessTermHandler(): Boolean
 }

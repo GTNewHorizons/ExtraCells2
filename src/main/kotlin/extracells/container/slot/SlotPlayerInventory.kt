@@ -1,29 +1,17 @@
-package extracells.container.slot;
+package extracells.container.slot
 
-import extracells.container.IStorageContainer;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.Slot;
-import net.minecraft.item.ItemStack;
+import extracells.container.IStorageContainer
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.Slot
 
-public class SlotPlayerInventory extends Slot {
-
-	public final IStorageContainer container;
-
-	public SlotPlayerInventory(IInventory arg0,
-			IStorageContainer _container, int arg1, int arg2, int arg3) {
-		super(arg0, arg1, arg2, arg3);
-		this.container = _container;
-	}
-
-	@Override
-	public boolean canTakeStack(EntityPlayer player) {
-		if (player == null || this.container == null)
-			return true;
-		ItemStack s = player.getCurrentEquippedItem();
-		if (s == null || !this.container.hasWirelessTermHandler())
-			return true;
-        return s != this.inventory.getStackInSlot(getSlotIndex());
+class SlotPlayerInventory(arg0: IInventory?,
+                          val container: IStorageContainer?, arg1: Int, arg2: Int, arg3: Int) : Slot(arg0, arg1, arg2,
+        arg3) {
+    override fun canTakeStack(player: EntityPlayer): Boolean {
+        if (player == null || container == null) return true
+        val s = player.currentEquippedItem
+        return if (s == null || !container.hasWirelessTermHandler()) true else s != inventory.getStackInSlot(
+                slotIndex)
     }
-
 }

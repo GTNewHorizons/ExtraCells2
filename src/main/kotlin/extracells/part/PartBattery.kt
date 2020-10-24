@@ -1,193 +1,156 @@
-package extracells.part;
+package extracells.part
 
-import appeng.api.config.AccessRestriction;
-import appeng.api.config.Actionable;
-import appeng.api.config.PowerMultiplier;
-import appeng.api.implementations.items.IAEItemPowerStorage;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.energy.IAEPowerStorage;
-import appeng.api.networking.events.MENetworkPowerStorage;
-import appeng.api.parts.IPartCollisionHelper;
-import appeng.api.parts.IPartRenderHelper;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.network.AbstractPacket;
-import extracells.render.TextureManager;
-import extracells.util.inventory.ECPrivateInventory;
-import extracells.util.inventory.IInventoryUpdateReceiver;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.IIcon;
+import appeng.api.config.AccessRestriction
+import appeng.api.config.Actionable
+import appeng.api.config.PowerMultiplier
+import appeng.api.implementations.items.IAEItemPowerStorage
+import appeng.api.networking.energy.IAEPowerStorage
+import appeng.api.networking.events.MENetworkPowerStorage
+import appeng.api.parts.IPartCollisionHelper
+import appeng.api.parts.IPartRenderHelper
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.network.AbstractPacket
+import extracells.render.TextureManager
+import extracells.util.inventory.ECPrivateInventory
+import extracells.util.inventory.IInventoryUpdateReceiver
+import io.netty.buffer.ByteBuf
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.client.renderer.texture.TextureMap
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import java.io.IOException
 
-import java.io.IOException;
-import java.util.List;
+class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
+    private var batteryIcon = TextureManager.BATTERY_FRONT.texture
+    private var battery: ItemStack? = null
+    var handler: IAEItemPowerStorage? = null
+    private val inventory: ECPrivateInventory = object : ECPrivateInventory(
+            "extracells.part.battery", 1, 1) {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+            return (itemStack != null
+                    && itemStack.item is IAEItemPowerStorage)
+        }
+    }
 
-public class PartBattery extends PartECBase implements IAEPowerStorage,
-		IInventoryUpdateReceiver {
+    override fun getDrops(drops: MutableList<ItemStack>, wrenched: Boolean) {
+        for (stack in inventory.slots) {
+            if (stack == null) continue
+            drops.add(stack)
+        }
+    }
 
-	private IIcon batteryIcon = TextureManager.BATTERY_FRONT.getTexture();
-	private ItemStack battery;
-	IAEItemPowerStorage handler;
-	private final ECPrivateInventory inventory = new ECPrivateInventory(
-			"extracells.part.battery", 1, 1) {
+    override fun cableConnectionRenderTo(): Int {
+        return 2
+    }
 
-		@Override
-		public boolean isItemValidForSlot(int i, ItemStack itemStack) {
-			return itemStack != null
-					&& itemStack.getItem() instanceof IAEItemPowerStorage;
-		}
-	};
+    override fun extractAEPower(amt: Double, mode: Actionable,
+                                usePowerMultiplier: PowerMultiplier): Double {
+        return if (handler == null || battery == null) 0 else handler!!.extractAEPower(
+                if (mode == Actionable.MODULATE) battery else battery!!
+                        .copy(), usePowerMultiplier.multiply(amt))
+    }
 
-	@Override
-	public void getDrops( List<ItemStack> drops, boolean wrenched) {
-		for (ItemStack stack : inventory.slots) {
-			if (stack == null)
-				continue;
-			drops.add(stack);
-		}
-	}
+    override fun getAECurrentPower(): Double {
+        return if (handler == null || battery == null) 0 else handler!!.getAECurrentPower(
+                battery)
+    }
 
-	@Override
-	public int cableConnectionRenderTo() {
-		return 2;
-	}
+    override fun getAEMaxPower(): Double {
+        return if (handler == null || battery == null) 0 else handler!!.getAEMaxPower(battery)
+    }
 
-	@Override
-	public double extractAEPower(double amt, Actionable mode,
-			PowerMultiplier usePowerMultiplier) {
-		if (this.handler == null || this.battery == null)
-			return 0;
-		return this.handler.extractAEPower(
-				mode == Actionable.MODULATE ? this.battery : this.battery
-						.copy(), usePowerMultiplier.multiply(amt));
-	}
+    override fun getBoxes(bch: IPartCollisionHelper) {
+        bch.addBox(2.0, 2.0, 14.0, 14.0, 14.0, 16.0)
+    }
 
-	@Override
-	public double getAECurrentPower() {
-		if (this.handler == null || this.battery == null)
-			return 0;
-		return this.handler.getAECurrentPower(this.battery);
-	}
+    override fun getPowerFlow(): AccessRestriction {
+        return if (handler == null || battery == null) AccessRestriction.NO_ACCESS else handler!!.getPowerFlow(battery)
+    }
 
-	@Override
-	public double getAEMaxPower() {
-		if (this.handler == null || this.battery == null)
-			return 0;
-		return this.handler.getAEMaxPower(this.battery);
-	}
+    override fun injectAEPower(amt: Double, mode: Actionable): Double {
+        return if (handler == null || battery == null) 0 else handler!!.injectAEPower(
+                if (mode == Actionable.MODULATE) battery else battery!!
+                        .copy(), amt)
+    }
 
-	@Override
-	public void getBoxes(IPartCollisionHelper bch) {
-		bch.addBox(2, 2, 14, 14, 14, 16);
-	}
+    override fun isAEPublicPowerStorage(): Boolean {
+        return true
+    }
 
-	@Override
-	public AccessRestriction getPowerFlow() {
-		if (this.handler == null || this.battery == null)
-			return AccessRestriction.NO_ACCESS;
-		return this.handler.getPowerFlow(this.battery);
-	}
+    override fun onInventoryChanged() {
+        battery = inventory.getStackInSlot(0)
+        if (battery != null
+                && battery!!.item is IAEItemPowerStorage) {
+            batteryIcon = battery!!.iconIndex
+            handler = battery!!.item as IAEItemPowerStorage
+        } else {
+            batteryIcon = null
+            handler = null
+        }
+        val node = gridNode
+        if (node != null) {
+            val grid = node.grid
+            grid?.postEvent(MENetworkPowerStorage(this,
+                    MENetworkPowerStorage.PowerEventType.REQUEST_POWER))
+            host.markForUpdate()
+        }
+    }
 
-	@Override
-	public double injectAEPower(double amt, Actionable mode) {
-		if (this.handler == null || this.battery == null)
-			return 0;
-		return this.handler.injectAEPower(
-				mode == Actionable.MODULATE ? this.battery : this.battery
-						.copy(), amt);
-	}
+    override fun readFromNBT(data: NBTTagCompound) {
+        super.readFromNBT(data)
+        inventory.readFromNBT(data.getTagList("inventory", 10))
+        onInventoryChanged()
+    }
 
-	@Override
-	public boolean isAEPublicPowerStorage() {
-		return true;
-	}
+    @Throws(IOException::class)
+    override fun readFromStream(data: ByteBuf): Boolean {
+        super.readFromStream(data)
+        val iconName: String = AbstractPacket.Companion.readString(data)
+        if (iconName != "none") {
+            batteryIcon = (Minecraft.getMinecraft()
+                    .textureManager
+                    .getTexture(TextureMap.locationBlocksTexture) as TextureMap)
+                    .getAtlasSprite(iconName)
+        } else {
+            batteryIcon = TextureManager.BATTERY_FRONT.texture
+        }
+        return true
+    }
 
-	@Override
-	public void onInventoryChanged() {
-		this.battery = this.inventory.getStackInSlot(0);
-		if (this.battery != null
-				&& this.battery.getItem() instanceof IAEItemPowerStorage) {
-			this.batteryIcon = this.battery.getIconIndex();
-			this.handler = (IAEItemPowerStorage) this.battery.getItem();
-		} else {
-			this.batteryIcon = null;
-			this.handler = null;
-		}
-		IGridNode node = getGridNode();
-		if (node != null) {
-			IGrid grid = node.getGrid();
-			if (grid != null) {
-				grid.postEvent(new MENetworkPowerStorage(this,
-						MENetworkPowerStorage.PowerEventType.REQUEST_POWER));
-			}
-			getHost().markForUpdate();
-		}
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
+        val side = TextureManager.BUS_SIDE.texture
+        rh.setTexture(side, side, side,
+                TextureManager.BATTERY_FRONT.textures[0], side, side)
+        rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
+        rh.renderInventoryBox(renderer)
+        rh.setBounds(5f, 5f, 13f, 11f, 11f, 14f)
+        renderInventoryBusLights(rh, renderer)
+    }
 
-	@Override
-	public void readFromNBT(NBTTagCompound data) {
-		super.readFromNBT(data);
-		this.inventory.readFromNBT(data.getTagList("inventory", 10));
-		onInventoryChanged();
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderStatic(x: Int, y: Int, z: Int, rh: IPartRenderHelper,
+                              renderer: RenderBlocks) {
+        val side = TextureManager.BUS_SIDE.texture
+        rh.setTexture(side, side, side, batteryIcon, side, side)
+        rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setBounds(5f, 5f, 13f, 11f, 11f, 14f)
+        renderStaticBusLights(x, y, z, rh, renderer)
+    }
 
-	@Override
-	public boolean readFromStream(ByteBuf data) throws IOException {
-		super.readFromStream(data);
-		String iconName = AbstractPacket.readString(data);
-		if (!iconName.equals("none")) {
-			this.batteryIcon = ((TextureMap) Minecraft.getMinecraft()
-					.getTextureManager()
-					.getTexture(TextureMap.locationBlocksTexture))
-					.getAtlasSprite(iconName);
-		} else {
-			this.batteryIcon = TextureManager.BATTERY_FRONT.getTexture();
-		}
-		return true;
-	}
+    override fun writeToNBT(data: NBTTagCompound) {
+        super.writeToNBT(data)
+        data.setTag("inventory", inventory.writeToNBT())
+    }
 
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		IIcon side = TextureManager.BUS_SIDE.getTexture();
-		rh.setTexture(side, side, side,
-				TextureManager.BATTERY_FRONT.getTextures()[0], side, side);
-		rh.setBounds(2, 2, 14, 14, 14, 16);
-		rh.renderInventoryBox(renderer);
-
-		rh.setBounds(5, 5, 13, 11, 11, 14);
-		renderInventoryBusLights(rh, renderer);
-	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderStatic(int x, int y, int z, IPartRenderHelper rh,
-			RenderBlocks renderer) {
-		IIcon side = TextureManager.BUS_SIDE.getTexture();
-		rh.setTexture(side, side, side, this.batteryIcon, side, side);
-		rh.setBounds(2, 2, 14, 14, 14, 16);
-		rh.renderBlock(x, y, z, renderer);
-
-		rh.setBounds(5, 5, 13, 11, 11, 14);
-		renderStaticBusLights(x, y, z, rh, renderer);
-	}
-
-	@Override
-	public void writeToNBT(NBTTagCompound data) {
-		super.writeToNBT(data);
-		data.setTag("inventory", this.inventory.writeToNBT());
-	}
-
-	@Override
-	public void writeToStream(ByteBuf data) throws IOException {
-		super.writeToStream(data);
-		AbstractPacket.writeString(this.battery != null ? this.battery
-				.getItem().getIconIndex(this.battery).getIconName() : "none",
-				data);
-	}
+    @Throws(IOException::class)
+    override fun writeToStream(data: ByteBuf) {
+        super.writeToStream(data)
+        AbstractPacket.Companion.writeString(if (battery != null) battery!!
+                .item.getIconIndex(battery).iconName else "none",
+                data)
+    }
 }

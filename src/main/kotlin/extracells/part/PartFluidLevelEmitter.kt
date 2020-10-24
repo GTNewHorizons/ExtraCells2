@@ -1,296 +1,239 @@
-package extracells.part;
+package extracells.part
 
-import appeng.api.AEApi;
-import appeng.api.config.RedstoneMode;
-import appeng.api.config.SecurityPermissions;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.security.BaseActionSource;
-import appeng.api.networking.storage.IStackWatcher;
-import appeng.api.networking.storage.IStackWatcherHost;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.parts.IPart;
-import appeng.api.parts.IPartCollisionHelper;
-import appeng.api.parts.IPartHost;
-import appeng.api.parts.IPartRenderHelper;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.StorageChannel;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IAEStack;
-import appeng.api.storage.data.IItemList;
-import com.google.common.collect.Lists;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.container.ContainerFluidEmitter;
-import extracells.gui.GuiFluidEmitter;
-import extracells.network.packet.other.IFluidSlotPartOrBlock;
-import extracells.network.packet.other.PacketFluidSlot;
-import extracells.network.packet.part.PacketFluidEmitter;
-import extracells.render.TextureManager;
-import extracells.util.PermissionUtil;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.init.Blocks;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.Vec3;
-import net.minecraft.world.World;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
+import appeng.api.AEApi
+import appeng.api.config.RedstoneMode
+import appeng.api.config.SecurityPermissions
+import appeng.api.networking.security.BaseActionSource
+import appeng.api.networking.storage.IStackWatcher
+import appeng.api.networking.storage.IStackWatcherHost
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.parts.IPart
+import appeng.api.parts.IPartCollisionHelper
+import appeng.api.parts.IPartRenderHelper
+import appeng.api.storage.StorageChannel
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IAEStack
+import appeng.api.storage.data.IItemList
+import com.google.common.collect.Lists
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.container.ContainerFluidEmitter
+import extracells.gui.GuiFluidEmitter
+import extracells.network.packet.other.IFluidSlotPartOrBlock
+import extracells.network.packet.other.PacketFluidSlot
+import extracells.network.packet.part.PacketFluidEmitter
+import extracells.render.TextureManager
+import extracells.util.PermissionUtil
+import io.netty.buffer.ByteBuf
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.init.Blocks
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.tileentity.TileEntity
+import net.minecraft.util.Vec3
+import net.minecraft.world.World
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidRegistry
+import net.minecraftforge.fluids.FluidStack
+import java.io.IOException
+import java.util.*
 
-import java.io.IOException;
-import java.util.Random;
+class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrBlock {
+    private var fluid: Fluid? = null
+    private var mode = RedstoneMode.HIGH_SIGNAL
+    private var watcher: IStackWatcher? = null
+    private var wantedAmount: Long = 0
+    private var currentAmount: Long = 0
+    private var clientRedstoneOutput = false
+    override fun cableConnectionRenderTo(): Int {
+        return 8
+    }
 
-public class PartFluidLevelEmitter extends PartECBase implements
-		IStackWatcherHost, IFluidSlotPartOrBlock {
+    fun changeWantedAmount(modifier: Int, player: EntityPlayer?) {
+        setWantedAmount(wantedAmount + modifier, player)
+    }
 
-	private Fluid fluid;
-	private RedstoneMode mode = RedstoneMode.HIGH_SIGNAL;
-	private IStackWatcher watcher;
-	private long wantedAmount;
-	private long currentAmount;
-	private boolean clientRedstoneOutput = false;
+    override fun getBoxes(bch: IPartCollisionHelper) {
+        bch.addBox(7.0, 7.0, 11.0, 9.0, 9.0, 16.0)
+    }
 
-	@Override
-	public int cableConnectionRenderTo() {
-		return 8;
-	}
+    override fun getClientGuiElement(player: EntityPlayer): Any? {
+        return GuiFluidEmitter(this, player)
+    }
 
-	public void changeWantedAmount(int modifier, EntityPlayer player) {
-		setWantedAmount(this.wantedAmount + modifier, player);
-	}
+    override val powerUsage: Double
+        get() = 1.0
 
-	@Override
-	public void getBoxes(IPartCollisionHelper bch) {
-		bch.addBox(7, 7, 11, 9, 9, 16);
-	}
+    override fun getServerGuiElement(player: EntityPlayer): Any? {
+        return ContainerFluidEmitter(this, player)
+    }
 
-	@Override
-	public Object getClientGuiElement(EntityPlayer player) {
-		return new GuiFluidEmitter(this, player);
-	}
+    private val isPowering: Boolean
+        private get() = when (mode) {
+            RedstoneMode.LOW_SIGNAL -> wantedAmount >= currentAmount
+            RedstoneMode.HIGH_SIGNAL -> wantedAmount < currentAmount
+            else -> false
+        }
 
-	@Override
-	public double getPowerUsage() {
-		return 1.0D;
-	}
+    override fun isProvidingStrongPower(): Int {
+        return if (isPowering) 15 else 0
+    }
 
-	@Override
-	public Object getServerGuiElement(EntityPlayer player) {
-		return new ContainerFluidEmitter(this, player);
-	}
+    override fun isProvidingWeakPower(): Int {
+        return isProvidingStrongPower
+    }
 
-	private boolean isPowering() {
-		switch (this.mode) {
-		case LOW_SIGNAL:
-			return this.wantedAmount >= this.currentAmount;
-		case HIGH_SIGNAL:
-			return this.wantedAmount < this.currentAmount;
-		default:
-			return false;
-		}
-	}
+    private fun notifyTargetBlock(_tile: TileEntity?, _side: ForgeDirection?) {
+        // note - params are always the same
+        _tile!!.worldObj.notifyBlocksOfNeighborChange(_tile.xCoord,
+                _tile.yCoord, _tile.zCoord, Blocks.air)
+        _tile.worldObj.notifyBlocksOfNeighborChange(
+                _tile.xCoord + _side!!.offsetX, _tile.yCoord + _side.offsetY,
+                _tile.zCoord + _side.offsetZ, Blocks.air)
+    }
 
-	@Override
-	public int isProvidingStrongPower() {
-		return isPowering() ? 15 : 0;
-	}
+    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+        return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
+                        this as IPart)) {
+            super.onActivate(player, pos)
+        } else false
+    }
 
-	@Override
-	public int isProvidingWeakPower() {
-		return isProvidingStrongPower();
-	}
+    override fun onStackChange(o: IItemList<*>?, fullStack: IAEStack<*>?,
+                               diffStack: IAEStack<*>?, src: BaseActionSource, chan: StorageChannel) {
+        if (chan == StorageChannel.FLUIDS && diffStack != null && (diffStack as IAEFluidStack).fluid === fluid) {
+            currentAmount = fullStack?.stackSize ?: 0
+            val node = gridNode
+            if (node != null) {
+                isActive = node.isActive
+                host.markForUpdate()
+                notifyTargetBlock(hostTile, side)
+            }
+        }
+    }
 
-	private void notifyTargetBlock(TileEntity _tile, ForgeDirection _side) {
-		// note - params are always the same
-		_tile.getWorldObj().notifyBlocksOfNeighborChange(_tile.xCoord,
-				_tile.yCoord, _tile.zCoord, Blocks.air);
-		_tile.getWorldObj().notifyBlocksOfNeighborChange(
-				_tile.xCoord + _side.offsetX, _tile.yCoord + _side.offsetY,
-				_tile.zCoord + _side.offsetZ, Blocks.air);
-	}
+    override fun randomDisplayTick(world: World, x: Int, y: Int, z: Int, r: Random) {
+        if (clientRedstoneOutput) {
+            val d = side
+            val d0 = d!!.offsetX * 0.45f + (r.nextFloat() - 0.5f) * 0.2
+            val d1 = d.offsetY * 0.45f + (r.nextFloat() - 0.5f) * 0.2
+            val d2 = d.offsetZ * 0.45f + (r.nextFloat() - 0.5f) * 0.2
+            world.spawnParticle("reddust", 0.5 + x + d0, 0.5 + y + d1, 0.5 + z
+                    + d2, 0.0, 0.0, 0.0)
+        }
+    }
 
-	@Override
-	public boolean onActivate(EntityPlayer player, Vec3 pos) {
-		if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
-				(IPart) this)) {
-			return super.onActivate(player, pos);
-		}
-		return false;
-	}
+    override fun readFromNBT(data: NBTTagCompound) {
+        super.readFromNBT(data)
+        fluid = FluidRegistry.getFluid(data.getString("fluid"))
+        mode = RedstoneMode.values()[data.getInteger("mode")]
+        wantedAmount = data.getLong("wantedAmount")
+        if (wantedAmount < 0) wantedAmount = 0
+    }
 
-	@Override
-	public void onStackChange(IItemList o, IAEStack fullStack,
-			IAEStack diffStack, BaseActionSource src, StorageChannel chan) {
-		if (chan == StorageChannel.FLUIDS && diffStack != null
-				&& ((IAEFluidStack) diffStack).getFluid() == this.fluid) {
-			this.currentAmount = fullStack != null ? fullStack.getStackSize()
-					: 0;
+    @Throws(IOException::class)
+    override fun readFromStream(data: ByteBuf): Boolean {
+        super.readFromStream(data)
+        clientRedstoneOutput = data.readBoolean()
+        if (host != null) host.markForUpdate()
+        return true
+    }
 
-			IGridNode node = getGridNode();
-			if (node != null) {
-				setActive(node.isActive());
-				getHost().markForUpdate();
-				notifyTargetBlock(getHostTile(), getSide());
-			}
-		}
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
+        rh.setTexture(TextureManager.LEVEL_FRONT.textures[0])
+        rh.setBounds(7f, 7f, 11f, 9f, 9f, 14f)
+        rh.renderInventoryBox(renderer)
+        rh.setTexture(TextureManager.LEVEL_FRONT.textures[1])
+        rh.setBounds(7f, 7f, 14f, 9f, 9f, 16f)
+        rh.renderInventoryBox(renderer)
+    }
 
-	@Override
-	public void randomDisplayTick(World world, int x, int y, int z, Random r) {
-		if (this.clientRedstoneOutput) {
-			ForgeDirection d = getSide();
-			double d0 = d.offsetX * 0.45F + (r.nextFloat() - 0.5F) * 0.2D;
-			double d1 = d.offsetY * 0.45F + (r.nextFloat() - 0.5F) * 0.2D;
-			double d2 = d.offsetZ * 0.45F + (r.nextFloat() - 0.5F) * 0.2D;
-			world.spawnParticle("reddust", 0.5 + x + d0, 0.5 + y + d1, 0.5 + z
-					+ d2, 0.0D, 0.0D, 0.0D);
-		}
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderStatic(x: Int, y: Int, z: Int, rh: IPartRenderHelper,
+                              renderer: RenderBlocks) {
+        rh.setTexture(TextureManager.LEVEL_FRONT.textures[0])
+        rh.setBounds(7f, 7f, 11f, 9f, 9f, 14f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setTexture(if (clientRedstoneOutput) TextureManager.LEVEL_FRONT
+                .textures[2] else TextureManager.LEVEL_FRONT.textures[1])
+        rh.setBounds(7f, 7f, 14f, 9f, 9f, 16f)
+        rh.renderBlock(x, y, z, renderer)
+    }
 
-	@Override
-	public void readFromNBT(NBTTagCompound data) {
-		super.readFromNBT(data);
-		this.fluid = FluidRegistry.getFluid(data.getString("fluid"));
-		this.mode = RedstoneMode.values()[data.getInteger("mode")];
-		this.wantedAmount = data.getLong("wantedAmount");
-		if (this.wantedAmount < 0)
-			this.wantedAmount = 0;
-	}
+    private fun updateCurrentAmount() {
+        val n = gridNode ?: return
+        val g = n.grid ?: return
+        val s = g.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return
+        val f = s.fluidInventory ?: return
+        currentAmount = 0L
+        for (st in f.storageList) {
+            if (fluid != null && st.fluid === fluid) currentAmount = st.stackSize
+        }
+        val h = host
+        h?.markForUpdate()
+    }
 
-	@Override
-	public boolean readFromStream(ByteBuf data) throws IOException {
-		super.readFromStream(data);
-		this.clientRedstoneOutput = data.readBoolean();
-		if (getHost() != null)
-			getHost().markForUpdate();
-		return true;
-	}
+    override fun setFluid(_index: Int, _fluid: Fluid?, _player: EntityPlayer?) {
+        fluid = _fluid
+        updateCurrentAmount()
+        if (watcher == null) return
+        watcher!!.clear()
+        updateWatcher(watcher!!)
+        PacketFluidSlot(Lists.newArrayList(fluid))
+                .sendPacketToPlayer(_player)
+        notifyTargetBlock(hostTile, side)
+        saveData()
+    }
 
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		rh.setTexture(TextureManager.LEVEL_FRONT.getTextures()[0]);
-		rh.setBounds(7, 7, 11, 9, 9, 14);
-		rh.renderInventoryBox(renderer);
+    fun setWantedAmount(_wantedAmount: Long, player: EntityPlayer?) {
+        wantedAmount = _wantedAmount
+        if (wantedAmount < 0) wantedAmount = 0
+        val h = host
+        h?.markForUpdate()
+        PacketFluidEmitter(wantedAmount, player)
+                .sendPacketToPlayer(player)
+        notifyTargetBlock(hostTile, side)
+        saveData()
+    }
 
-		rh.setTexture(TextureManager.LEVEL_FRONT.getTextures()[1]);
-		rh.setBounds(7, 7, 14, 9, 9, 16);
-		rh.renderInventoryBox(renderer);
-	}
+    fun syncClientGui(player: EntityPlayer?) {
+        PacketFluidEmitter(mode, player).sendPacketToPlayer(player)
+        PacketFluidEmitter(wantedAmount, player)
+                .sendPacketToPlayer(player)
+        PacketFluidSlot(Lists.newArrayList(fluid))
+                .sendPacketToPlayer(player)
+    }
 
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderStatic(int x, int y, int z, IPartRenderHelper rh,
-			RenderBlocks renderer) {
-		rh.setTexture(TextureManager.LEVEL_FRONT.getTextures()[0]);
-		rh.setBounds(7, 7, 11, 9, 9, 14);
-		rh.renderBlock(x, y, z, renderer);
-		rh.setTexture(this.clientRedstoneOutput ? TextureManager.LEVEL_FRONT
-				.getTextures()[2] : TextureManager.LEVEL_FRONT.getTextures()[1]);
-		rh.setBounds(7, 7, 14, 9, 9, 16);
-		rh.renderBlock(x, y, z, renderer);
-	}
+    fun toggleMode(player: EntityPlayer?) {
+        when (mode) {
+            RedstoneMode.LOW_SIGNAL -> mode = RedstoneMode.HIGH_SIGNAL
+            else -> mode = RedstoneMode.LOW_SIGNAL
+        }
+        val h = host
+        h?.markForUpdate()
+        PacketFluidEmitter(mode, player).sendPacketToPlayer(player)
+        notifyTargetBlock(hostTile, side)
+        saveData()
+    }
 
-	private void updateCurrentAmount() {
-		IGridNode n = getGridNode();
-		if (n == null) return;
-		IGrid g = n.getGrid();
-		if (g == null) return;
-		IStorageGrid s = g.getCache(IStorageGrid.class);
-		if (s == null) return;
-		IMEMonitor<IAEFluidStack> f = s.getFluidInventory();
-		if (f == null) return;
+    override fun updateWatcher(newWatcher: IStackWatcher) {
+        watcher = newWatcher
+        if (fluid != null) watcher!!.add(AEApi.instance().storage()
+                .createFluidStack(FluidStack(fluid, 1)))
+    }
 
-		this.currentAmount = 0L;
-		for (IAEFluidStack st: f.getStorageList()) {
-			if (this.fluid != null && st.getFluid() == this.fluid)
-				this.currentAmount = st.getStackSize();
-		}
+    override fun writeToNBT(data: NBTTagCompound) {
+        super.writeToNBT(data)
+        if (fluid != null) data.setString("fluid", fluid!!.name) else data.removeTag("fluid")
+        data.setInteger("mode", mode.ordinal)
+        data.setLong("wantedAmount", wantedAmount)
+    }
 
-		IPartHost h = getHost();
-		if (h != null) h.markForUpdate();
-	}
-
-	@Override
-	public void setFluid(int _index, Fluid _fluid, EntityPlayer _player) {
-		this.fluid = _fluid;
-		updateCurrentAmount();
-		if (this.watcher == null)
-			return;
-		this.watcher.clear();
-		updateWatcher(this.watcher);
-		new PacketFluidSlot(Lists.newArrayList(this.fluid))
-				.sendPacketToPlayer(_player);
-		notifyTargetBlock(getHostTile(), getSide());
-		saveData();
-	}
-
-	public void setWantedAmount(long _wantedAmount, EntityPlayer player) {
-		this.wantedAmount = _wantedAmount;
-		if (this.wantedAmount < 0)
-			this.wantedAmount = 0;
-
-		IPartHost h = getHost();
-		if (h != null) h.markForUpdate();
-
-		new PacketFluidEmitter(this.wantedAmount, player)
-				.sendPacketToPlayer(player);
-		notifyTargetBlock(getHostTile(), getSide());
-		saveData();
-	}
-
-	public void syncClientGui(EntityPlayer player) {
-		new PacketFluidEmitter(this.mode, player).sendPacketToPlayer(player);
-		new PacketFluidEmitter(this.wantedAmount, player)
-				.sendPacketToPlayer(player);
-		new PacketFluidSlot(Lists.newArrayList(this.fluid))
-				.sendPacketToPlayer(player);
-	}
-
-	public void toggleMode(EntityPlayer player) {
-		switch (this.mode) {
-			case LOW_SIGNAL:
-				this.mode = RedstoneMode.HIGH_SIGNAL;
-				break;
-			default:
-				this.mode = RedstoneMode.LOW_SIGNAL;
-				break;
-		}
-
-		IPartHost h = getHost();
-		if (h != null) h.markForUpdate();
-
-		new PacketFluidEmitter(this.mode, player).sendPacketToPlayer(player);
-		notifyTargetBlock(getHostTile(), getSide());
-		saveData();
-	}
-
-	@Override
-	public void updateWatcher(IStackWatcher newWatcher) {
-		this.watcher = newWatcher;
-		if (this.fluid != null)
-			this.watcher.add(AEApi.instance().storage()
-					.createFluidStack(new FluidStack(this.fluid, 1)));
-	}
-
-	@Override
-	public void writeToNBT(NBTTagCompound data) {
-		super.writeToNBT(data);
-		if (this.fluid != null)
-			data.setString("fluid", this.fluid.getName());
-		else
-			data.removeTag("fluid");
-		data.setInteger("mode", this.mode.ordinal());
-		data.setLong("wantedAmount", this.wantedAmount);
-	}
-
-	@Override
-	public void writeToStream(ByteBuf data) throws IOException {
-		super.writeToStream(data);
-		data.writeBoolean(isPowering());
-	}
+    @Throws(IOException::class)
+    override fun writeToStream(data: ByteBuf) {
+        super.writeToStream(data)
+        data.writeBoolean(isPowering)
+    }
 }

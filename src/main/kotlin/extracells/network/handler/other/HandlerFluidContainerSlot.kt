@@ -1,17 +1,14 @@
-package extracells.network.handler.other;
+package extracells.network.handler.other
 
-import cpw.mods.fml.common.network.simpleimpl.IMessage;
-import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
-import cpw.mods.fml.common.network.simpleimpl.MessageContext;
-import extracells.network.packet.other.PacketFluidContainerSlot;
+import cpw.mods.fml.common.network.simpleimpl.IMessage
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler
+import cpw.mods.fml.common.network.simpleimpl.MessageContext
+import extracells.network.packet.other.PacketFluidContainerSlot
 
-public class HandlerFluidContainerSlot implements
-		IMessageHandler<PacketFluidContainerSlot, IMessage> {
-
-	@Override
-	public IMessage onMessage(PacketFluidContainerSlot message,
-			MessageContext ctx) {
-		message.execute();
-		return null;
-	}
+class HandlerFluidContainerSlot : IMessageHandler<PacketFluidContainerSlot, IMessage?> {
+    override fun onMessage(message: PacketFluidContainerSlot,
+                           ctx: MessageContext): IMessage? {
+        message.execute()
+        return null
+    }
 }

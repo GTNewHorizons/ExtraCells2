@@ -1,101 +1,83 @@
-package extracells.item;
+package extracells.item
 
-import extracells.registries.ItemEnum;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.StatCollector;
-import net.minecraft.world.World;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
+import extracells.registries.ItemEnum
+import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.util.IIcon
+import net.minecraft.util.StatCollector
+import net.minecraft.world.World
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidRegistry
+import net.minecraftforge.fluids.FluidStack
 
-import java.util.List;
+class ItemFluidPattern : ItemECBase() {
+    var icon: IIcon? = null
+    override fun getIcon(itemStack: ItemStack, pass: Int): IIcon {
+        if (pass == 0) {
+            val fluid = getFluid(itemStack)
+            if (fluid != null) return fluid.icon
+        }
+        return icon!!
+    }
 
-public class ItemFluidPattern extends ItemECBase {
+    override fun getItemStackDisplayName(itemStack: ItemStack): String {
+        val fluid = getFluid(itemStack)
+                ?: return StatCollector.translateToLocal(getUnlocalizedName(itemStack))
+        return (StatCollector.translateToLocal(getUnlocalizedName(itemStack))
+                + ": " + fluid.getLocalizedName(FluidStack(fluid, 1)))
+    }
 
-	public static Fluid getFluid(ItemStack itemStack) {
-		if (!itemStack.hasTagCompound())
-			itemStack.setTagCompound(new NBTTagCompound());
+    override fun getSpriteNumber(): Int {
+        return 1
+    }
 
-		return FluidRegistry.getFluid(itemStack.getTagCompound().getString(
-				"fluidID"));
-	}
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+        super.getSubItems(item, creativeTab, itemList)
+        for (fluid in FluidRegistry.getRegisteredFluidIDsByFluid().keys) {
+            val itemStack = ItemStack(this, 1)
+            itemStack.tagCompound = NBTTagCompound()
+            itemStack.tagCompound.setString("fluidID", fluid.name)
+            itemList.add(itemStack)
+        }
+    }
 
-	public static ItemStack getPatternForFluid(Fluid fluid) {
-		ItemStack itemStack = new ItemStack(ItemEnum.FLUIDPATTERN.getItem(), 1);
-		itemStack.setTagCompound(new NBTTagCompound());
-		if (fluid != null)
-			itemStack.getTagCompound().setString("fluidID", fluid.getName());
-		return itemStack;
-	}
+    override fun getUnlocalizedName(itemStack: ItemStack): String {
+        return "extracells.item.fluid.pattern"
+    }
 
-	IIcon icon;
+    override fun onItemRightClick(itemStack: ItemStack, world: World,
+                                  entityPlayer: EntityPlayer): ItemStack {
+        return if (entityPlayer.isSneaking) ItemEnum.FLUIDPATTERN.getSizedStack(itemStack.stackSize) else itemStack
+    }
 
-	public ItemFluidPattern() {
-		setMaxStackSize(1);
-	}
+    override fun registerIcons(iconRegister: IIconRegister) {
+        icon = iconRegister.registerIcon("extracells:fluid.pattern")
+    }
 
-	@Override
-	public IIcon getIcon(ItemStack itemStack, int pass) {
-		if (pass == 0) {
-			Fluid fluid = getFluid(itemStack);
-			if (fluid != null)
-				return fluid.getIcon();
-		}
-		return this.icon;
-	}
+    override fun requiresMultipleRenderPasses(): Boolean {
+        return true
+    }
 
-	@Override
-	public String getItemStackDisplayName(ItemStack itemStack) {
-		Fluid fluid = getFluid(itemStack);
-		if (fluid == null)
-			return StatCollector.translateToLocal(getUnlocalizedName(itemStack));
-		return StatCollector.translateToLocal(getUnlocalizedName(itemStack))
-				+ ": " + fluid.getLocalizedName(new FluidStack(fluid, 1));
-	}
+    companion object {
+        fun getFluid(itemStack: ItemStack): Fluid {
+            if (!itemStack.hasTagCompound()) itemStack.tagCompound = NBTTagCompound()
+            return FluidRegistry.getFluid(itemStack.tagCompound.getString(
+                    "fluidID"))
+        }
 
-	@Override
-	public int getSpriteNumber() {
-		return 1;
-	}
+        fun getPatternForFluid(fluid: Fluid?): ItemStack {
+            val itemStack = ItemStack(ItemEnum.FLUIDPATTERN.item, 1)
+            itemStack.tagCompound = NBTTagCompound()
+            if (fluid != null) itemStack.tagCompound.setString("fluidID", fluid.name)
+            return itemStack
+        }
+    }
 
-	@SuppressWarnings({ "unchecked", "rawtypes" })
-	@Override
-	public void getSubItems(Item item, CreativeTabs creativeTab, List itemList) {
-        super.getSubItems(item, creativeTab, itemList);
-		for (Fluid fluid : FluidRegistry.getRegisteredFluidIDsByFluid().keySet()) {
-			ItemStack itemStack = new ItemStack(this, 1);
-			itemStack.setTagCompound(new NBTTagCompound());
-			itemStack.getTagCompound().setString("fluidID", fluid.getName());
-			itemList.add(itemStack);
-		}
-	}
-
-	@Override
-	public String getUnlocalizedName(ItemStack itemStack) {
-		return "extracells.item.fluid.pattern";
-	}
-
-	@Override
-	public ItemStack onItemRightClick(ItemStack itemStack, World world,
-			EntityPlayer entityPlayer) {
-		if (entityPlayer.isSneaking())
-			return ItemEnum.FLUIDPATTERN.getSizedStack(itemStack.stackSize);
-		return itemStack;
-	}
-
-	@Override
-	public void registerIcons(IIconRegister iconRegister) {
-		this.icon = iconRegister.registerIcon("extracells:fluid.pattern");
-	}
-
-	@Override
-	public boolean requiresMultipleRenderPasses() {
-		return true;
-	}
+    init {
+        setMaxStackSize(1)
+    }
 }

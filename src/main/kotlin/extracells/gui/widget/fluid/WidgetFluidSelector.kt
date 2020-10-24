@@ -1,117 +1,88 @@
-package extracells.gui.widget.fluid;
+package extracells.gui.widget.fluid
 
-import appeng.api.storage.data.IAEFluidStack;
-import extracells.Extracells;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.renderer.texture.TextureMap;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import org.lwjgl.opengl.GL11;
+import appeng.api.storage.data.IAEFluidStack
+import extracells.Extracells.shortenedBuckets
+import net.minecraft.client.Minecraft
+import net.minecraft.client.renderer.texture.TextureMap
+import net.minecraftforge.fluids.FluidStack
+import org.lwjgl.opengl.GL11
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class WidgetFluidSelector(guiFluidTerminal: IFluidSelectorGui,
+                          stack: IAEFluidStack?) : AbstractFluidWidget(guiFluidTerminal, 18, 18,
+        stack!!.fluidStack.getFluid()) {
+    var amount: Long = 0
+    private val color: Int
+    private val borderThickness: Int
+    private fun drawHollowRectWithCorners(posX: Int, posY: Int, height: Int,
+                                          width: Int, color: Int, thickness: Int) {
+        drawRect(posX, posY, posX + height, posY + thickness, color)
+        drawRect(posX, posY + width - thickness, posX + height, posY + width,
+                color)
+        drawRect(posX, posY, posX + thickness, posY + width, color)
+        drawRect(posX + height - thickness, posY, posX + height, posY + width,
+                color)
+        drawRect(posX, posY, posX + thickness + 1, posY + thickness + 1, color)
+        drawRect(posX + height, posY + width, posX + height - thickness - 1,
+                posY + width - thickness - 1, color)
+        drawRect(posX + height, posY, posX + height - thickness - 1, posY
+                + thickness + 1, color)
+        drawRect(posX, posY + width, posX + thickness + 1, posY + width - thickness - 1, color)
+    }
 
-public class WidgetFluidSelector extends AbstractFluidWidget {
+    override fun drawTooltip(posX: Int, posY: Int, mouseX: Int, mouseY: Int): Boolean {
+        if (fluid == null || amount <= 0 || !isPointInRegion(posX, posY, height, width,
+                        mouseX, mouseY)) return false
+        var amountToText = amount.toString() + "mB"
+        if (shortenedBuckets) {
+            if (amount > 1000000000L) amountToText = amount / 1000000000L
+                    .toString() + "MegaB" else if (amount > 1000000L) amountToText = amount / 1000000L.toString() + "KiloB" else if (amount > 9999L) {
+                amountToText = amount / 1000L.toString() + "B"
+            }
+        }
+        val description: MutableList<String?> = ArrayList()
+        description.add(fluid.getLocalizedName(FluidStack(fluid, 0)))
+        description.add(amountToText)
+        drawHoveringText(description, mouseX - guiFluidTerminal.guiLeft(),
+                mouseY - guiFluidTerminal.guiTop() + 18,
+                Minecraft.getMinecraft().fontRenderer)
+        return true
+    }
 
-	private long amount = 0;
-	private final int color;
-	private final int borderThickness;
+    override fun drawWidget(posX: Int, posY: Int) {
+        Minecraft.getMinecraft().renderEngine
+                .bindTexture(TextureMap.locationBlocksTexture)
+        GL11.glDisable(GL11.GL_LIGHTING)
+        GL11.glEnable(GL11.GL_BLEND)
+        GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)
+        GL11.glColor3f(1f, 1f, 1f)
+        val terminalFluid = (guiFluidTerminal as IFluidSelectorGui).currentFluid
+        val currentFluid = terminalFluid?.fluid
+        if (fluid != null && fluid.icon != null) {
+            GL11.glColor3f((fluid.color shr 16 and 0xFF) / 255.0f, (fluid.color shr 8 and 0xFF) / 255.0f,
+                    (fluid.color and 0xFF) / 255.0f)
+            drawTexturedModelRectFromIcon(posX + 1, posY + 1,
+                    fluid.icon, height - 2, width - 2)
+        }
+        GL11.glColor3f(1f, 1f, 1f)
+        if (fluid === currentFluid) drawHollowRectWithCorners(posX, posY, height, width,
+                color, borderThickness)
+        GL11.glEnable(GL11.GL_LIGHTING)
+        GL11.glDisable(GL11.GL_BLEND)
+    }
 
-	public WidgetFluidSelector(IFluidSelectorGui guiFluidTerminal,
-			IAEFluidStack stack) {
-		super(guiFluidTerminal, 18, 18, stack.getFluidStack().getFluid());
-		this.amount = stack.getStackSize();
-		this.color = 0xFF00FFFF;
-		this.borderThickness = 1;
-	}
+    override fun mouseClicked(posX: Int, posY: Int, mouseX: Int, mouseY: Int) {
+        if (fluid != null
+                && isPointInRegion(posX, posY, height, width, mouseX,
+                        mouseY)) {
+            (guiFluidTerminal as IFluidSelectorGui).container
+                    .setSelectedFluid(fluid)
+        }
+    }
 
-	private void drawHollowRectWithCorners(int posX, int posY, int height,
-			int width, int color, int thickness) {
-		drawRect(posX, posY, posX + height, posY + thickness, color);
-		drawRect(posX, posY + width - thickness, posX + height, posY + width,
-				color);
-		drawRect(posX, posY, posX + thickness, posY + width, color);
-		drawRect(posX + height - thickness, posY, posX + height, posY + width,
-				color);
-
-		drawRect(posX, posY, posX + thickness + 1, posY + thickness + 1, color);
-		drawRect(posX + height, posY + width, posX + height - thickness - 1,
-				posY + width - thickness - 1, color);
-		drawRect(posX + height, posY, posX + height - thickness - 1, posY
-				+ thickness + 1, color);
-		drawRect(posX, posY + width, posX + thickness + 1, posY + width
-				- thickness - 1, color);
-	}
-
-	@Override
-	public boolean drawTooltip(int posX, int posY, int mouseX, int mouseY) {
-		if (this.fluid == null
-				|| this.amount <= 0
-				|| !isPointInRegion(posX, posY, this.height, this.width,
-						mouseX, mouseY))
-			return false;
-
-		String amountToText = this.amount + "mB";
-		if (Extracells.getShortenedBuckets()) {
-			if (this.amount > 1000000000L)
-				amountToText = this.amount / 1000000000L
-						+ "MegaB";
-			else if (this.amount > 1000000L)
-				amountToText = this.amount / 1000000L + "KiloB";
-			else if (this.amount > 9999L) {
-				amountToText = this.amount / 1000L + "B";
-			}
-		}
-
-		List<String> description = new ArrayList<String>();
-		description.add(this.fluid.getLocalizedName(new FluidStack(this.fluid, 0)));
-		description.add(amountToText);
-		drawHoveringText(description, mouseX - this.guiFluidTerminal.guiLeft(),
-				mouseY - this.guiFluidTerminal.guiTop() + 18,
-				Minecraft.getMinecraft().fontRenderer);
-		return true;
-	}
-
-	@Override
-	public void drawWidget(int posX, int posY) {
-		Minecraft.getMinecraft().renderEngine
-				.bindTexture(TextureMap.locationBlocksTexture);
-		GL11.glDisable(GL11.GL_LIGHTING);
-		GL11.glEnable(GL11.GL_BLEND);
-		GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-		GL11.glColor3f(1F, 1F, 1F);
-
-		IAEFluidStack terminalFluid = ((IFluidSelectorGui) this.guiFluidTerminal).getCurrentFluid();
-		Fluid currentFluid = terminalFluid != null ? terminalFluid.getFluid() : null;
-
-		if (this.fluid != null && this.fluid.getIcon() != null) {
-			GL11.glColor3f((this.fluid.getColor() >> 16 & 0xFF) / 255.0F, (this.fluid.getColor() >> 8 & 0xFF) / 255.0F, (this.fluid.getColor() & 0xFF) / 255.0F);
-			drawTexturedModelRectFromIcon(posX + 1, posY + 1,
-					this.fluid.getIcon(), this.height - 2, this.width - 2);
-		}
-		GL11.glColor3f(1F, 1F, 1F);
-		if (this.fluid == currentFluid)
-			drawHollowRectWithCorners(posX, posY, this.height, this.width,
-					this.color, this.borderThickness);
-		GL11.glEnable(GL11.GL_LIGHTING);
-		GL11.glDisable(GL11.GL_BLEND);
-	}
-
-	public long getAmount() {
-		return this.amount;
-	}
-
-	@Override
-	public void mouseClicked(int posX, int posY, int mouseX, int mouseY) {
-		if (this.fluid != null
-				&& isPointInRegion(posX, posY, this.height, this.width, mouseX,
-						mouseY)) {
-			((IFluidSelectorGui) this.guiFluidTerminal).getContainer()
-					.setSelectedFluid(this.fluid);
-		}
-	}
-
-	public void setAmount(long amount) {
-		this.amount = amount;
-	}
+    init {
+        amount = stack!!.stackSize
+        color = -0xff0001
+        borderThickness = 1
+    }
 }

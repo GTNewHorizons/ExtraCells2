@@ -1,57 +1,54 @@
-package extracells.block;
+package extracells.block
 
-import extracells.Extracells;
-import extracells.tileentity.TileEntityCraftingStorage;
-import net.minecraft.client.renderer.texture.IIconRegister;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.IIcon;
+import appeng.block.crafting.BlockCraftingStorage
+import extracells.Extracells.ModTab
+import extracells.tileentity.TileEntityCraftingStorage
+import net.minecraft.client.renderer.texture.IIconRegister
+import net.minecraft.item.ItemStack
+import net.minecraft.util.IIcon
 
-public class BlockCraftingStorage extends appeng.block.crafting.BlockCraftingStorage {
-
-	private static final IIcon[] icons = new IIcon[8];
-
-	public BlockCraftingStorage() {
-		this.setTileEntity(TileEntityCraftingStorage.class);
-        this.setCreativeTab(Extracells.getModTab());
-		this.hasSubtypes = true;
-		this.setBlockName("blockCraftingStorage");
-	}
-
-	@Override
-	public String getUnlocalizedName( ItemStack is ){
-		return this.getItemUnlocalizedName( is );
-	}
-
-	protected String getItemUnlocalizedName( ItemStack is ){
-		return super.getUnlocalizedName( is );
-	}
-
-    public void registerBlockIcons(IIconRegister ir) {
-        icons[0] = ir.registerIcon("extracells:crafting.storage.256k");
-        icons[1] = ir.registerIcon("extracells:crafting.storage.256k.fit");
-
-        icons[2] = ir.registerIcon("extracells:crafting.storage.1024k");
-        icons[3] = ir.registerIcon("extracells:crafting.storage.1024k.fit");
-
-        icons[4] = ir.registerIcon("extracells:crafting.storage.4096k");
-        icons[5] = ir.registerIcon("extracells:crafting.storage.4096k.fit");
-
-        icons[6] = ir.registerIcon("extracells:crafting.storage.16384k");
-        icons[7] = ir.registerIcon("extracells:crafting.storage.16384k.fit");
+class BlockCraftingStorage : BlockCraftingStorage() {
+    override fun getUnlocalizedName(`is`: ItemStack): String {
+        return getItemUnlocalizedName(`is`)
     }
 
-	@Override
-	public IIcon getIcon(int side, int meta) {
-		switch(meta & (~4)){
-			case 0: return icons[0];
-			case 1: return icons[2];
-			case 2: return icons[4];
-			case 3: return icons[6];
-			case 8: return icons[1];
-			case 1|8: return icons[3];
-			case 2|8: return icons[5];
-			case 3|8: return icons[7];
-			default: return null;
-		}
-	}
+    override fun getItemUnlocalizedName(`is`: ItemStack): String {
+        return super.getUnlocalizedName(`is`)
+    }
+
+    override fun registerBlockIcons(ir: IIconRegister) {
+        icons[0] = ir.registerIcon("extracells:crafting.storage.256k")
+        icons[1] = ir.registerIcon("extracells:crafting.storage.256k.fit")
+        icons[2] = ir.registerIcon("extracells:crafting.storage.1024k")
+        icons[3] = ir.registerIcon("extracells:crafting.storage.1024k.fit")
+        icons[4] = ir.registerIcon("extracells:crafting.storage.4096k")
+        icons[5] = ir.registerIcon("extracells:crafting.storage.4096k.fit")
+        icons[6] = ir.registerIcon("extracells:crafting.storage.16384k")
+        icons[7] = ir.registerIcon("extracells:crafting.storage.16384k.fit")
+    }
+
+    override fun getIcon(side: Int, meta: Int): IIcon {
+        return when (meta and 4.inv()) {
+            0 -> icons[0]!!
+            1 -> icons[2]!!
+            2 -> icons[4]!!
+            3 -> icons[6]!!
+            8 -> icons[1]!!
+            1 or 8 -> icons[3]!!
+            2 or 8 -> icons[5]!!
+            3 or 8 -> icons[7]!!
+            else -> null
+        }
+    }
+
+    companion object {
+        private val icons = arrayOfNulls<IIcon>(8)
+    }
+
+    init {
+        setTileEntity(TileEntityCraftingStorage::class.java)
+        setCreativeTab(ModTab)
+        hasSubtypes = true
+        setBlockName("blockCraftingStorage")
+    }
 }

@@ -1,309 +1,246 @@
-package extracells.inventory;
+package extracells.inventory
 
-import appeng.api.AEApi;
-import appeng.api.config.AccessRestriction;
-import appeng.api.config.Actionable;
-import appeng.api.implementations.tiles.ITileStorageMonitorable;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.events.MENetworkCellArrayUpdate;
-import appeng.api.networking.events.MENetworkStorageEvent;
-import appeng.api.networking.security.BaseActionSource;
-import appeng.api.networking.security.MachineSource;
-import appeng.api.networking.storage.IBaseMonitor;
-import appeng.api.storage.*;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IItemList;
-import extracells.part.PartFluidStorage;
-import extracells.util.FluidUtil;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.FluidTankInfo;
-import net.minecraftforge.fluids.IFluidHandler;
+import appeng.api.AEApi
+import appeng.api.config.AccessRestriction
+import appeng.api.config.Actionable
+import appeng.api.implementations.tiles.ITileStorageMonitorable
+import appeng.api.networking.events.MENetworkCellArrayUpdate
+import appeng.api.networking.events.MENetworkStorageEvent
+import appeng.api.networking.security.BaseActionSource
+import appeng.api.networking.security.MachineSource
+import appeng.api.networking.storage.IBaseMonitor
+import appeng.api.storage.*
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IItemList
+import extracells.part.PartFluidStorage
+import extracells.util.FluidUtil
+import net.minecraft.tileentity.TileEntity
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import net.minecraftforge.fluids.IFluidHandler
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
-
-public class HandlerPartStorageFluid implements IMEInventoryHandler<IAEFluidStack>, IMEMonitorHandlerReceiver<IAEFluidStack> {
-
-	protected PartFluidStorage node;
-	protected IFluidHandler tank;
-	protected AccessRestriction access = AccessRestriction.READ_WRITE;
-	protected List<Fluid> prioritizedFluids = new ArrayList<Fluid>();
-	protected boolean inverted;
-	private  IExternalStorageHandler externalHandler = null;
-	protected TileEntity tile = null;
-	public ITileStorageMonitorable externalSystem;
-
-	public HandlerPartStorageFluid(PartFluidStorage _node) {
-		this.node = _node;
-	}
-
-	@Override
-	public boolean canAccept(IAEFluidStack input) {
-		if (!this.node.isActive())
-			return false;
-		else if (this.tank == null && this.externalSystem == null && this.externalHandler == null || !(this.access == AccessRestriction.WRITE || this.access == AccessRestriction.READ_WRITE) || input == null)
-			return false;
-		else if (this.externalSystem != null) {
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(
-					this.node.getSide().getOpposite(), new MachineSource(
-							this.node));
-			if (monitor == null)
-				return false;
-			IMEMonitor<IAEFluidStack> fluidInventory = monitor
-					.getFluidInventory();
-			return fluidInventory != null && fluidInventory.canAccept(input);
-		} else if (externalHandler != null) {
-			IMEInventory<IAEFluidStack> inventory = this.externalHandler.getInventory(this.tile, this.node.getSide().getOpposite(), StorageChannel.FLUIDS, new MachineSource(this.node));
-			return inventory != null;
-		}
-		FluidTankInfo[] infoArray = this.tank.getTankInfo(this.node.getSide().getOpposite());
-		if (infoArray != null && infoArray.length > 0) {
-			for (FluidTankInfo tank : infoArray) {
-			    if (tank.fluid == null) return isPrioritized(input);
-			    else if (tank.fluid.getFluidID() == input.getFluidStack().getFluidID()) {
-			        if (!isPrioritized(input)) return false;
-                    if (tank.fluid.amount < tank.capacity) return true;
+class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInventoryHandler<IAEFluidStack?>, IMEMonitorHandlerReceiver<IAEFluidStack?> {
+    protected var tank: IFluidHandler? = null
+    protected var access = AccessRestriction.READ_WRITE
+    protected var prioritizedFluids: MutableList<Fluid> = ArrayList()
+    protected var inverted = false
+    private var externalHandler: IExternalStorageHandler? = null
+    protected var tile: TileEntity? = null
+    var externalSystem: ITileStorageMonitorable? = null
+    override fun canAccept(input: IAEFluidStack?): Boolean {
+        if (!node.isActive) return false else if (tank == null && externalSystem == null && externalHandler == null || !(access == AccessRestriction.WRITE || access == AccessRestriction.READ_WRITE) || input == null) return false else if (externalSystem != null) {
+            val monitor = externalSystem!!.getMonitorable(
+                    node.side.opposite, MachineSource(
+                    node))
+                    ?: return false
+            val fluidInventory = monitor
+                    .fluidInventory
+            return fluidInventory != null && fluidInventory.canAccept(input)
+        } else if (externalHandler != null) {
+            val inventory: IMEInventory<IAEFluidStack>? = externalHandler!!.getInventory(tile, node.side.opposite,
+                    StorageChannel.FLUIDS, MachineSource(
+                    node))
+            return inventory != null
+        }
+        val infoArray = tank!!.getTankInfo(node.side.opposite)
+        if (infoArray != null && infoArray.size > 0) {
+            for (tank in infoArray) {
+                if (tank.fluid == null) return isPrioritized(
+                        input) else if (tank.fluid.fluidID == input.fluidStack.fluidID) {
+                    if (!isPrioritized(input)) return false
+                    if (tank.fluid.amount < tank.capacity) return true
                 }
             }
-		}
-		return false;
-	}
+        }
+        return false
+    }
 
-	@Override
-	public IAEFluidStack extractItems(IAEFluidStack request, Actionable mode, BaseActionSource src) {
-		if (!this.node.isActive()
-				|| !(this.access == AccessRestriction.READ || this.access == AccessRestriction.READ_WRITE))
-			return null;
-		if (this.externalSystem != null && request != null) {
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(
-					this.node.getSide().getOpposite(), src);
-			if (monitor == null)
-				return null;
-			IMEMonitor<IAEFluidStack> fluidInventory = monitor
-					.getFluidInventory();
-			if (fluidInventory == null)
-				return null;
-			return fluidInventory.extractItems(request, mode, src);
+    override fun extractItems(request: IAEFluidStack, mode: Actionable, src: BaseActionSource): IAEFluidStack? {
+        if (!node.isActive
+                || !(access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE)) return null
+        if (externalSystem != null && request != null) {
+            val monitor = externalSystem!!.getMonitorable(
+                    node.side.opposite, src) ?: return null
+            val fluidInventory = monitor
+                    .fluidInventory ?: return null
+            return fluidInventory.extractItems(request, mode, src)
+        } else if (externalHandler != null && request != null) {
+            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+                    MachineSource(node))
+                    ?: return null
+            return inventory.extractItems(request, mode, MachineSource(node))
+        }
+        if (tank == null || request == null || access == AccessRestriction.WRITE || access == AccessRestriction.NO_ACCESS) return null
+        val toDrain = request.fluidStack
+        if (!tank!!.canDrain(node.side.opposite, toDrain.getFluid())) return null
+        val drain = tank!!.drain(
+                node.side.opposite, FluidStack(toDrain.getFluid(), toDrain.amount), mode == Actionable.MODULATE)
+        return if (drain == null) {
+            null
+        } else if (drain.amount == 0) {
+            null
+        } else if (drain.amount == toDrain.amount) {
+            request
+        } else {
+            FluidUtil.createAEFluidStack(toDrain.fluidID, drain.amount.toLong())
+        }
+    }
 
-		}else if(externalHandler != null && request != null){
-			IMEInventory<IAEFluidStack> inventory = externalHandler.getInventory(this.tile, this.node.getSide().getOpposite(), StorageChannel.FLUIDS, new MachineSource(this.node));
-			if(inventory == null)
-				return null;
-			return inventory.extractItems(request, mode, new MachineSource(this.node));
-		}
-		if (this.tank == null || request == null || this.access == AccessRestriction.WRITE || this.access == AccessRestriction.NO_ACCESS)
-			return null;
-		FluidStack toDrain = request.getFluidStack();
-		if (!this.tank.canDrain(this.node.getSide().getOpposite(), toDrain.getFluid()))
-		    return null;
+    override fun getAccess(): AccessRestriction {
+        return access
+    }
 
-        FluidStack drain = this.tank.drain(
-        		this.node.getSide().getOpposite(), new FluidStack(toDrain.getFluid(), toDrain.amount), mode == Actionable.MODULATE);
+    override fun getAvailableItems(
+            out: IItemList<IAEFluidStack>): IItemList<IAEFluidStack> {
+        if (!node.isActive || !(access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE)) return out
+        if (externalSystem != null) {
+            val monitor = externalSystem!!.getMonitorable(
+                    node.side.opposite, MachineSource(node))
+                    ?: return out
+            val fluidInventory = monitor.fluidInventory ?: return out
+            val list = externalSystem!!.getMonitorable(
+                    node.side.opposite, MachineSource(node)).fluidInventory.storageList
+            for (stack in list) {
+                out.add(stack)
+            }
+        } else if (externalHandler != null) {
+            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+                    MachineSource(
+                            node))
+                    ?: return out
+            val list = inventory.getAvailableItems(AEApi.instance().storage().createFluidList())
+            for (stack in list) {
+                out.add(stack)
+            }
+        } else if (tank != null) {
+            val infoArray = tank!!.getTankInfo(node.side.opposite)
+            if (infoArray != null && infoArray.size > 0) {
+                for (info in infoArray) {
+                    if (info.fluid != null) out.add(AEApi.instance().storage().createFluidStack(info.fluid))
+                }
+            }
+        }
+        return out
+    }
 
-        if (drain == null) {
-        	return null;
-		} else if (drain.amount == 0) {
-			return null;
-		} else if (drain.amount == toDrain.amount) {
-			return request;
-		} else {
-			return FluidUtil.createAEFluidStack(toDrain.getFluidID(), drain.amount);
-		}
-	}
+    override fun getChannel(): StorageChannel {
+        return StorageChannel.FLUIDS
+    }
 
-	@Override
-	public AccessRestriction getAccess() {
-		return this.access;
-	}
+    override fun getPriority(): Int {
+        return node.priority
+    }
 
-	@Override
-	public IItemList<IAEFluidStack> getAvailableItems(
-			IItemList<IAEFluidStack> out) {
-		if (!this.node.isActive() || !(this.access == AccessRestriction.READ || this.access == AccessRestriction.READ_WRITE))
-			return out;
-		if (this.externalSystem != null) {
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(this.node.getSide().getOpposite(), new MachineSource(this.node));
-			if (monitor == null)
-				return out;
-			IMEMonitor<IAEFluidStack> fluidInventory = monitor.getFluidInventory();
-			if (fluidInventory == null)
-				return out;
-			IItemList<IAEFluidStack> list = this.externalSystem.getMonitorable(this.node.getSide().getOpposite(), new MachineSource(this.node)).getFluidInventory().getStorageList();
-			for (IAEFluidStack stack : list) {
-				out.add(stack);
-			}
-		}else if(externalHandler != null){
-			IMEInventory<IAEFluidStack> inventory = externalHandler.getInventory(this.tile, this.node.getSide().getOpposite(), StorageChannel.FLUIDS, new MachineSource(this.node));
-			if(inventory == null)
-				return out;
-			IItemList<IAEFluidStack> list = inventory.getAvailableItems(AEApi.instance().storage().createFluidList());
-			for(IAEFluidStack stack : list){
-				out.add(stack);
-			}
-		} else if (this.tank != null) {
-			FluidTankInfo[] infoArray = this.tank.getTankInfo(this.node.getSide().getOpposite());
-			if (infoArray != null && infoArray.length > 0){
-				for(FluidTankInfo info : infoArray){
-					if(info.fluid != null)
-						out.add(AEApi.instance().storage().createFluidStack(info.fluid));
-				}
-			}
-		}
-		return out;
-	}
+    override fun getSlot(): Int {
+        return 0
+    }
 
-	@Override
-	public StorageChannel getChannel() {
-		return StorageChannel.FLUIDS;
-	}
+    override fun injectItems(input: IAEFluidStack, mode: Actionable,
+                             src: BaseActionSource): IAEFluidStack? {
+        if (!(access == AccessRestriction.WRITE || access == AccessRestriction.READ_WRITE)) return null
+        if (externalSystem != null && input != null) {
+            val monitor = externalSystem!!.getMonitorable(node.side.opposite, src) ?: return input
+            val fluidInventory = monitor.fluidInventory ?: return input
+            return fluidInventory.injectItems(input, mode, src)
+        } else if (externalHandler != null && input != null) {
+            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+                    MachineSource(node))
+                    ?: return input
+            return inventory.injectItems(input, mode, MachineSource(node))
+        }
+        if (tank == null || input == null || !canAccept(input)) return input
+        val toFill = input.fluidStack
+        var filled = 0
+        var filled2 = 0
+        do {
+            filled2 = tank!!.fill(node.side.opposite, FluidStack(toFill.getFluid(), toFill.amount - filled),
+                    mode == Actionable.MODULATE)
+            filled = filled + filled2
+        } while (filled2 != 0 && filled != toFill.amount)
+        return if (filled == toFill.amount) null else FluidUtil.createAEFluidStack(toFill.fluidID,
+                toFill.amount - filled.toLong())
+    }
 
-	@Override
-	public int getPriority() {
-		return this.node.getPriority();
-	}
+    override fun isPrioritized(input: IAEFluidStack?): Boolean {
+        if (input == null) return false else if (prioritizedFluids.isEmpty()) return true
+        for (fluid in prioritizedFluids) if (fluid === input.fluid) return !inverted
+        return inverted
+    }
 
-	@Override
-	public int getSlot() {
-		return 0;
-	}
+    override fun isValid(verificationToken: Any): Boolean {
+        return true
+    }
 
-	@Override
-	public IAEFluidStack injectItems(IAEFluidStack input, Actionable mode,
-			BaseActionSource src) {
-		if (!(this.access == AccessRestriction.WRITE || this.access == AccessRestriction.READ_WRITE))
-			return null;
-		if (this.externalSystem != null && input != null) {
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(this.node.getSide().getOpposite(), src);
-			if (monitor == null)
-				return input;
-			IMEMonitor<IAEFluidStack> fluidInventory = monitor.getFluidInventory();
-			if (fluidInventory == null)
-				return input;
-			return fluidInventory.injectItems(input, mode, src);
-		}else if(externalHandler != null && input != null){
-			IMEInventory<IAEFluidStack> inventory = externalHandler.getInventory(this.tile, this.node.getSide().getOpposite(), StorageChannel.FLUIDS, new MachineSource(this.node));
-			if(inventory == null)
-				return input;
-			return inventory.injectItems(input, mode, new MachineSource(this.node));
-		}
-		if (this.tank == null || input == null || !canAccept(input))
-			return input;
-		FluidStack toFill = input.getFluidStack();
-		int filled = 0;
-		int filled2 = 0;
-		do {
-			filled2 = this.tank.fill(this.node.getSide().getOpposite(), new FluidStack(toFill.getFluid(), toFill.amount - filled), mode == Actionable.MODULATE);
-			filled = filled + filled2;
-		} while (filled2 != 0 && filled != toFill.amount);
-		if (filled == toFill.amount)
-			return null;
-		return FluidUtil.createAEFluidStack(toFill.getFluidID(), toFill.amount - filled);
-	}
+    override fun onListUpdate() {}
+    fun onNeighborChange() {
+        if (externalSystem != null) {
+            val monitor = externalSystem!!.getMonitorable(
+                    node.side.opposite, MachineSource(node))
+            if (monitor != null) {
+                val fluidInventory = monitor.fluidInventory
+                fluidInventory?.removeListener(this)
+            }
+        }
+        tank = null
+        val orientation = node.side
+        val hostTile = node.hostTile ?: return
+        if (hostTile.worldObj == null) return
+        val tileEntity = hostTile.worldObj.getTileEntity(
+                hostTile.xCoord + orientation!!.offsetX,
+                hostTile.yCoord + orientation.offsetY,
+                hostTile.zCoord + orientation.offsetZ)
+        tile = tileEntity
+        tank = null
+        externalSystem = null
+        if (tileEntity == null) {
+            externalHandler = null
+            return
+        }
+        externalHandler = AEApi.instance().registries().externalStorage().getHandler(tileEntity, node.side.opposite,
+                StorageChannel.FLUIDS, MachineSource(
+                node))
+        if (tileEntity is ITileStorageMonitorable) {
+            externalSystem = tileEntity
+            val monitor = externalSystem!!.getMonitorable(
+                    node.side.opposite, MachineSource(
+                    node))
+                    ?: return
+            val fluidInventory = monitor
+                    .fluidInventory ?: return
+            fluidInventory.addListener(this, null)
+        } else if (externalHandler == null && tileEntity is IFluidHandler) tank = tileEntity
+    }
 
-	@Override
-	public boolean isPrioritized(IAEFluidStack input) {
-		if (input == null)
-			return false;
-		else if (this.prioritizedFluids.isEmpty()) return true;
+    override fun postChange(monitor: IBaseMonitor<IAEFluidStack?>,
+                            change: Iterable<IAEFluidStack?>, actionSource: BaseActionSource) {
+        val gridNode = node.gridNode
+        if (gridNode != null) {
+            val grid = gridNode.grid
+            if (grid != null) {
+                grid.postEvent(MENetworkCellArrayUpdate())
+                gridNode.grid.postEvent(MENetworkStorageEvent(node.gridBlock.fluidMonitor, StorageChannel.FLUIDS))
+            }
+            node.host.markForUpdate()
+        }
+    }
 
-		for (Fluid fluid : this.prioritizedFluids)
-			if (fluid == input.getFluid())
-				return !this.inverted;
-		return this.inverted;
-	}
+    fun setAccessRestriction(access: AccessRestriction) {
+        this.access = access
+    }
 
-	@Override
-	public boolean isValid(Object verificationToken) {
-		return true;
-	}
+    fun setInverted(_inverted: Boolean) {
+        inverted = _inverted
+    }
 
-	@Override
-	public void onListUpdate() {
+    fun setPrioritizedFluids(_fluids: Array<Fluid?>) {
+        prioritizedFluids.clear()
+        for (fluid in _fluids) {
+            if (fluid != null) prioritizedFluids.add(fluid)
+        }
+    }
 
-	}
-
-	public void onNeighborChange() {
-		if (this.externalSystem != null) {
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(this.node.getSide().getOpposite(), new MachineSource(this.node));
-			if (monitor != null) {
-				IMEMonitor<IAEFluidStack> fluidInventory = monitor.getFluidInventory();
-				if (fluidInventory != null) {
-					fluidInventory.removeListener(this);
-				}
-			}
-		}
-		this.tank = null;
-		ForgeDirection orientation = this.node.getSide();
-		TileEntity hostTile = this.node.getHostTile();
-		if (hostTile == null)
-			return;
-		if (hostTile.getWorldObj() == null)
-			return;
-		TileEntity tileEntity = hostTile.getWorldObj().getTileEntity(
-				hostTile.xCoord + orientation.offsetX,
-				hostTile.yCoord + orientation.offsetY,
-				hostTile.zCoord + orientation.offsetZ);
-		this.tile = tileEntity;
-		this.tank = null;
-		this.externalSystem = null;
-		if(tileEntity == null){
-			this.externalHandler = null;
-			return;
-		}
-		this.externalHandler = AEApi.instance().registries().externalStorage().getHandler(tileEntity, this.node.getSide().getOpposite(), StorageChannel.FLUIDS, new MachineSource(this.node));
-		if (tileEntity instanceof ITileStorageMonitorable) {
-			this.externalSystem = (ITileStorageMonitorable) tileEntity;
-			IStorageMonitorable monitor = this.externalSystem.getMonitorable(
-					this.node.getSide().getOpposite(), new MachineSource(
-							this.node));
-			if (monitor == null)
-				return;
-			IMEMonitor<IAEFluidStack> fluidInventory = monitor
-					.getFluidInventory();
-			if (fluidInventory == null)
-				return;
-			fluidInventory.addListener(this, null);
-
-		}else if (externalHandler == null && tileEntity instanceof IFluidHandler)
-			this.tank = (IFluidHandler) tileEntity;
-	}
-
-	@Override
-	public void postChange(IBaseMonitor<IAEFluidStack> monitor,
-			Iterable<IAEFluidStack> change, BaseActionSource actionSource) {
-		IGridNode gridNode = this.node.getGridNode();
-		if (gridNode != null) {
-			IGrid grid = gridNode.getGrid();
-			if (grid != null) {
-				grid.postEvent(new MENetworkCellArrayUpdate());
-				gridNode.getGrid().postEvent(new MENetworkStorageEvent(this.node.getGridBlock().getFluidMonitor(), StorageChannel.FLUIDS));
-			}
-			this.node.getHost().markForUpdate();
-		}
-	}
-
-	public void setAccessRestriction(AccessRestriction access) {
-		this.access = access;
-	}
-
-	public void setInverted(boolean _inverted) {
-		this.inverted = _inverted;
-	}
-
-	public void setPrioritizedFluids(Fluid[] _fluids) {
-		this.prioritizedFluids.clear();
-		for (Fluid fluid : _fluids) {
-			if (fluid != null)
-				this.prioritizedFluids.add(fluid);
-		}
-	}
-
-	@Override
-	public boolean validForPass(int i) {
-		return true; // TODO
-	}
+    override fun validForPass(i: Int): Boolean {
+        return true // TODO
+    }
 }

@@ -1,16 +1,13 @@
-package extracells.network.handler.part;
+package extracells.network.handler.part
 
-import cpw.mods.fml.common.network.simpleimpl.IMessage;
-import cpw.mods.fml.common.network.simpleimpl.IMessageHandler;
-import cpw.mods.fml.common.network.simpleimpl.MessageContext;
-import extracells.network.packet.part.PacketBusFluidIO;
+import cpw.mods.fml.common.network.simpleimpl.IMessage
+import cpw.mods.fml.common.network.simpleimpl.IMessageHandler
+import cpw.mods.fml.common.network.simpleimpl.MessageContext
+import extracells.network.packet.part.PacketBusFluidIO
 
-public class HandlerBusFluidIO implements
-		IMessageHandler<PacketBusFluidIO, IMessage> {
-
-	@Override
-	public IMessage onMessage(PacketBusFluidIO message, MessageContext ctx) {
-		message.execute();
-		return null;
-	}
+class HandlerBusFluidIO : IMessageHandler<PacketBusFluidIO, IMessage?> {
+    override fun onMessage(message: PacketBusFluidIO, ctx: MessageContext): IMessage? {
+        message.execute()
+        return null
+    }
 }

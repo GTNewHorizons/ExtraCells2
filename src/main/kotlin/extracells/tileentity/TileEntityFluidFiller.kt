@@ -1,373 +1,294 @@
-package extracells.tileentity;
+package extracells.tileentity
 
-import appeng.api.AEApi;
-import appeng.api.config.Actionable;
-import appeng.api.implementations.ICraftingPatternItem;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.crafting.ICraftingPatternDetails;
-import appeng.api.networking.crafting.ICraftingProvider;
-import appeng.api.networking.crafting.ICraftingProviderHelper;
-import appeng.api.networking.events.MENetworkCellArrayUpdate;
-import appeng.api.networking.events.MENetworkCraftingPatternChange;
-import appeng.api.networking.events.MENetworkEventSubscribe;
-import appeng.api.networking.events.MENetworkPowerStatusChange;
-import appeng.api.networking.security.BaseActionSource;
-import appeng.api.networking.security.IActionHost;
-import appeng.api.networking.security.MachineSource;
-import appeng.api.networking.storage.IBaseMonitor;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.IMEMonitorHandlerReceiver;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IAEItemStack;
-import appeng.api.util.AECableType;
-import appeng.api.util.DimensionalCoord;
-import cpw.mods.fml.common.FMLCommonHandler;
-import extracells.api.IECTileEntity;
-import extracells.gridblock.ECFluidGridBlock;
-import extracells.util.FluidUtil;
-import net.minecraft.init.Items;
-import net.minecraft.inventory.InventoryCrafting;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import org.apache.commons.lang3.tuple.MutablePair;
+import appeng.api.AEApi
+import appeng.api.config.Actionable
+import appeng.api.implementations.ICraftingPatternItem
+import appeng.api.networking.IGrid
+import appeng.api.networking.IGridNode
+import appeng.api.networking.crafting.ICraftingPatternDetails
+import appeng.api.networking.crafting.ICraftingProvider
+import appeng.api.networking.crafting.ICraftingProviderHelper
+import appeng.api.networking.events.MENetworkCellArrayUpdate
+import appeng.api.networking.events.MENetworkCraftingPatternChange
+import appeng.api.networking.events.MENetworkEventSubscribe
+import appeng.api.networking.events.MENetworkPowerStatusChange
+import appeng.api.networking.security.BaseActionSource
+import appeng.api.networking.security.IActionHost
+import appeng.api.networking.security.MachineSource
+import appeng.api.networking.storage.IBaseMonitor
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.storage.IMEMonitor
+import appeng.api.storage.IMEMonitorHandlerReceiver
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.util.AECableType
+import appeng.api.util.DimensionalCoord
+import cpw.mods.fml.common.FMLCommonHandler
+import extracells.api.IECTileEntity
+import extracells.gridblock.ECFluidGridBlock
+import extracells.util.FluidUtil
+import net.minecraft.init.Items
+import net.minecraft.inventory.InventoryCrafting
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagList
+import net.minecraft.network.NetworkManager
+import net.minecraft.network.Packet
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTileEntity, IMEMonitorHandlerReceiver<IAEFluidStack>, IListenerTile {
+    private val gridBlock: ECFluidGridBlock
+    private var node: IGridNode? = null
+    var fluids: MutableList<Fluid> = ArrayList()
+    var containerItem: ItemStack? = ItemStack(Items.bucket)
+    var returnStack: ItemStack? = null
+    var ticksToFinish = 0
+    private var isFirstGetGridNode = true
+    private val encodedPattern = AEApi.instance().definitions().items().encodedPattern().maybeItem().orNull()
+    @MENetworkEventSubscribe
+    fun cellUpdate(event: MENetworkCellArrayUpdate?) {
+        val storage = storageGrid
+        if (storage != null) postChange(storage.fluidInventory, null, null)
+    }
 
-public class TileEntityFluidFiller extends TileBase implements IActionHost,
-		ICraftingProvider, IECTileEntity,
-		IMEMonitorHandlerReceiver<IAEFluidStack>, IListenerTile {
+    override fun getActionableNode(): IGridNode {
+        if (FMLCommonHandler.instance().effectiveSide.isClient) return null
+        if (node == null) {
+            node = AEApi.instance().createGridNode(gridBlock)
+        }
+        return node!!
+    }
 
-	private final ECFluidGridBlock gridBlock;
-	private IGridNode node = null;
-	List<Fluid> fluids = new ArrayList<Fluid>();
-	public ItemStack containerItem = new ItemStack(Items.bucket);
-	ItemStack returnStack = null;
-	int ticksToFinish = 0;
+    override fun getCableConnectionType(dir: ForgeDirection): AECableType {
+        return AECableType.DENSE
+    }
 
-	private boolean isFirstGetGridNode = true;
+    override fun getDescriptionPacket(): Packet {
+        val nbtTag = NBTTagCompound()
+        writeToNBT(nbtTag)
+        return S35PacketUpdateTileEntity(xCoord, yCoord,
+                zCoord, 1, nbtTag)
+    }
 
-	private final Item encodedPattern = AEApi.instance().definitions().items().encodedPattern().maybeItem().orNull();
+    override fun getGridNode(dir: ForgeDirection): IGridNode {
+        if (FMLCommonHandler.instance().side.isClient
+                && (getWorldObj() == null || getWorldObj().isRemote)) return null
+        if (isFirstGetGridNode) {
+            isFirstGetGridNode = false
+            actionableNode.updateState()
+            val storage = storageGrid
+            storage!!.fluidInventory.addListener(this, null)
+        }
+        return node!!
+    }
 
-	public TileEntityFluidFiller() {
-		super();
-		this.gridBlock = new ECFluidGridBlock(this);
-	}
+    override val location: DimensionalCoord
+        get() = DimensionalCoord(this)
 
-	@MENetworkEventSubscribe
-	public void cellUpdate(MENetworkCellArrayUpdate event) {
-		IStorageGrid storage = getStorageGrid();
-		if (storage != null)
-			postChange(storage.getFluidInventory(), null, null);
-	}
+    private fun getPattern(emptyContainer: ItemStack?,
+                           filledContainer: ItemStack?): ItemStack {
+        val `in` = NBTTagList()
+        val out = NBTTagList()
+        `in`.appendTag(emptyContainer!!.writeToNBT(NBTTagCompound()))
+        out.appendTag(filledContainer!!.writeToNBT(NBTTagCompound()))
+        val itemTag = NBTTagCompound()
+        itemTag.setTag("in", `in`)
+        itemTag.setTag("out", out)
+        itemTag.setBoolean("crafting", false)
+        val pattern = ItemStack(encodedPattern)
+        pattern.tagCompound = itemTag
+        return pattern
+    }
 
-	@Override
-	public IGridNode getActionableNode() {
-		if (FMLCommonHandler.instance().getEffectiveSide().isClient())
-			return null;
-		if (this.node == null) {
-			this.node = AEApi.instance().createGridNode(this.gridBlock);
-		}
-		return this.node;
-	}
+    override val powerUsage: Double
+        get() = 1.0
+    private val storageGrid: IStorageGrid?
+        private get() {
+            node = getGridNode(ForgeDirection.UNKNOWN)
+            if (node == null) return null
+            val grid = node!!.grid ?: return null
+            return grid.getCache(IStorageGrid::class.java)
+        }
 
-	@Override
-	public AECableType getCableConnectionType(ForgeDirection dir) {
-		return AECableType.DENSE;
-	}
+    override fun isBusy(): Boolean {
+        return returnStack != null
+    }
 
-	@Override
-	public Packet getDescriptionPacket() {
-		NBTTagCompound nbtTag = new NBTTagCompound();
-		writeToNBT(nbtTag);
-		return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord,
-				this.zCoord, 1, nbtTag);
-	}
+    override fun isValid(verificationToken: Any): Boolean {
+        return true
+    }
 
-	@Override
-	public IGridNode getGridNode(ForgeDirection dir) {
-		if (FMLCommonHandler.instance().getSide().isClient()
-				&& (getWorldObj() == null || getWorldObj().isRemote))
-			return null;
-		if (this.isFirstGetGridNode) {
-			this.isFirstGetGridNode = false;
-			getActionableNode().updateState();
-			IStorageGrid storage = getStorageGrid();
-			storage.getFluidInventory().addListener(this, null);
-		}
-		return this.node;
-	}
+    override fun onDataPacket(net: NetworkManager, pkt: S35PacketUpdateTileEntity) {
+        readFromNBT(pkt.func_148857_g())
+    }
 
-	@Override
-	public DimensionalCoord getLocation() {
-		return new DimensionalCoord(this);
-	}
+    override fun onListUpdate() {}
+    override fun postChange(monitor: IBaseMonitor<IAEFluidStack>,
+                            change: Iterable<IAEFluidStack>, actionSource: BaseActionSource) {
+        val oldFluids: MutableList<Fluid> = ArrayList(fluids)
+        var mustUpdate = false
+        fluids.clear()
+        for (fluid in (monitor as IMEMonitor<IAEFluidStack>)
+                .storageList) {
+            if (!oldFluids.contains(fluid.fluid)) mustUpdate = true else oldFluids.remove(fluid.fluid)
+            fluids.add(fluid.fluid)
+        }
+        if (!(oldFluids.isEmpty() && !mustUpdate)) {
+            if (getGridNode(ForgeDirection.UNKNOWN) != null
+                    && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
+                getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+                        MENetworkCraftingPatternChange(this,
+                                getGridNode(ForgeDirection.UNKNOWN)))
+            }
+        }
+    }
 
-	private ItemStack getPattern(ItemStack emptyContainer,
-			ItemStack filledContainer) {
-		NBTTagList in = new NBTTagList();
-		NBTTagList out = new NBTTagList();
-		in.appendTag(emptyContainer.writeToNBT(new NBTTagCompound()));
-		out.appendTag(filledContainer.writeToNBT(new NBTTagCompound()));
-		NBTTagCompound itemTag = new NBTTagCompound();
-		itemTag.setTag("in", in);
-		itemTag.setTag("out", out);
-		itemTag.setBoolean("crafting", false);
-		ItemStack pattern = new ItemStack(this.encodedPattern);
-		pattern.setTagCompound(itemTag);
-		return pattern;
-	}
+    fun postUpdateEvent() {
+        if (getGridNode(ForgeDirection.UNKNOWN) != null
+                && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
+            getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+                    MENetworkCraftingPatternChange(this,
+                            getGridNode(ForgeDirection.UNKNOWN)))
+        }
+    }
 
-	@Override
-	public double getPowerUsage() {
-		return 1.0D;
-	}
+    @MENetworkEventSubscribe
+    fun powerUpdate(event: MENetworkPowerStatusChange?) {
+        val storage = storageGrid
+        if (storage != null) postChange(storage.fluidInventory, null, null)
+    }
 
-	private IStorageGrid getStorageGrid() {
-		this.node = getGridNode(ForgeDirection.UNKNOWN);
-		if (this.node == null)
-			return null;
-		IGrid grid = this.node.getGrid();
-		if (grid == null)
-			return null;
-		return grid.getCache(IStorageGrid.class);
-	}
+    override fun provideCrafting(craftingTracker: ICraftingProviderHelper) {
+        val storage = storageGrid ?: return
+        val fluidStorage = storage.fluidInventory
+        for (fluidStack in fluidStorage.storageList) {
+            val fluid = fluidStack.fluid ?: continue
+            val maxCapacity = FluidUtil.getCapacity(containerItem)
+            if (maxCapacity == 0) continue
+            val filled = FluidUtil.fillStack(
+                    containerItem!!.copy(), FluidStack(fluid,
+                    maxCapacity))
+            if (filled!!.right == null) continue
+            val pattern = getPattern(containerItem, filled.right)
+            val patter = pattern
+                    .item as ICraftingPatternItem
+            craftingTracker.addCraftingOption(this,
+                    patter.getPatternForItem(pattern, getWorldObj()))
+        }
+    }
 
-	@Override
-	public boolean isBusy() {
-		return this.returnStack != null;
-	}
+    override fun pushPattern(patternDetails: ICraftingPatternDetails,
+                             table: InventoryCrafting): Boolean {
+        if (returnStack != null) return false
+        val filled = patternDetails.condensedOutputs[0]
+                .itemStack
+        val fluid = FluidUtil.getFluidFromContainer(filled)
+        val storage = storageGrid ?: return false
+        val fluidStack = AEApi
+                .instance()
+                .storage()
+                .createFluidStack(
+                        FluidStack(
+                                fluid!!.getFluid(),
+                                FluidUtil.getCapacity(patternDetails
+                                        .condensedInputs[0].itemStack)))
+        val extracted = storage.fluidInventory
+                .extractItems(fluidStack.copy(), Actionable.SIMULATE,
+                        MachineSource(this))
+        if (extracted == null
+                || extracted.stackSize != fluidStack.stackSize) return false
+        storage.fluidInventory.extractItems(fluidStack,
+                Actionable.MODULATE, MachineSource(this))
+        returnStack = filled
+        ticksToFinish = 40
+        return true
+    }
 
-	@Override
-	public boolean isValid(Object verificationToken) {
-		return true;
-	}
+    override fun readFromNBT(tagCompound: NBTTagCompound) {
+        super.readFromNBT(tagCompound)
+        if (tagCompound.hasKey("container")) containerItem = ItemStack.loadItemStackFromNBT(tagCompound
+                .getCompoundTag("container")) else if (tagCompound.hasKey("isContainerEmpty")
+                && tagCompound.getBoolean("isContainerEmpty")) containerItem = null
+        if (tagCompound.hasKey("return")) returnStack = ItemStack.loadItemStackFromNBT(tagCompound
+                .getCompoundTag("return")) else if (tagCompound.hasKey("isReturnEmpty")
+                && tagCompound.getBoolean("isReturnEmpty")) returnStack = null
+        if (tagCompound.hasKey("time")) ticksToFinish = tagCompound.getInteger("time")
+        if (hasWorldObj()) {
+            val node = getGridNode(ForgeDirection.UNKNOWN)
+            if (tagCompound.hasKey("nodes") && node != null) {
+                node.loadFromNBT("node0", tagCompound.getCompoundTag("nodes"))
+                node.updateState()
+            }
+        }
+    }
 
-	@Override
-	public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
-		readFromNBT(pkt.func_148857_g());
-	}
+    override fun registerListener() {
+        val storage = storageGrid ?: return
+        postChange(storage.fluidInventory, null, null)
+        storage.fluidInventory.addListener(this, null)
+    }
 
-	@Override
-	public void onListUpdate() {}
+    override fun removeListener() {
+        val storage = storageGrid ?: return
+        storage.fluidInventory.removeListener(this)
+    }
 
-	@Override
-	public void postChange(IBaseMonitor<IAEFluidStack> monitor,
-			Iterable<IAEFluidStack> change, BaseActionSource actionSource) {
-		List<Fluid> oldFluids = new ArrayList<Fluid>(this.fluids);
-		boolean mustUpdate = false;
-		this.fluids.clear();
-		for (IAEFluidStack fluid : ((IMEMonitor<IAEFluidStack>) monitor)
-				.getStorageList()) {
-			if (!oldFluids.contains(fluid.getFluid()))
-				mustUpdate = true;
-			else
-				oldFluids.remove(fluid.getFluid());
-			this.fluids.add(fluid.getFluid());
-		}
-		if (!(oldFluids.isEmpty() && !mustUpdate)) {
-			if (getGridNode(ForgeDirection.UNKNOWN) != null
-					&& getGridNode(ForgeDirection.UNKNOWN).getGrid() != null) {
-				getGridNode(ForgeDirection.UNKNOWN).getGrid().postEvent(
-						new MENetworkCraftingPatternChange(this,
-								getGridNode(ForgeDirection.UNKNOWN)));
-			}
-		}
-	}
+    override fun securityBreak() {
+        if (getWorldObj() != null) getWorldObj().func_147480_a(xCoord, yCoord, zCoord,
+                true)
+    }
 
-	public void postUpdateEvent() {
-		if (getGridNode(ForgeDirection.UNKNOWN) != null
-				&& getGridNode(ForgeDirection.UNKNOWN).getGrid() != null) {
-			getGridNode(ForgeDirection.UNKNOWN).getGrid().postEvent(
-					new MENetworkCraftingPatternChange(this,
-							getGridNode(ForgeDirection.UNKNOWN)));
-		}
-	}
+    override fun updateEntity() {
+        if (getWorldObj() == null || getWorldObj().provider == null) return
+        if (ticksToFinish > 0) ticksToFinish = ticksToFinish - 1
+        if (ticksToFinish <= 0 && returnStack != null) {
+            val storage = storageGrid ?: return
+            val toInject = AEApi.instance().storage()
+                    .createItemStack(returnStack)
+            if (storage.itemInventory.canAccept(toInject.copy())) {
+                val nodAdded = storage.itemInventory.injectItems(
+                        toInject.copy(), Actionable.SIMULATE,
+                        MachineSource(this))
+                if (nodAdded == null) {
+                    storage.itemInventory.injectItems(toInject,
+                            Actionable.MODULATE, MachineSource(this))
+                    returnStack = null
+                }
+            }
+        }
+    }
 
-	@MENetworkEventSubscribe
-	public void powerUpdate(MENetworkPowerStatusChange event) {
-		IStorageGrid storage = getStorageGrid();
-		if (storage != null)
-			postChange(storage.getFluidInventory(), null, null);
-	}
+    override fun updateGrid(oldGrid: IGrid?, newGrid: IGrid?) {
+        if (oldGrid != null) {
+            val storage = oldGrid.getCache<IStorageGrid>(IStorageGrid::class.java)
+            storage?.fluidInventory?.removeListener(this)
+        }
+        if (newGrid != null) {
+            val storage = newGrid.getCache<IStorageGrid>(IStorageGrid::class.java)
+            storage?.fluidInventory?.addListener(this, null)
+        }
+    }
 
-	@Override
-	public void provideCrafting(ICraftingProviderHelper craftingTracker) {
-		IStorageGrid storage = getStorageGrid();
-		if (storage == null)
-			return;
-		IMEMonitor<IAEFluidStack> fluidStorage = storage.getFluidInventory();
-		for (IAEFluidStack fluidStack : fluidStorage.getStorageList()) {
-			Fluid fluid = fluidStack.getFluid();
-			if (fluid == null)
-				continue;
-			int maxCapacity = FluidUtil.getCapacity(this.containerItem);
-			if (maxCapacity == 0)
-				continue;
-			MutablePair<Integer, ItemStack> filled = FluidUtil.fillStack(
-					this.containerItem.copy(), new FluidStack(fluid,
-							maxCapacity));
-			if (filled.right == null)
-				continue;
-			ItemStack pattern = getPattern(this.containerItem, filled.right);
-			ICraftingPatternItem patter = (ICraftingPatternItem) pattern
-					.getItem();
-			craftingTracker.addCraftingOption(this,
-					patter.getPatternForItem(pattern, getWorldObj()));
-		}
+    override fun writeToNBT(tagCompound: NBTTagCompound) {
+        super.writeToNBT(tagCompound)
+        if (containerItem != null) tagCompound.setTag("container",
+                containerItem!!.writeToNBT(NBTTagCompound())) else tagCompound.setBoolean("isContainerEmpty", true)
+        if (returnStack != null) tagCompound.setTag("return",
+                returnStack!!.writeToNBT(NBTTagCompound())) else tagCompound.setBoolean("isReturnEmpty", true)
+        tagCompound.setInteger("time", ticksToFinish)
+        if (!hasWorldObj()) return
+        val node = getGridNode(ForgeDirection.UNKNOWN)
+        if (node != null) {
+            val nodeTag = NBTTagCompound()
+            node.saveToNBT("node0", nodeTag)
+            tagCompound.setTag("nodes", nodeTag)
+        }
+    }
 
-	}
-
-	@Override
-	public boolean pushPattern(ICraftingPatternDetails patternDetails,
-			InventoryCrafting table) {
-		if (this.returnStack != null)
-			return false;
-		ItemStack filled = patternDetails.getCondensedOutputs()[0]
-				.getItemStack();
-		FluidStack fluid = FluidUtil.getFluidFromContainer(filled);
-		IStorageGrid storage = getStorageGrid();
-		if (storage == null)
-			return false;
-		IAEFluidStack fluidStack = AEApi
-				.instance()
-				.storage()
-				.createFluidStack(
-						new FluidStack(
-								fluid.getFluid(),
-								FluidUtil.getCapacity(patternDetails
-										.getCondensedInputs()[0].getItemStack())));
-		IAEFluidStack extracted = storage.getFluidInventory()
-				.extractItems(fluidStack.copy(), Actionable.SIMULATE,
-						new MachineSource(this));
-		if (extracted == null
-				|| extracted.getStackSize() != fluidStack.getStackSize())
-			return false;
-		storage.getFluidInventory().extractItems(fluidStack,
-				Actionable.MODULATE, new MachineSource(this));
-		this.returnStack = filled;
-		this.ticksToFinish = 40;
-		return true;
-	}
-
-	@Override
-	public void readFromNBT(NBTTagCompound tagCompound) {
-		super.readFromNBT(tagCompound);
-		if (tagCompound.hasKey("container"))
-			this.containerItem = ItemStack.loadItemStackFromNBT(tagCompound
-					.getCompoundTag("container"));
-		else if (tagCompound.hasKey("isContainerEmpty")
-				&& tagCompound.getBoolean("isContainerEmpty"))
-			this.containerItem = null;
-		if (tagCompound.hasKey("return"))
-			this.returnStack = ItemStack.loadItemStackFromNBT(tagCompound
-					.getCompoundTag("return"));
-		else if (tagCompound.hasKey("isReturnEmpty")
-				&& tagCompound.getBoolean("isReturnEmpty"))
-			this.returnStack = null;
-		if (tagCompound.hasKey("time"))
-			this.ticksToFinish = tagCompound.getInteger("time");
-		if (hasWorldObj()) {
-			IGridNode node = getGridNode(ForgeDirection.UNKNOWN);
-			if (tagCompound.hasKey("nodes") && node != null) {
-				node.loadFromNBT("node0", tagCompound.getCompoundTag("nodes"));
-				node.updateState();
-			}
-		}
-	}
-
-	@Override
-	public void registerListener() {
-		IStorageGrid storage = getStorageGrid();
-		if (storage == null)
-			return;
-		postChange(storage.getFluidInventory(), null, null);
-		storage.getFluidInventory().addListener(this, null);
-	}
-
-	@Override
-	public void removeListener() {
-		IStorageGrid storage = getStorageGrid();
-		if (storage == null)
-			return;
-		storage.getFluidInventory().removeListener(this);
-	}
-
-	@Override
-	public void securityBreak() {
-		if (this.getWorldObj() != null)
-			getWorldObj().func_147480_a(this.xCoord, this.yCoord, this.zCoord,
-					true);
-	}
-
-	@Override
-	public void updateEntity() {
-		if (getWorldObj() == null || getWorldObj().provider == null)
-			return;
-		if (this.ticksToFinish > 0)
-			this.ticksToFinish = this.ticksToFinish - 1;
-		if (this.ticksToFinish <= 0 && this.returnStack != null) {
-			IStorageGrid storage = getStorageGrid();
-			if (storage == null)
-				return;
-			IAEItemStack toInject = AEApi.instance().storage()
-					.createItemStack(this.returnStack);
-			if (storage.getItemInventory().canAccept(toInject.copy())) {
-				IAEItemStack nodAdded = storage.getItemInventory().injectItems(
-						toInject.copy(), Actionable.SIMULATE,
-						new MachineSource(this));
-				if (nodAdded == null) {
-					storage.getItemInventory().injectItems(toInject,
-							Actionable.MODULATE, new MachineSource(this));
-					this.returnStack = null;
-				}
-			}
-		}
-	}
-
-	@Override
-	public void updateGrid(IGrid oldGrid, IGrid newGrid) {
-		if (oldGrid != null) {
-			IStorageGrid storage = oldGrid.getCache(IStorageGrid.class);
-			if (storage != null)
-				storage.getFluidInventory().removeListener(this);
-		}
-		if (newGrid != null) {
-			IStorageGrid storage = newGrid.getCache(IStorageGrid.class);
-			if (storage != null)
-				storage.getFluidInventory().addListener(this, null);
-		}
-	}
-
-	@Override
-	public void writeToNBT(NBTTagCompound tagCompound) {
-		super.writeToNBT(tagCompound);
-		if (this.containerItem != null)
-			tagCompound.setTag("container", this.containerItem.writeToNBT(new NBTTagCompound()));
-		else
-			tagCompound.setBoolean("isContainerEmpty", true);
-		if (this.returnStack != null)
-			tagCompound.setTag("return", this.returnStack.writeToNBT(new NBTTagCompound()));
-		else
-			tagCompound.setBoolean("isReturnEmpty", true);
-		tagCompound.setInteger("time", this.ticksToFinish);
-		if (!hasWorldObj())
-			return;
-		IGridNode node = getGridNode(ForgeDirection.UNKNOWN);
-		if (node != null) {
-			NBTTagCompound nodeTag = new NBTTagCompound();
-			node.saveToNBT("node0", nodeTag);
-			tagCompound.setTag("nodes", nodeTag);
-		}
-	}
+    init {
+        gridBlock = ECFluidGridBlock(this)
+    }
 }

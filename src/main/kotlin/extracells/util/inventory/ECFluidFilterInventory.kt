@@ -1,93 +1,69 @@
-package extracells.util.inventory;
+package extracells.util.inventory
 
-import extracells.registries.ItemEnum;
-import extracells.util.FluidUtil;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidRegistry;
-import net.minecraftforge.fluids.FluidStack;
+import extracells.registries.ItemEnum
+import extracells.util.FluidUtil
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidRegistry
 
-public class ECFluidFilterInventory extends ECPrivateInventory {
+class ECFluidFilterInventory(_customName: String, _size: Int,
+                             private val cellItem: ItemStack) : ECPrivateInventory(_customName, _size, 1) {
+    override fun isItemValidForSlot(i: Int, itemstack: ItemStack): Boolean {
+        if (itemstack == null) return false
+        if (itemstack.item === ItemEnum.FLUIDITEM.item) {
+            val fluidID = itemstack.itemDamage
+            for (s in slots) {
+                if (s == null) continue
+                if (s.itemDamage == fluidID) return false
+            }
+            return true
+        }
+        if (!FluidUtil.isFilled(itemstack)) return false
+        val stack = FluidUtil.getFluidFromContainer(itemstack) ?: return false
+        val fluidID = stack.fluidID
+        for (s in slots) {
+            if (s == null) continue
+            if (s.itemDamage == fluidID) return false
+        }
+        return true
+    }
 
-	private final ItemStack cellItem;
+    override fun markDirty() {
+        val tag: NBTTagCompound
+        tag = if (cellItem.hasTagCompound()) cellItem.tagCompound else NBTTagCompound()
+        tag.setTag("filter", writeToNBT())
+    }
 
-	public ECFluidFilterInventory(String _customName, int _size,
-			ItemStack _cellItem) {
-		super(_customName, _size, 1);
-		this.cellItem = _cellItem;
-		if (this.cellItem.hasTagCompound())
-			if (this.cellItem.getTagCompound().hasKey("filter"))
-				readFromNBT(this.cellItem.getTagCompound().getTagList("filter",
-						10));
-	}
+    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack) {
+        if (itemstack == null) {
+            super.setInventorySlotContents(slotId, null)
+            return
+        }
+        val fluid: Fluid?
+        if (itemstack.item === ItemEnum.FLUIDITEM.item) {
+            fluid = FluidRegistry.getFluid(itemstack.itemDamage)
+            if (fluid == null) return
+        } else {
+            if (!isItemValidForSlot(slotId, itemstack)) return
+            val fluidStack = FluidUtil.getFluidFromContainer(itemstack)
+            if (fluidStack == null) {
+                super.setInventorySlotContents(slotId, null)
+                return
+            }
+            fluid = fluidStack.getFluid()
+            if (fluid == null) {
+                super.setInventorySlotContents(slotId, null)
+                return
+            }
+        }
+        super.setInventorySlotContents(slotId,
+                ItemStack(ItemEnum.FLUIDITEM.item, 1, fluid.id))
+    }
 
-	@Override
-	public boolean isItemValidForSlot(int i, ItemStack itemstack) {
-		if (itemstack == null)
-			return false;
-		if (itemstack.getItem() == ItemEnum.FLUIDITEM.getItem()) {
-			int fluidID = itemstack.getItemDamage();
-			for (ItemStack s : this.slots) {
-				if (s == null)
-					continue;
-				if (s.getItemDamage() == fluidID)
-					return false;
-			}
-			return true;
-		}
-		if (!FluidUtil.isFilled(itemstack))
-			return false;
-		FluidStack stack = FluidUtil.getFluidFromContainer(itemstack);
-		if (stack == null)
-			return false;
-		int fluidID = stack.getFluidID();
-		for (ItemStack s : this.slots) {
-			if (s == null)
-				continue;
-			if (s.getItemDamage() == fluidID)
-				return false;
-		}
-		return true;
-	}
-
-	@Override
-	public void markDirty() {
-		NBTTagCompound tag;
-		if (this.cellItem.hasTagCompound())
-			tag = this.cellItem.getTagCompound();
-		else
-			tag = new NBTTagCompound();
-		tag.setTag("filter", writeToNBT());
-	}
-
-	@Override
-	public void setInventorySlotContents(int slotId, ItemStack itemstack) {
-		if (itemstack == null) {
-			super.setInventorySlotContents(slotId, null);
-			return;
-		}
-		Fluid fluid;
-		if (itemstack.getItem() == ItemEnum.FLUIDITEM.getItem()) {
-			fluid = FluidRegistry.getFluid(itemstack.getItemDamage());
-			if (fluid == null)
-				return;
-		} else {
-			if (!isItemValidForSlot(slotId, itemstack))
-				return;
-			FluidStack fluidStack = FluidUtil.getFluidFromContainer(itemstack);
-			if (fluidStack == null) {
-				super.setInventorySlotContents(slotId, null);
-				return;
-			}
-			fluid = fluidStack.getFluid();
-			if (fluid == null) {
-				super.setInventorySlotContents(slotId, null);
-				return;
-			}
-		}
-		super.setInventorySlotContents(slotId,
-				new ItemStack(ItemEnum.FLUIDITEM.getItem(), 1, fluid.getID()));
-	}
-
+    init {
+        if (cellItem.hasTagCompound()) if (cellItem.tagCompound.hasKey("filter")) readFromNBT(
+                cellItem.tagCompound.getTagList("filter",
+                        10))
+    }
 }

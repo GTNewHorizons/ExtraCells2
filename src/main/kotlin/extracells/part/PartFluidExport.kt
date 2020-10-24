@@ -1,162 +1,135 @@
-package extracells.part;
+package extracells.part
 
-import appeng.api.AEApi;
-import appeng.api.config.Actionable;
-import appeng.api.config.SecurityPermissions;
-import appeng.api.parts.IPart;
-import appeng.api.parts.IPartCollisionHelper;
-import appeng.api.parts.IPartRenderHelper;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.util.AEColor;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.render.TextureManager;
-import extracells.util.PermissionUtil;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.Vec3;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import net.minecraftforge.fluids.IFluidHandler;
+import appeng.api.AEApi
+import appeng.api.config.Actionable
+import appeng.api.config.SecurityPermissions
+import appeng.api.parts.IPart
+import appeng.api.parts.IPartCollisionHelper
+import appeng.api.parts.IPartRenderHelper
+import appeng.api.util.AEColor
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.render.TextureManager
+import extracells.util.PermissionUtil
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.util.Vec3
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class PartFluidExport : PartFluidIO() {
+    override fun cableConnectionRenderTo(): Int {
+        return 5
+    }
 
-public class PartFluidExport extends PartFluidIO {
+    override fun doWork(rate: Int, TicksSinceLastCall: Int): Boolean {
+        val facingTank = facingTank
+        if (facingTank == null || !isActive) return false
+        val filter: MutableList<Fluid> = ArrayList()
+        filter.add(filterFluids[4]!!)
+        if (filterSize >= 1) {
+            var i: Byte = 1
+            while (i < 9) {
+                if (i.toInt() != 4) {
+                    filter.add(filterFluids[i.toInt()]!!)
+                }
+                (i += 2).toByte()
+            }
+        }
+        if (filterSize >= 2) {
+            var i: Byte = 0
+            while (i < 9) {
+                if (i.toInt() != 4) {
+                    filter.add(filterFluids[i.toInt()]!!)
+                }
+                (i += 2).toByte()
+            }
+        }
+        for (fluid in filter) {
+            if (fluid != null) {
+                var stack = extractFluid(
+                        AEApi.instance().storage().createFluidStack(FluidStack(fluid, rate * TicksSinceLastCall)),
+                        Actionable.SIMULATE)
+                if (stack == null || stack.stackSize <= 0) continue
+                val filled = facingTank.fill(side.opposite, stack.fluidStack, false)
+                if (filled > 0) {
+                    stack.stackSize = filled.toLong()
+                    stack = extractFluid(stack, Actionable.MODULATE)
+                    if (stack != null && stack.stackSize > 0) {
+                        facingTank.fill(side.opposite, stack.fluidStack, true)
+                        return true
+                    }
+                }
+            }
+        }
+        return false
+    }
 
-	@Override
-	public int cableConnectionRenderTo() {
-		return 5;
-	}
+    override fun getBoxes(bch: IPartCollisionHelper) {
+        bch.addBox(6.0, 6.0, 12.0, 10.0, 10.0, 13.0)
+        bch.addBox(4.0, 4.0, 13.0, 12.0, 12.0, 14.0)
+        bch.addBox(5.0, 5.0, 14.0, 11.0, 11.0, 15.0)
+        bch.addBox(6.0, 6.0, 15.0, 10.0, 10.0, 16.0)
+        bch.addBox(6.0, 6.0, 11.0, 10.0, 10.0, 12.0)
+    }
 
-	@Override
-	public boolean doWork(int rate, int TicksSinceLastCall) {
-		IFluidHandler facingTank = getFacingTank();
-		if (facingTank == null || !isActive())
-			return false;
-		List<Fluid> filter = new ArrayList<Fluid>();
-		filter.add(this.filterFluids[4]);
+    override val powerUsage: Double
+        get() = 1.0
 
-		if (this.filterSize >= 1) {
-			for (byte i = 1; i < 9; i += 2) {
-				if (i != 4) {
-					filter.add(this.filterFluids[i]);
-				}
-			}
-		}
+    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+        return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
+                        this as IPart)) {
+            super.onActivate(player, pos)
+        } else false
+    }
 
-		if (this.filterSize >= 2) {
-			for (byte i = 0; i < 9; i += 2) {
-				if (i != 4) {
-					filter.add(this.filterFluids[i]);
-				}
-			}
-		}
+    @SideOnly(Side.CLIENT)
+    override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        rh.setTexture(TextureManager.EXPORT_SIDE.texture)
+        rh.setBounds(6f, 6f, 12f, 10f, 10f, 13f)
+        rh.renderInventoryBox(renderer)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderInventoryBox(renderer)
+        rh.setBounds(5f, 5f, 14f, 11f, 11f, 15f)
+        rh.renderInventoryBox(renderer)
+        val side = TextureManager.EXPORT_SIDE.texture
+        rh.setTexture(side, side, side,
+                TextureManager.EXPORT_FRONT.texture, side, side)
+        rh.setBounds(6f, 6f, 15f, 10f, 10f, 16f)
+        rh.renderInventoryBox(renderer)
+        rh.setInvColor(AEColor.Cyan.blackVariant)
+        ts.setBrightness(15 shl 20 or 15 shl 4)
+        rh.renderInventoryFace(TextureManager.EXPORT_FRONT.textures[1],
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(6f, 6f, 11f, 10f, 10f, 12f)
+        renderInventoryBusLights(rh, renderer)
+    }
 
-		for (Fluid fluid : filter) {
-			if (fluid != null) {
-				IAEFluidStack stack = extractFluid(AEApi.instance().storage().createFluidStack(new FluidStack(fluid, rate * TicksSinceLastCall)), Actionable.SIMULATE);
-
-				if (stack == null || stack.getStackSize() <= 0)
-					continue;
-
-				int filled = facingTank.fill(this.getSide().getOpposite(), stack.getFluidStack(), false);
-				if (filled > 0) {
-					stack.setStackSize(filled);
-					stack = this.extractFluid(stack, Actionable.MODULATE);
-					if (stack != null && stack.getStackSize() > 0) {
-						facingTank.fill(this.getSide().getOpposite(), stack.getFluidStack(), true);
-						return true;
-					}
-				}
-			}
-		}
-		return false;
-	}
-
-	@Override
-	public void getBoxes(IPartCollisionHelper bch) {
-		bch.addBox(6, 6, 12, 10, 10, 13);
-		bch.addBox(4, 4, 13, 12, 12, 14);
-		bch.addBox(5, 5, 14, 11, 11, 15);
-		bch.addBox(6, 6, 15, 10, 10, 16);
-		bch.addBox(6, 6, 11, 10, 10, 12);
-	}
-
-	@Override
-	public double getPowerUsage() {
-		return 1.0D;
-	}
-
-	@Override
-	public boolean onActivate(EntityPlayer player, Vec3 pos) {
-		if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
-				(IPart) this)) {
-			return super.onActivate(player, pos);
-		}
-		return false;
-	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
-		rh.setTexture(TextureManager.EXPORT_SIDE.getTexture());
-		rh.setBounds(6, 6, 12, 10, 10, 13);
-		rh.renderInventoryBox(renderer);
-
-		rh.setBounds(4, 4, 13, 12, 12, 14);
-		rh.renderInventoryBox(renderer);
-
-		rh.setBounds(5, 5, 14, 11, 11, 15);
-		rh.renderInventoryBox(renderer);
-
-		IIcon side = TextureManager.EXPORT_SIDE.getTexture();
-		rh.setTexture(side, side, side,
-				TextureManager.EXPORT_FRONT.getTexture(), side, side);
-		rh.setBounds(6, 6, 15, 10, 10, 16);
-		rh.renderInventoryBox(renderer);
-
-		rh.setInvColor(AEColor.Cyan.blackVariant);
-		ts.setBrightness(15 << 20 | 15 << 4);
-		rh.renderInventoryFace(TextureManager.EXPORT_FRONT.getTextures()[1],
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(6, 6, 11, 10, 10, 12);
-		renderInventoryBusLights(rh, renderer);
-	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderStatic(int x, int y, int z, IPartRenderHelper rh,
-			RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
-		rh.setTexture(TextureManager.EXPORT_SIDE.getTexture());
-		rh.setBounds(6, 6, 12, 10, 10, 13);
-		rh.renderBlock(x, y, z, renderer);
-
-		rh.setBounds(4, 4, 13, 12, 12, 14);
-		rh.renderBlock(x, y, z, renderer);
-
-		rh.setBounds(5, 5, 14, 11, 11, 15);
-		rh.renderBlock(x, y, z, renderer);
-
-		IIcon side = TextureManager.EXPORT_SIDE.getTexture();
-		rh.setTexture(side, side, side,
-				TextureManager.EXPORT_FRONT.getTextures()[0], side, side);
-		rh.setBounds(6, 6, 15, 10, 10, 16);
-		rh.renderBlock(x, y, z, renderer);
-
-		ts.setColorOpaque_I(getHost().getColor().blackVariant);
-		if (isActive())
-			ts.setBrightness(15 << 20 | 15 << 4);
-		rh.renderFace(x, y, z, TextureManager.EXPORT_FRONT.getTextures()[1],
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(6, 6, 11, 10, 10, 12);
-		renderStaticBusLights(x, y, z, rh, renderer);
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderStatic(x: Int, y: Int, z: Int, rh: IPartRenderHelper,
+                              renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        rh.setTexture(TextureManager.EXPORT_SIDE.texture)
+        rh.setBounds(6f, 6f, 12f, 10f, 10f, 13f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setBounds(5f, 5f, 14f, 11f, 11f, 15f)
+        rh.renderBlock(x, y, z, renderer)
+        val side = TextureManager.EXPORT_SIDE.texture
+        rh.setTexture(side, side, side,
+                TextureManager.EXPORT_FRONT.textures[0], side, side)
+        rh.setBounds(6f, 6f, 15f, 10f, 10f, 16f)
+        rh.renderBlock(x, y, z, renderer)
+        ts.setColorOpaque_I(host.color.blackVariant)
+        if (isActive) ts.setBrightness(15 shl 20 or 15 shl 4)
+        rh.renderFace(x, y, z, TextureManager.EXPORT_FRONT.textures[1],
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(6f, 6f, 11f, 10f, 10f, 12f)
+        renderStaticBusLights(x, y, z, rh, renderer)
+    }
 }

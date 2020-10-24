@@ -1,97 +1,90 @@
-package extracells.network.packet.other;
+package extracells.network.packet.other
 
-import extracells.network.AbstractPacket;
-import extracells.part.PartECBase;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraftforge.fluids.Fluid;
+import extracells.network.AbstractPacket
+import extracells.part.PartECBase
+import io.netty.buffer.ByteBuf
+import net.minecraft.client.Minecraft
+import net.minecraft.client.gui.Gui
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.tileentity.TileEntity
+import net.minecraftforge.fluids.Fluid
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class PacketFluidSlot : AbstractPacket {
+    private var index = 0
+    private var fluid: Fluid? = null
+    private var partOrBlock: IFluidSlotPartOrBlock? = null
+    private var filterFluids: MutableList<Fluid?>? = null
 
-public class PacketFluidSlot extends AbstractPacket {
+    constructor() {}
+    constructor(_partOrBlock: IFluidSlotPartOrBlock?, _index: Int,
+                _fluid: Fluid?, _player: EntityPlayer?) : super(_player) {
+        mode = 0
+        partOrBlock = _partOrBlock
+        index = _index
+        fluid = _fluid
+    }
 
-	private int index;
-	private Fluid fluid;
-	private IFluidSlotPartOrBlock partOrBlock;
-	private List<Fluid> filterFluids;
+    constructor(_filterFluids: MutableList<Fluid?>?) {
+        mode = 1
+        filterFluids = _filterFluids
+    }
 
-	public PacketFluidSlot() {}
+    override fun execute() {
+        when (mode) {
+            0 -> partOrBlock!!.setFluid(index, fluid, player)
+            1 -> {
+                val gui: Gui = Minecraft.getMinecraft().currentScreen
+                if (gui is IFluidSlotGui) {
+                    val partGui = gui as IFluidSlotGui
+                    partGui.updateFluids(filterFluids)
+                }
+            }
+        }
+    }
 
-	public PacketFluidSlot(IFluidSlotPartOrBlock _partOrBlock, int _index,
-			Fluid _fluid, EntityPlayer _player) {
-		super(_player);
-		this.mode = 0;
-		this.partOrBlock = _partOrBlock;
-		this.index = _index;
-		this.fluid = _fluid;
-	}
+    override fun readData(`in`: ByteBuf) {
+        when (mode) {
+            0 -> {
+                if (`in`.readBoolean()) partOrBlock = AbstractPacket.Companion.readPart(
+                        `in`) as IFluidSlotPartOrBlock else partOrBlock = AbstractPacket.Companion.readTileEntity(
+                        `in`) as IFluidSlotPartOrBlock
+                index = `in`.readInt()
+                fluid = AbstractPacket.Companion.readFluid(`in`)
+            }
+            1 -> {
+                filterFluids = ArrayList()
+                val size = `in`.readInt()
+                var i = 0
+                while (i < size) {
+                    filterFluids.add(AbstractPacket.Companion.readFluid(`in`))
+                    i++
+                }
+            }
+        }
+    }
 
-	public PacketFluidSlot(List<Fluid> _filterFluids) {
-		this.mode = 1;
-		this.filterFluids = _filterFluids;
-	}
-
-	@Override
-	public void execute() {
-		switch (this.mode) {
-		case 0:
-			this.partOrBlock.setFluid(this.index, this.fluid, this.player);
-			break;
-		case 1:
-			Gui gui = Minecraft.getMinecraft().currentScreen;
-			if (gui instanceof IFluidSlotGui) {
-				IFluidSlotGui partGui = (IFluidSlotGui) gui;
-				partGui.updateFluids(this.filterFluids);
-			}
-			break;
-		}
-	}
-
-	@Override
-	public void readData(ByteBuf in) {
-		switch (this.mode) {
-		case 0:
-			if (in.readBoolean())
-				this.partOrBlock = (IFluidSlotPartOrBlock) readPart(in);
-			else
-				this.partOrBlock = (IFluidSlotPartOrBlock) readTileEntity(in);
-			this.index = in.readInt();
-			this.fluid = readFluid(in);
-			break;
-		case 1:
-			this.filterFluids = new ArrayList<Fluid>();
-			int size = in.readInt();
-			for (int i = 0; i < size; i++) {
-				this.filterFluids.add(readFluid(in));
-			}
-			break;
-		}
-	}
-
-	@Override
-	public void writeData(ByteBuf out) {
-		switch (this.mode) {
-		case 0:
-			if (this.partOrBlock instanceof PartECBase) {
-				out.writeBoolean(true);
-				writePart((PartECBase) this.partOrBlock, out);
-			} else {
-				out.writeBoolean(false);
-				writeTileEntity((TileEntity) this.partOrBlock, out);
-			}
-			out.writeInt(this.index);
-			writeFluid(this.fluid, out);
-			break;
-		case 1:
-			out.writeInt(this.filterFluids.size());
-			for (int i = 0; i < this.filterFluids.size(); i++) {
-				writeFluid(this.filterFluids.get(i), out);
-			}
-			break;
-		}
-	}
+    override fun writeData(out: ByteBuf) {
+        when (mode) {
+            0 -> {
+                if (partOrBlock is PartECBase) {
+                    out.writeBoolean(true)
+                    AbstractPacket.Companion.writePart(partOrBlock as PartECBase?, out)
+                } else {
+                    out.writeBoolean(false)
+                    AbstractPacket.Companion.writeTileEntity(partOrBlock as TileEntity?, out)
+                }
+                out.writeInt(index)
+                AbstractPacket.Companion.writeFluid(fluid, out)
+            }
+            1 -> {
+                out.writeInt(filterFluids!!.size)
+                var i = 0
+                while (i < filterFluids!!.size) {
+                    AbstractPacket.Companion.writeFluid(filterFluids!![i], out)
+                    i++
+                }
+            }
+        }
+    }
 }

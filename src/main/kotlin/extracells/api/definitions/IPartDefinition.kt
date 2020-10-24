@@ -1,31 +1,19 @@
-package extracells.api.definitions;
+package extracells.api.definitions
 
+import appeng.api.definitions.IItemDefinition
 
-public interface IPartDefinition {
-
-	appeng.api.definitions.IItemDefinition partBattery();
-
-	appeng.api.definitions.IItemDefinition partConversionMonitor();
-
-	appeng.api.definitions.IItemDefinition partDrive();
-
-	appeng.api.definitions.IItemDefinition partFluidAnnihilationPlane();
-
-	appeng.api.definitions.IItemDefinition partFluidExportBus();
-
-	appeng.api.definitions.IItemDefinition partFluidFormationPlane();
-
-	appeng.api.definitions.IItemDefinition partFluidImportBus();
-
-	appeng.api.definitions.IItemDefinition partFluidLevelEmitter();
-
-	appeng.api.definitions.IItemDefinition partFluidStorageBus();
-
-	appeng.api.definitions.IItemDefinition partFluidTerminal();
-
-	appeng.api.definitions.IItemDefinition partInterface();
-
-	appeng.api.definitions.IItemDefinition partOreDictExportBus();
-
-	appeng.api.definitions.IItemDefinition partStorageMonitor();
+interface IPartDefinition {
+    fun partBattery(): IItemDefinition
+    fun partConversionMonitor(): IItemDefinition
+    fun partDrive(): IItemDefinition
+    fun partFluidAnnihilationPlane(): IItemDefinition
+    fun partFluidExportBus(): IItemDefinition
+    fun partFluidFormationPlane(): IItemDefinition
+    fun partFluidImportBus(): IItemDefinition
+    fun partFluidLevelEmitter(): IItemDefinition
+    fun partFluidStorageBus(): IItemDefinition
+    fun partFluidTerminal(): IItemDefinition
+    fun partInterface(): IItemDefinition
+    fun partOreDictExportBus(): IItemDefinition
+    fun partStorageMonitor(): IItemDefinition
 }

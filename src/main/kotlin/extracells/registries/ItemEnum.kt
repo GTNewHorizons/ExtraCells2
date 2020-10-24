@@ -1,72 +1,44 @@
-package extracells.registries;
+package extracells.registries
 
-import extracells.Extracells;
-import extracells.integration.Integration;
-import extracells.item.*;
-import net.minecraft.creativetab.CreativeTabs;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.StatCollector;
+import extracells.Extracells.ModTab
+import extracells.integration.Integration
+import extracells.item.*
+import net.minecraft.creativetab.CreativeTabs
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.util.StatCollector
 
-public enum ItemEnum {
-	PARTITEM("part.base", new ItemPartECBase()),
-	FLUIDSTORAGE("storage.fluid", new ItemStorageFluid()),
-	PHYSICALSTORAGE("storage.physical", new ItemStoragePhysical()),
-	GASSTORAGE("storage.gas", new ItemStorageGas(), Integration.Mods.MEKANISMGAS),
-	FLUIDPATTERN("pattern.fluid", new ItemFluidPattern()),
-	FLUIDWIRELESSTERMINAL("terminal.fluid.wireless", ItemWirelessTerminalFluid.INSTANCE),
-	STORAGECOMPONENT("storage.component", new ItemStorageComponent()),
-	STORAGECASING("storage.casing", new ItemStorageCasing()),
-	FLUIDITEM("fluid.item", new ItemFluid(), null, null), // Internal EC Item
-	FLUIDSTORAGEPORTABLE("storage.fluid.portable", ItemStoragePortableFluidCell.INSTANCE),
-//	GASSTORAGEPORTABLE("storage.gas.portable", ItemStoragePortableGasCell.INSTANCE, Integration.Mods.MEKANISMGAS),
-	CRAFTINGPATTERN("pattern.crafting", new ItemInternalCraftingPattern(), null, null),// Internal EC Item
-	UNIVERSALTERMINAL("terminal.universal.wireless", ItemWirelessTerminalUniversal.INSTANCE),
-	GASWIRELESSTERMINAL("terminal.gas.wireless", ItemWirelessTerminalGas.INSTANCE, Integration.Mods.MEKANISMGAS),
-	OCUPGRADE("oc.upgrade", ItemOCUpgrade.INSTANCE, Integration.Mods.OPENCOMPUTERS);
+enum class ItemEnum @JvmOverloads constructor(val internalName: String, val item: Item, _mod: Integration.Mods? = null, creativeTab: CreativeTabs? = ModTab) {
+    PARTITEM("part.base", ItemPartECBase()), FLUIDSTORAGE("storage.fluid", ItemStorageFluid()), PHYSICALSTORAGE(
+            "storage.physical", ItemStoragePhysical()),
+    GASSTORAGE("storage.gas", ItemStorageGas(), Integration.Mods.MEKANISMGAS), FLUIDPATTERN("pattern.fluid",
+            ItemFluidPattern()),
+    FLUIDWIRELESSTERMINAL("terminal.fluid.wireless", ItemWirelessTerminalFluid), STORAGECOMPONENT("storage.component",
+            ItemStorageComponent()),
+    STORAGECASING("storage.casing", ItemStorageCasing()), FLUIDITEM("fluid.item", ItemFluid(), null,
+            null),  // Internal EC Item
+    FLUIDSTORAGEPORTABLE("storage.fluid.portable",
+            ItemStoragePortableFluidCell),  //	GASSTORAGEPORTABLE("storage.gas.portable", ItemStoragePortableGasCell.INSTANCE, Integration.Mods.MEKANISMGAS),
+    CRAFTINGPATTERN("pattern.crafting", ItemInternalCraftingPattern(), null, null),  // Internal EC Item
+    UNIVERSALTERMINAL("terminal.universal.wireless", ItemWirelessTerminalUniversal), GASWIRELESSTERMINAL(
+            "terminal.gas.wireless", ItemWirelessTerminalGas, Integration.Mods.MEKANISMGAS),
+    OCUPGRADE("oc.upgrade", ItemOCUpgrade, Integration.Mods.OPENCOMPUTERS);
 
-	private final String internalName;
-	private final Item item;
-	private final Integration.Mods mod;
+    val mod: Integration.Mods?
+    fun getDamagedStack(damage: Int): ItemStack {
+        return ItemStack(item, 1, damage)
+    }
 
-	ItemEnum(String _internalName, Item _item) {
-		this(_internalName, _item, null);
-	}
+    fun getSizedStack(size: Int): ItemStack {
+        return ItemStack(item, size)
+    }
 
-	ItemEnum(String _internalName, Item _item, Integration.Mods _mod){
-		this(_internalName, _item, _mod, Extracells.getModTab());
-	}
+    val statName: String
+        get() = StatCollector.translateToLocal(item.unlocalizedName)
 
-	ItemEnum(String _internalName, Item _item, Integration.Mods _mod, CreativeTabs creativeTab) {
-		this.internalName = _internalName;
-		this.item = _item;
-		this.item.setUnlocalizedName("extracells." + this.internalName);
-		this.mod = _mod;
-		if ((creativeTab != null) && (_mod == null || _mod.isEnabled()))
-			this.item.setCreativeTab(Extracells.getModTab());
-	}
-
-	public ItemStack getDamagedStack(int damage) {
-		return new ItemStack(this.item, 1, damage);
-	}
-
-	public String getInternalName() {
-		return this.internalName;
-	}
-
-	public Item getItem() {
-		return this.item;
-	}
-
-	public ItemStack getSizedStack(int size) {
-		return new ItemStack(this.item, size);
-	}
-
-	public String getStatName() {
-		return StatCollector.translateToLocal(this.item.getUnlocalizedName());
-	}
-
-	public Integration.Mods getMod(){
-		return mod;
-	}
+    init {
+        item.unlocalizedName = "extracells." + internalName
+        mod = _mod
+        if (creativeTab != null && (_mod == null || _mod.isEnabled)) item.creativeTab = ModTab
+    }
 }

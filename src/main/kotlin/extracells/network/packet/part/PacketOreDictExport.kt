@@ -1,77 +1,61 @@
-package extracells.network.packet.part;
+package extracells.network.packet.part
 
-import cpw.mods.fml.common.network.ByteBufUtils;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.container.ContainerOreDictExport;
-import extracells.gui.GuiOreDictExport;
-import extracells.network.AbstractPacket;
-import io.netty.buffer.ByteBuf;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.Container;
+import cpw.mods.fml.common.network.ByteBufUtils
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.container.ContainerOreDictExport
+import extracells.gui.GuiOreDictExport
+import extracells.network.AbstractPacket
+import io.netty.buffer.ByteBuf
+import net.minecraft.entity.player.EntityPlayer
 
-public class PacketOreDictExport extends AbstractPacket {
+class PacketOreDictExport : AbstractPacket {
+    private var filter: String? = null
+    private var side: Side? = null
 
-	private String filter;
-	private Side side;
+    constructor() {}
+    constructor(_player: EntityPlayer?, filter: String?, side: Side?) : super(_player) {
+        mode = 0
+        this.filter = filter
+        this.side = side
+    }
 
-	public PacketOreDictExport() {}
+    override fun execute() {
+        when (mode) {
+            0 -> if (side!!.isClient) try {
+                handleClient()
+            } catch (e: Throwable) {
+            } else handleServer()
+        }
+    }
 
-	public PacketOreDictExport(EntityPlayer _player, String filter, Side side) {
-		super(_player);
-		this.mode = 0;
-		this.filter = filter;
-		this.side = side;
-	}
+    @SideOnly(Side.CLIENT)
+    private fun handleClient() {
+        GuiOreDictExport.Companion.updateFilter(filter)
+    }
 
-	@Override
-	public void execute() {
-		switch (this.mode) {
-		case 0:
-			if (this.side.isClient())
-				try {
-					handleClient();
-				} catch (Throwable e) {}
-			else
-				handleServer();
-			break;
-		}
-	}
+    private fun handleServer() {
+        val con = player!!.openContainer
+        if (con != null && con is ContainerOreDictExport) {
+            con.part.filter = filter
+        }
+    }
 
-	@SideOnly(Side.CLIENT)
-	private void handleClient() {
-		GuiOreDictExport.updateFilter(this.filter);
-	}
+    override fun readData(`in`: ByteBuf) {
+        when (mode) {
+            0 -> {
+                if (`in`.readBoolean()) side = Side.SERVER else side = Side.CLIENT
+                filter = ByteBufUtils.readUTF8String(`in`)
+            }
+        }
+    }
 
-	private void handleServer() {
-		Container con = this.player.openContainer;
-		if (con != null && con instanceof ContainerOreDictExport) {
-			ContainerOreDictExport c = (ContainerOreDictExport) con;
-			c.part.setFilter(this.filter);
-		}
-	}
-
-	@Override
-	public void readData(ByteBuf in) {
-		switch (this.mode) {
-		case 0:
-			if (in.readBoolean())
-				this.side = Side.SERVER;
-			else
-				this.side = Side.CLIENT;
-			this.filter = ByteBufUtils.readUTF8String(in);
-			break;
-		}
-	}
-
-	@Override
-	public void writeData(ByteBuf out) {
-		switch (this.mode) {
-		case 0:
-			out.writeBoolean(this.side.isServer());
-			ByteBufUtils.writeUTF8String(out, this.filter);
-			break;
-
-		}
-	}
+    override fun writeData(out: ByteBuf) {
+        when (mode) {
+            0 -> {
+                out.writeBoolean(side!!.isServer)
+                ByteBufUtils.writeUTF8String(out, filter)
+            }
+        }
+    }
 }

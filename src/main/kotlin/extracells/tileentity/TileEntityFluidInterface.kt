@@ -1,1032 +1,881 @@
-package extracells.tileentity;
-
-import appeng.api.AEApi;
-import appeng.api.config.Actionable;
-import appeng.api.implementations.ICraftingPatternItem;
-import appeng.api.implementations.tiles.ITileStorageMonitorable;
-import appeng.api.networking.IGrid;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.crafting.ICraftingPatternDetails;
-import appeng.api.networking.crafting.ICraftingProvider;
-import appeng.api.networking.crafting.ICraftingProviderHelper;
-import appeng.api.networking.events.MENetworkCraftingPatternChange;
-import appeng.api.networking.security.BaseActionSource;
-import appeng.api.networking.security.IActionHost;
-import appeng.api.networking.security.MachineSource;
-import appeng.api.networking.storage.IStorageGrid;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.IStorageMonitorable;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.storage.data.IAEItemStack;
-import appeng.api.storage.data.IAEStack;
-import appeng.api.util.AECableType;
-import appeng.api.util.DimensionalCoord;
-import cpw.mods.fml.common.FMLCommonHandler;
-import extracells.api.IECTileEntity;
-import extracells.api.IFluidInterface;
-import extracells.api.crafting.IFluidCraftingPatternDetails;
-import extracells.container.IContainerListener;
-import extracells.crafting.CraftingPattern;
-import extracells.crafting.CraftingPattern2;
-import extracells.gridblock.ECFluidGridBlock;
-import extracells.integration.waila.IWailaTile;
-import extracells.network.packet.other.IFluidSlotPartOrBlock;
-import extracells.registries.ItemEnum;
-import extracells.util.EmptyMeItemMonitor;
-import extracells.util.ItemUtils;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.inventory.ISidedInventory;
-import net.minecraft.inventory.InventoryCrafting;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.nbt.NBTTagList;
-import net.minecraft.network.NetworkManager;
-import net.minecraft.network.Packet;
-import net.minecraft.network.play.server.S35PacketUpdateTileEntity;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.util.StatCollector;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.*;
-
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-
-public class TileEntityFluidInterface extends TileBase implements
-		IActionHost, IFluidHandler, IECTileEntity, IFluidInterface,
-		IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable,
-		ICraftingProvider, IWailaTile {
-
-	private class FluidInterfaceInventory implements IInventory {
-
-		private final ItemStack[] inv = new ItemStack[9];
-
-		@Override
-		public void closeInventory() {}
-
-		@Override
-		public ItemStack decrStackSize(int slot, int amt) {
-			ItemStack stack = getStackInSlot(slot);
-			if (stack != null) {
-				if (stack.stackSize <= amt) {
-					setInventorySlotContents(slot, null);
-				} else {
-					stack = stack.splitStack(amt);
-					if (stack.stackSize == 0) {
-						setInventorySlotContents(slot, null);
-					}
-				}
-			}
-			TileEntityFluidInterface.this.update = true;
-			return stack;
-		}
-
-		@Override
-		public String getInventoryName() {
-			return "inventory.fluidInterface";
-		}
-
-		@Override
-		public int getInventoryStackLimit() {
-			return 1;
-		}
-
-		@Override
-		public int getSizeInventory() {
-			return this.inv.length;
-		}
-
-		@Override
-		public ItemStack getStackInSlot(int slot) {
-			return this.inv[slot];
-		}
-
-		@Override
-		public ItemStack getStackInSlotOnClosing(int slot) {
-			return null;
-		}
-
-		@Override
-		public boolean hasCustomInventoryName() {
-			return false;
-		}
-
-		@Override
-		public boolean isItemValidForSlot(int slot, ItemStack stack) {
-			if (stack.getItem() instanceof ICraftingPatternItem) {
-				ICraftingPatternDetails details = ((ICraftingPatternItem) stack
-						.getItem()).getPatternForItem(stack, getWorldObj());
-				return details != null;
-			}
-			return false;
-		}
-
-		@Override
-		public boolean isUseableByPlayer(EntityPlayer player) {
-			return true;
-		}
-
-		@Override
-		public void markDirty() {}
-
-		@Override
-		public void openInventory() {}
-
-		public void readFromNBT(NBTTagCompound tagCompound) {
-
-			NBTTagList tagList = tagCompound.getTagList("Inventory", 10);
-			for (int i = 0; i < tagList.tagCount(); i++) {
-				NBTTagCompound tag = tagList.getCompoundTagAt(i);
-				byte slot = tag.getByte("Slot");
-				if (slot >= 0 && slot < this.inv.length) {
-					this.inv[slot] = ItemStack.loadItemStackFromNBT(tag);
-				}
-			}
-		}
-
-		@Override
-		public void setInventorySlotContents(int slot, ItemStack stack) {
-			this.inv[slot] = stack;
-			if (stack != null && stack.stackSize > getInventoryStackLimit()) {
-				stack.stackSize = getInventoryStackLimit();
-			}
-			TileEntityFluidInterface.this.update = true;
-		}
-
-		public void writeToNBT(NBTTagCompound tagCompound) {
-
-			NBTTagList itemList = new NBTTagList();
-			for (int i = 0; i < this.inv.length; i++) {
-				ItemStack stack = this.inv[i];
-				if (stack != null) {
-					NBTTagCompound tag = new NBTTagCompound();
-					tag.setByte("Slot", (byte) i);
-					stack.writeToNBT(tag);
-					itemList.appendTag(tag);
-				}
-			}
-			tagCompound.setTag("Inventory", itemList);
-		}
-	}
-
-	List<IContainerListener> listeners = new ArrayList<IContainerListener>();
-	private final ECFluidGridBlock gridBlock;
-	private IGridNode node = null;
-	public FluidTank[] tanks = new FluidTank[6];
-	public Integer[] fluidFilter = new Integer[this.tanks.length];
-	public boolean doNextUpdate = false;
-	private boolean wasIdle = false;
-	private int tickCount = 0;
-	private boolean update = false;
-	private List<ICraftingPatternDetails> patternHandlers = new ArrayList<ICraftingPatternDetails>();
-	private final HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails> patternConvert = new HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails>();
-	private final List<IAEItemStack> requestedItems = new ArrayList<IAEItemStack>();
-	private final List<IAEItemStack> removeList = new ArrayList<IAEItemStack>();
-	public final FluidInterfaceInventory inventory;
-	private IAEItemStack toExport = null;
-
-	private final Item encodedPattern = AEApi.instance().definitions().items().encodedPattern()
-			.maybeItem().orNull();
-	private final List<IAEStack> export = new ArrayList<IAEStack>();
-
-	private final List<IAEStack> addToExport = new ArrayList<IAEStack>();
-
-	private final List<IAEItemStack> watcherList = new ArrayList<IAEItemStack>();
-
-	private boolean isFirstGetGridNode = true;
-
-	public TileEntityFluidInterface() {
-		super();
-		this.inventory = new FluidInterfaceInventory();
-		this.gridBlock = new ECFluidGridBlock(this);
-		for (int i = 0; i < this.tanks.length; i++) {
-			this.tanks[i] = new FluidTank(10000) {
-				@Override
-				public FluidTank readFromNBT(NBTTagCompound nbt) {
-					if (!nbt.hasKey("Empty")) {
-						FluidStack fluid = FluidStack
-								.loadFluidStackFromNBT(nbt);
-						setFluid(fluid);
-					} else {
-						setFluid(null);
-					}
-					return this;
-				}
-			};
-			this.fluidFilter[i] = -1;
-		}
-	}
-
-	@Override
-	public boolean canDrain(ForgeDirection from, Fluid fluid) {
-		if (from == ForgeDirection.UNKNOWN)
-			return false;
-		FluidStack tankFluid = this.tanks[from.ordinal()].getFluid();
-		return tankFluid != null && tankFluid.getFluid() == fluid;
-	}
-
-	@Override
-	public boolean canFill(ForgeDirection from, Fluid fluid) {
-		return from != ForgeDirection.UNKNOWN
-				&& this.tanks[from.ordinal()].fill(new FluidStack(fluid, 1), false) > 0;
-	}
-
-	@Override
-	public FluidStack drain(ForgeDirection from, FluidStack resource,
-			boolean doDrain) {
-		FluidStack tankFluid = this.tanks[from.ordinal()].getFluid();
-		if (resource == null || tankFluid == null
-				|| tankFluid.getFluid() != resource.getFluid())
-			return null;
-		return drain(from, resource.amount, doDrain);
-
-	}
-
-	@Override
-	public FluidStack drain(ForgeDirection from, int maxDrain, boolean doDrain) {
-		if (from == ForgeDirection.UNKNOWN)
-			return null;
-		FluidStack drained = this.tanks[from.ordinal()]
-				.drain(maxDrain, doDrain);
-		if (drained != null)
-			if (getWorldObj() != null)
-				getWorldObj().markBlockForUpdate(this.xCoord, this.yCoord,
-						this.zCoord);
-		this.doNextUpdate = true;
-		return drained;
-	}
-
-	@Override
-	public int fill(ForgeDirection from, FluidStack resource, boolean doFill) {
-		if (from == ForgeDirection.UNKNOWN || resource == null)
-			return 0;
-
-		if ((this.tanks[from.ordinal()].getFluid() == null || this.tanks[from
-				.ordinal()].getFluid().getFluid() == resource.getFluid())
-				&& resource.getFluid() == FluidRegistry
-						.getFluid(this.fluidFilter[from.ordinal()])) {
-			int added = this.tanks[from.ordinal()]
-					.fill(resource.copy(), doFill);
-			if (added == resource.amount) {
-				this.doNextUpdate = true;
-				return added;
-			}
-			added += fillToNetwork(new FluidStack(resource.getFluid(),
-					resource.amount - added), doFill);
-			this.doNextUpdate = true;
-			return added;
-		}
-
-		int filled = 0;
-		filled += fillToNetwork(resource, doFill);
-
-		if (filled < resource.amount)
-			filled += this.tanks[from.ordinal()].fill(new FluidStack(
-					resource.getFluid(), resource.amount - filled), doFill);
-		if (filled > 0)
-			if (getWorldObj() != null)
-				getWorldObj().markBlockForUpdate(this.xCoord, this.yCoord,
-						this.zCoord);
-		this.doNextUpdate = true;
-		return filled;
-	}
-
-	public int fillToNetwork(FluidStack resource, boolean doFill) {
-		IGridNode node = getGridNode(ForgeDirection.UNKNOWN);
-		if (node == null || resource == null)
-			return 0;
-		IGrid grid = node.getGrid();
-		if (grid == null)
-			return 0;
-		IStorageGrid storage = grid.getCache(IStorageGrid.class);
-		if (storage == null)
-			return 0;
-		IAEFluidStack notRemoved;
-		FluidStack copy = resource.copy();
-		if (doFill) {
-			notRemoved = storage.getFluidInventory().injectItems(
-					AEApi.instance().storage().createFluidStack(resource),
-					Actionable.MODULATE, new MachineSource(this));
-		} else {
-			notRemoved = storage.getFluidInventory().injectItems(
-					AEApi.instance().storage().createFluidStack(resource),
-					Actionable.SIMULATE, new MachineSource(this));
-		}
-		if (notRemoved == null)
-			return resource.amount;
-		return (int) (resource.amount - notRemoved.getStackSize());
-	}
-
-	private void forceUpdate() {
-		getWorldObj().markBlockForUpdate(this.yCoord, this.yCoord, this.zCoord);
-		for (IContainerListener listener : this.listeners) {
-			if (listener != null)
-				listener.updateContainer();
-		}
-		this.doNextUpdate = false;
-	}
-
-	@Override
-	public IGridNode getActionableNode() {
-		if (FMLCommonHandler.instance().getEffectiveSide().isClient())
-			return null;
-		if (this.node == null) {
-			this.node = AEApi.instance().createGridNode(this.gridBlock);
-		}
-		return this.node;
-	}
-
-	@Override
-	public AECableType getCableConnectionType(ForgeDirection dir) {
-		return AECableType.DENSE;
-	}
-
-	@Override
-	public Packet getDescriptionPacket() {
-		NBTTagCompound nbtTag = new NBTTagCompound();
-		writeToNBTWithoutExport(nbtTag);
-		return new S35PacketUpdateTileEntity(this.xCoord, this.yCoord,
-				this.zCoord, 1, nbtTag);
-	}
-
-	@Override
-	public Fluid getFilter(ForgeDirection side) {
-		if (side == null || side == ForgeDirection.UNKNOWN)
-			return null;
-		return FluidRegistry.getFluid(this.fluidFilter[side.ordinal()]);
-	}
-
-	@Override
-	public IMEMonitor<IAEFluidStack> getFluidInventory() {
-		return getFluidInventory(ForgeDirection.UNKNOWN);
-	}
-
-	@Override
-	public IFluidTank getFluidTank(ForgeDirection side) {
-		if (side == null || side == ForgeDirection.UNKNOWN)
-			return null;
-		return this.tanks[side.ordinal()];
-	}
-
-	@Override
-	public IGridNode getGridNode(ForgeDirection dir) {
-		if (FMLCommonHandler.instance().getSide().isClient()
-				&& (getWorldObj() == null || getWorldObj().isRemote))
-			return null;
-		if (this.isFirstGetGridNode) {
-			this.isFirstGetGridNode = false;
-			getActionableNode().updateState();
-		}
-		return this.node;
-	}
-
-	@Override
-	public IMEMonitor<IAEItemStack> getItemInventory() {
-		return new EmptyMeItemMonitor();
-	}
-
-	@Override
-	public DimensionalCoord getLocation() {
-		return new DimensionalCoord(this);
-	}
-
-	@Override
-	public IStorageMonitorable getMonitorable(ForgeDirection side,
-			BaseActionSource src) {
-		return this;
-	}
-
-	@Override
-	public IInventory getPatternInventory() {
-		return this.inventory;
-	}
-
-	@Override
-	public double getPowerUsage() {
-		return 1.0D;
-	}
-
-	@Override
-	public FluidTankInfo[] getTankInfo(ForgeDirection from) {
-		if (from == ForgeDirection.UNKNOWN)
-			return null;
-		return new FluidTankInfo[] { this.tanks[from.ordinal()].getInfo() };
-	}
-
-	@Override
-	public List<String> getWailaBody(List<String> list, NBTTagCompound tag,
-			ForgeDirection side) {
-		if (side == null || side == ForgeDirection.UNKNOWN)
-			return list;
-		list.add(StatCollector.translateToLocal("extracells.tooltip.direction."
-				+ side.ordinal()));
-		FluidTank[] tanks = new FluidTank[6];
-		for (int i = 0; i < tanks.length; i++) {
-			tanks[i] = new FluidTank(10000) {
-				@Override
-				public FluidTank readFromNBT(NBTTagCompound nbt) {
-					if (!nbt.hasKey("Empty")) {
-						FluidStack fluid = FluidStack
-								.loadFluidStackFromNBT(nbt);
-						setFluid(fluid);
-					} else {
-						setFluid(null);
-					}
-					return this;
-				}
-			};
-		}
-
-		for (int i = 0; i < tanks.length; i++) {
-			if (tag.hasKey("tank#" + i))
-				tanks[i].readFromNBT(tag.getCompoundTag("tank#" + i));
-		}
-		FluidTank tank = tanks[side.ordinal()];
-		if (tank == null || tank.getFluid() == null
-				|| tank.getFluid().getFluid() == null) {
-			list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
-					+ ": "
-					+ StatCollector
-							.translateToLocal("extracells.tooltip.empty1"));
-			list.add(StatCollector
-					.translateToLocal("extracells.tooltip.amount")
-					+ ": 0mB / 10000mB");
-		} else {
-			list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
-					+ ": " + tank.getFluid().getLocalizedName());
-			list.add(StatCollector
-					.translateToLocal("extracells.tooltip.amount")
-					+ ": "
-					+ tank.getFluidAmount() + "mB / 10000mB");
-		}
-		return list;
-	}
-
-	@Override
-	public NBTTagCompound getWailaTag(NBTTagCompound tag) {
-		for (int i = 0; i < this.tanks.length; i++) {
-			tag.setTag("tank#" + i,
-					this.tanks[i].writeToNBT(new NBTTagCompound()));
-		}
-		return tag;
-	}
-
-	@Override
-	public boolean isBusy() {
-		return !this.export.isEmpty();
-	}
-
-	private ItemStack makeCraftingPatternItem(ICraftingPatternDetails details) {
-		if (details == null)
-			return null;
-		NBTTagList in = new NBTTagList();
-		NBTTagList out = new NBTTagList();
-		for (IAEItemStack s : details.getInputs()) {
-			if (s == null)
-				in.appendTag(new NBTTagCompound());
-			else
-				in.appendTag(s.getItemStack().writeToNBT(new NBTTagCompound()));
-		}
-		for (IAEItemStack s : details.getOutputs()) {
-			if (s == null)
-				out.appendTag(new NBTTagCompound());
-			else
-				out.appendTag(s.getItemStack().writeToNBT(new NBTTagCompound()));
-		}
-		NBTTagCompound itemTag = new NBTTagCompound();
-		itemTag.setTag("in", in);
-		itemTag.setTag("out", out);
-		itemTag.setBoolean("crafting", details.isCraftable());
-		ItemStack pattern = new ItemStack(this.encodedPattern);
-		pattern.setTagCompound(itemTag);
-		return pattern;
-	}
-
-	@Override
-	public void onDataPacket(NetworkManager net, S35PacketUpdateTileEntity pkt) {
-		readFromNBT(pkt.func_148857_g());
-	}
-
-	@Override
-	public void provideCrafting(ICraftingProviderHelper craftingTracker) {
-		this.patternHandlers = new ArrayList<ICraftingPatternDetails>();
-		this.patternConvert.clear();
-
-		for (ItemStack currentPatternStack : this.inventory.inv) {
-			if (currentPatternStack != null
-					&& currentPatternStack.getItem() != null
-					&& currentPatternStack.getItem() instanceof ICraftingPatternItem) {
-				ICraftingPatternItem currentPattern = (ICraftingPatternItem) currentPatternStack
-						.getItem();
-
-				if (currentPattern != null
-						&& currentPattern.getPatternForItem(
-								currentPatternStack, getWorldObj()) != null) {
-					IFluidCraftingPatternDetails pattern = new CraftingPattern2(
-							currentPattern.getPatternForItem(
-									currentPatternStack, getWorldObj()));
-					this.patternHandlers.add(pattern);
-					ItemStack is = makeCraftingPatternItem(pattern);
-					if (is == null)
-						continue;
-					ICraftingPatternDetails p = ((ICraftingPatternItem) is
-							.getItem()).getPatternForItem(is, getWorldObj());
-					this.patternConvert.put(p, pattern);
-					craftingTracker.addCraftingOption(this, p);
-				}
-			}
-		}
-	}
-
-	private void pushItems() {
-		this.export.addAll(this.addToExport);
-		this.addToExport.clear();
-		if (!hasWorldObj() || this.export.isEmpty())
-			return;
-		ForgeDirection[] directions = ForgeDirection.VALID_DIRECTIONS;
-		for (ForgeDirection dir : directions) {
-			TileEntity tile = getWorldObj().getTileEntity(
-					this.xCoord + dir.offsetX, this.yCoord + dir.offsetY,
-					this.zCoord + dir.offsetZ);
-			if (tile != null) {
-				IAEStack stack0 = this.export.get(0);
-				IAEStack stack = stack0.copy();
-				if (stack instanceof IAEItemStack && tile instanceof IInventory) {
-					if (tile instanceof ISidedInventory) {
-						ISidedInventory inv = (ISidedInventory) tile;
-						for (int i : inv.getAccessibleSlotsFromSide(dir
-								.getOpposite().ordinal())) {
-							if (inv.canInsertItem(i, ((IAEItemStack) stack)
-									.getItemStack(), dir.getOpposite()
-									.ordinal())) {
-								if (inv.getStackInSlot(i) == null) {
-									inv.setInventorySlotContents(i,
-											((IAEItemStack) stack)
-													.getItemStack());
-									this.export.remove(0);
-									return;
-								} else if (ItemUtils.areItemEqualsIgnoreStackSize(
-										inv.getStackInSlot(i),
-										((IAEItemStack) stack).getItemStack())) {
-									int max = inv.getInventoryStackLimit();
-									int current = inv.getStackInSlot(i).stackSize;
-									int outStack = (int) stack.getStackSize();
-									if (max == current)
-										continue;
-									if (current + outStack <= max) {
-										ItemStack s = inv.getStackInSlot(i)
-												.copy();
-										s.stackSize = s.stackSize + outStack;
-										inv.setInventorySlotContents(i, s);
-										this.export.remove(0);
-										return;
-									} else {
-										ItemStack s = inv.getStackInSlot(i)
-												.copy();
-										s.stackSize = max;
-										inv.setInventorySlotContents(i, s);
-										this.export.get(0).setStackSize(outStack - max + current);
-										return;
-									}
-								}
-							}
-						}
-					} else {
-						IInventory inv = (IInventory) tile;
-						for (int i = 0; i < inv.getSizeInventory(); i++) {
-							if (inv.isItemValidForSlot(i,
-									((IAEItemStack) stack).getItemStack())) {
-								if (inv.getStackInSlot(i) == null) {
-									inv.setInventorySlotContents(i,
-											((IAEItemStack) stack)
-													.getItemStack());
-									this.export.remove(0);
-									return;
-								} else if (ItemUtils.areItemEqualsIgnoreStackSize(
-										inv.getStackInSlot(i),
-										((IAEItemStack) stack).getItemStack())) {
-									int max = inv.getInventoryStackLimit();
-									int current = inv.getStackInSlot(i).stackSize;
-									int outStack = (int) stack.getStackSize();
-									if (max == current)
-										continue;
-									if (current + outStack <= max) {
-										ItemStack s = inv.getStackInSlot(i)
-												.copy();
-										s.stackSize = s.stackSize + outStack;
-										inv.setInventorySlotContents(i, s);
-										this.export.remove(0);
-										return;
-									} else {
-										ItemStack s = inv.getStackInSlot(i)
-												.copy();
-										s.stackSize = max;
-										inv.setInventorySlotContents(i, s);
-										this.export.get(0).setStackSize(outStack - max + current);
-										return;
-									}
-								}
-							}
-						}
-					}
-				} else if (stack instanceof IAEFluidStack
-						&& tile instanceof IFluidHandler) {
-					IFluidHandler handler = (IFluidHandler) tile;
-					IAEFluidStack fluid = (IAEFluidStack) stack;
-					if (handler.canFill(dir.getOpposite(), fluid.copy()
-							.getFluid())) {
-						int amount = handler.fill(dir.getOpposite(), fluid
-								.getFluidStack().copy(), false);
-						if (amount == 0)
-							continue;
-						if (amount == fluid.getStackSize()) {
-							handler.fill(dir.getOpposite(), fluid
-									.getFluidStack().copy(), true);
-							this.export.remove(0);
-						} else {
-							FluidStack fl = fluid.getFluidStack().copy();
-							fl.amount = amount;
-							this.export.get(0).setStackSize(fluid.getStackSize() - handler.fill(dir.getOpposite(), fl, true));
-							return;
-						}
-					}
-				}
-			}
-		}
-	}
-
-	@Override
-	public boolean pushPattern(ICraftingPatternDetails patDetails,
-			InventoryCrafting table) {
-		if (isBusy() || !this.patternConvert.containsKey(patDetails))
-			return false;
-		ICraftingPatternDetails patternDetails = this.patternConvert
-				.get(patDetails);
-		if (patternDetails instanceof CraftingPattern) {
-			CraftingPattern patter = (CraftingPattern) patternDetails;
-			HashMap<Fluid, Long> fluids = new HashMap<Fluid, Long>();
-			for (IAEFluidStack stack : patter.getCondensedFluidInputs()) {
-				if (fluids.containsKey(stack.getFluid())) {
-					Long amount = fluids.get(stack.getFluid())
-							+ stack.getStackSize();
-					fluids.remove(stack.getFluid());
-					fluids.put(stack.getFluid(), amount);
-				} else {
-					fluids.put(stack.getFluid(), stack.getStackSize());
-				}
-			}
-			IGrid grid = this.node.getGrid();
-			if (grid == null)
-				return false;
-			IStorageGrid storage = grid.getCache(IStorageGrid.class);
-			if (storage == null)
-				return false;
-			for (Fluid fluid : fluids.keySet()) {
-				Long amount = fluids.get(fluid);
-				IAEFluidStack extractFluid = storage.getFluidInventory()
-						.extractItems(
-								AEApi.instance()
-										.storage()
-										.createFluidStack(
-												new FluidStack(fluid,
-														(int) (amount + 0))),
-								Actionable.SIMULATE, new MachineSource(this));
-				if (extractFluid == null
-						|| extractFluid.getStackSize() != amount) {
-					return false;
-				}
-			}
-			for (Fluid fluid : fluids.keySet()) {
-				Long amount = fluids.get(fluid);
-				IAEFluidStack extractFluid = storage.getFluidInventory()
-						.extractItems(
-								AEApi.instance()
-										.storage()
-										.createFluidStack(
-												new FluidStack(fluid,
-														(int) (amount + 0))),
-								Actionable.MODULATE, new MachineSource(this));
-				this.export.add(extractFluid);
-			}
-			for (IAEItemStack s : patter.getCondensedInputs()) {
-				if (s == null)
-					continue;
-				if (s.getItem() == ItemEnum.FLUIDPATTERN.getItem()) {
-					this.toExport = s.copy();
-					continue;
-				}
-				this.export.add(s);
-			}
-
-		}
-		return true;
-	}
-
-	public void readFilter(NBTTagCompound tag) {
-		for (int i = 0; i < this.fluidFilter.length; i++) {
-			if (tag.hasKey("fluid#" + i))
-				this.fluidFilter[i] = tag.getInteger("fluid#" + i);
-		}
-	}
-
-	@Override
-	public void readFromNBT(NBTTagCompound tag) {
-		super.readFromNBT(tag);
-		for (int i = 0; i < this.tanks.length; i++) {
-			if (tag.hasKey("tank#" + i))
-				this.tanks[i].readFromNBT(tag.getCompoundTag("tank#" + i));
-			if (tag.hasKey("filter#" + i))
-				this.fluidFilter[i] = tag.getInteger("filter#" + i);
-		}
-		if (hasWorldObj()) {
-			IGridNode node = getGridNode(ForgeDirection.UNKNOWN);
-			if (tag.hasKey("nodes") && node != null) {
-				node.loadFromNBT("node0", tag.getCompoundTag("nodes"));
-				node.updateState();
-			}
-		}
-		if (tag.hasKey("inventory"))
-			this.inventory.readFromNBT(tag.getCompoundTag("inventory"));
-		if (tag.hasKey("export"))
-			readOutputFromNBT(tag.getCompoundTag("export"));
-	}
-
-	private void readOutputFromNBT(NBTTagCompound tag) {
-		this.addToExport.clear();
-		this.export.clear();
-		int i = tag.getInteger("add");
-		for (int j = 0; j < i; j++) {
-			if (tag.getBoolean("add-" + j + "-isItem")) {
-				IAEItemStack s = AEApi
-						.instance()
-						.storage()
-						.createItemStack(
-								ItemStack.loadItemStackFromNBT(tag
-										.getCompoundTag("add-" + j)));
-				s.setStackSize(tag.getLong("add-" + j + "-amount"));
-				this.addToExport.add(s);
-			} else {
-				IAEFluidStack s = AEApi
-						.instance()
-						.storage()
-						.createFluidStack(
-								FluidStack.loadFluidStackFromNBT(tag
-										.getCompoundTag("add-" + j)));
-				s.setStackSize(tag.getLong("add-" + j + "-amount"));
-				this.addToExport.add(s);
-			}
-		}
-		i = tag.getInteger("export");
-		for (int j = 0; j < i; j++) {
-			if (tag.getBoolean("export-" + j + "-isItem")) {
-				IAEItemStack s = AEApi
-						.instance()
-						.storage()
-						.createItemStack(
-								ItemStack.loadItemStackFromNBT(tag
-										.getCompoundTag("export-" + j)));
-				s.setStackSize(tag.getLong("export-" + j + "-amount"));
-				this.export.add(s);
-			} else {
-				IAEFluidStack s = AEApi
-						.instance()
-						.storage()
-						.createFluidStack(
-								FluidStack.loadFluidStackFromNBT(tag
-										.getCompoundTag("export-" + j)));
-				s.setStackSize(tag.getLong("export-" + j + "-amount"));
-				this.export.add(s);
-			}
-		}
-	}
-
-	public void registerListener(IContainerListener listener) {
-		this.listeners.add(listener);
-	}
-
-	public void removeListener(IContainerListener listener) {
-		this.listeners.remove(listener);
-	}
-
-	@Override
-	public void securityBreak() {
-
-	}
-
-	@Override
-	public void setFilter(ForgeDirection side, Fluid fluid) {
-		if (side == null || side == ForgeDirection.UNKNOWN)
-			return;
-		if (fluid == null) {
-			this.fluidFilter[side.ordinal()] = -1;
-			this.doNextUpdate = true;
-			return;
-		}
-		this.fluidFilter[side.ordinal()] = fluid.getID();
-		this.doNextUpdate = true;
-	}
-
-	@Override
-	public void setFluid(int _index, Fluid _fluid, EntityPlayer _player) {
-		setFilter(ForgeDirection.getOrientation(_index), _fluid);
-	}
-
-	@Override
-	public void setFluidTank(ForgeDirection side, FluidStack fluid) {
-		if (side == null || side == ForgeDirection.UNKNOWN)
-			return;
-		this.tanks[side.ordinal()].setFluid(fluid);
-		this.doNextUpdate = true;
-	}
-
-	private void tick() {
-		if (this.tickCount >= 40 || !this.wasIdle) {
-			this.tickCount = 0;
-			this.wasIdle = true;
-		} else {
-			this.tickCount++;
-			return;
-		}
-		if (this.node == null)
-			return;
-		IGrid grid = this.node.getGrid();
-		if (grid == null)
-			return;
-		IStorageGrid storage = grid.getCache(IStorageGrid.class);
-		if (storage == null)
-			return;
-		if (this.toExport != null) {
-			storage.getItemInventory().injectItems(this.toExport,
-					Actionable.MODULATE, new MachineSource(this));
-			this.toExport = null;
-		}
-		for (int i = 0; i < this.tanks.length; i++) {
-			if (this.tanks[i].getFluid() != null
-					&& FluidRegistry.getFluid(this.fluidFilter[i]) != this.tanks[i]
-							.getFluid().getFluid()) {
-				FluidStack s = this.tanks[i].drain(125, false);
-				if (s != null) {
-					IAEFluidStack notAdded = storage.getFluidInventory()
-							.injectItems(
-									AEApi.instance().storage()
-											.createFluidStack(s.copy()),
-									Actionable.SIMULATE,
-									new MachineSource(this));
-					if (notAdded != null) {
-						int toAdd = (int) (s.amount - notAdded.getStackSize());
-						storage.getFluidInventory().injectItems(
-								AEApi.instance()
-										.storage()
-										.createFluidStack(
-												this.tanks[i]
-														.drain(toAdd, true)),
-								Actionable.MODULATE, new MachineSource(this));
-						this.doNextUpdate = true;
-						this.wasIdle = false;
-					} else {
-						storage.getFluidInventory().injectItems(
-								AEApi.instance()
-										.storage()
-										.createFluidStack(
-												this.tanks[i].drain(s.amount,
-														true)),
-								Actionable.MODULATE, new MachineSource(this));
-						this.doNextUpdate = true;
-						this.wasIdle = false;
-					}
-				}
-			}
-			if ((this.tanks[i].getFluid() == null || this.tanks[i].getFluid()
-					.getFluid() == FluidRegistry.getFluid(this.fluidFilter[i]))
-					&& FluidRegistry.getFluid(this.fluidFilter[i]) != null) {
-				IAEFluidStack extracted = storage
-						.getFluidInventory()
-						.extractItems(
-								AEApi.instance()
-										.storage()
-										.createFluidStack(
-												new FluidStack(
-														FluidRegistry
-																.getFluid(this.fluidFilter[i]),
-														125)),
-								Actionable.SIMULATE, new MachineSource(this));
-				if (extracted == null)
-					continue;
-				int accepted = this.tanks[i].fill(extracted.getFluidStack(),
-						false);
-				if (accepted == 0)
-					continue;
-				this.tanks[i]
-						.fill(storage
-								.getFluidInventory()
-								.extractItems(
-										AEApi.instance()
-												.storage()
-												.createFluidStack(
-														new FluidStack(
-																FluidRegistry
-																		.getFluid(this.fluidFilter[i]),
-																accepted)),
-										Actionable.MODULATE,
-										new MachineSource(this))
-								.getFluidStack(), true);
-				this.doNextUpdate = true;
-				this.wasIdle = false;
-			}
-		}
-	}
-
-	@Override
-	public void updateEntity() {
-		if (getWorldObj() == null || getWorldObj().provider == null
-				|| getWorldObj().isRemote)
-			return;
-		if (this.update) {
-			this.update = false;
-			if (getGridNode(ForgeDirection.UNKNOWN) != null
-					&& getGridNode(ForgeDirection.UNKNOWN).getGrid() != null) {
-				getGridNode(ForgeDirection.UNKNOWN).getGrid().postEvent(
-						new MENetworkCraftingPatternChange(this,
-								getGridNode(ForgeDirection.UNKNOWN)));
-			}
-		}
-		pushItems();
-		if (this.doNextUpdate)
-			forceUpdate();
-		tick();
-	}
-
-	public NBTTagCompound writeFilter(NBTTagCompound tag) {
-		for (int i = 0; i < this.fluidFilter.length; i++) {
-			tag.setInteger("fluid#" + i, this.fluidFilter[i]);
-		}
-		return tag;
-	}
-
-	private NBTTagCompound writeOutputToNBT(NBTTagCompound tag) {
-		int i = 0;
-		i = 0;
-		for (IAEStack s : this.addToExport) {
-			if (s != null) {
-				tag.setBoolean("add-" + i + "-isItem", s.isItem());
-				NBTTagCompound data = new NBTTagCompound();
-				if (s.isItem()) {
-					((IAEItemStack) s).getItemStack().writeToNBT(data);
-				} else {
-					((IAEFluidStack) s).getFluidStack().writeToNBT(data);
-				}
-				tag.setTag("add-" + i, data);
-				tag.setLong("add-" + i + "-amount", s.getStackSize());
-			}
-			i++;
-		}
-		tag.setInteger("add", this.addToExport.size());
-		i = 0;
-		for (IAEStack s : this.export) {
-			if (s != null) {
-				tag.setBoolean("export-" + i + "-isItem", s.isItem());
-				NBTTagCompound data = new NBTTagCompound();
-				if (s.isItem()) {
-					((IAEItemStack) s).getItemStack().writeToNBT(data);
-				} else {
-					((IAEFluidStack) s).getFluidStack().writeToNBT(data);
-				}
-				tag.setTag("export-" + i, data);
-				tag.setLong("export-" + i + "-amount", s.getStackSize());
-			}
-			i++;
-		}
-		tag.setInteger("export", this.export.size());
-		return tag;
-	}
-
-	@Override
-	public void writeToNBT(NBTTagCompound data) {
-		writeToNBTWithoutExport(data);
-		NBTTagCompound tag = new NBTTagCompound();
-		writeOutputToNBT(tag);
-		data.setTag("export", tag);
-	}
-
-	public void writeToNBTWithoutExport(NBTTagCompound tag) {
-		super.writeToNBT(tag);
-		for (int i = 0; i < this.tanks.length; i++) {
-			tag.setTag("tank#" + i,
-					this.tanks[i].writeToNBT(new NBTTagCompound()));
-			tag.setInteger("filter#" + i, this.fluidFilter[i]);
-		}
-		if (!hasWorldObj())
-			return;
-		IGridNode node = getGridNode(ForgeDirection.UNKNOWN);
-		if (node != null) {
-			NBTTagCompound nodeTag = new NBTTagCompound();
-			node.saveToNBT("node0", nodeTag);
-			tag.setTag("nodes", nodeTag);
-		}
-		NBTTagCompound inventory = new NBTTagCompound();
-		this.inventory.writeToNBT(inventory);
-		tag.setTag("inventory", inventory);
-	}
+package extracells.tileentity
+
+import appeng.api.AEApi
+import appeng.api.config.Actionable
+import appeng.api.implementations.ICraftingPatternItem
+import appeng.api.implementations.tiles.ITileStorageMonitorable
+import appeng.api.networking.IGridNode
+import appeng.api.networking.crafting.ICraftingPatternDetails
+import appeng.api.networking.crafting.ICraftingProvider
+import appeng.api.networking.crafting.ICraftingProviderHelper
+import appeng.api.networking.events.MENetworkCraftingPatternChange
+import appeng.api.networking.security.BaseActionSource
+import appeng.api.networking.security.IActionHost
+import appeng.api.networking.security.MachineSource
+import appeng.api.networking.storage.IStorageGrid
+import appeng.api.storage.IMEMonitor
+import appeng.api.storage.IStorageMonitorable
+import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IAEItemStack
+import appeng.api.storage.data.IAEStack
+import appeng.api.util.AECableType
+import appeng.api.util.DimensionalCoord
+import cpw.mods.fml.common.FMLCommonHandler
+import extracells.api.IECTileEntity
+import extracells.api.IFluidInterface
+import extracells.api.crafting.IFluidCraftingPatternDetails
+import extracells.container.IContainerListener
+import extracells.crafting.CraftingPattern
+import extracells.crafting.CraftingPattern2
+import extracells.gridblock.ECFluidGridBlock
+import extracells.integration.waila.IWailaTile
+import extracells.network.packet.other.IFluidSlotPartOrBlock
+import extracells.registries.ItemEnum
+import extracells.util.EmptyMeItemMonitor
+import extracells.util.ItemUtils
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.inventory.ISidedInventory
+import net.minecraft.inventory.InventoryCrafting
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.nbt.NBTTagList
+import net.minecraft.network.NetworkManager
+import net.minecraft.network.Packet
+import net.minecraft.network.play.server.S35PacketUpdateTileEntity
+import net.minecraft.util.StatCollector
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.*
+import java.util.*
+
+class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTileEntity, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, ICraftingProvider, IWailaTile {
+    inner class FluidInterfaceInventory : IInventory {
+        val inv = arrayOfNulls<ItemStack>(9)
+        override fun closeInventory() {}
+        override fun decrStackSize(slot: Int, amt: Int): ItemStack {
+            var stack = getStackInSlot(slot)
+            if (stack != null) {
+                if (stack.stackSize <= amt) {
+                    setInventorySlotContents(slot, null)
+                } else {
+                    stack = stack.splitStack(amt)
+                    if (stack.stackSize == 0) {
+                        setInventorySlotContents(slot, null)
+                    }
+                }
+            }
+            update = true
+            return stack
+        }
+
+        override fun getInventoryName(): String {
+            return "inventory.fluidInterface"
+        }
+
+        override fun getInventoryStackLimit(): Int {
+            return 1
+        }
+
+        override fun getSizeInventory(): Int {
+            return inv.size
+        }
+
+        override fun getStackInSlot(slot: Int): ItemStack {
+            return inv[slot]!!
+        }
+
+        override fun getStackInSlotOnClosing(slot: Int): ItemStack {
+            return null
+        }
+
+        override fun hasCustomInventoryName(): Boolean {
+            return false
+        }
+
+        override fun isItemValidForSlot(slot: Int, stack: ItemStack): Boolean {
+            if (stack.item is ICraftingPatternItem) {
+                val details = (stack
+                        .item as ICraftingPatternItem).getPatternForItem(stack, getWorldObj())
+                return details != null
+            }
+            return false
+        }
+
+        override fun isUseableByPlayer(player: EntityPlayer): Boolean {
+            return true
+        }
+
+        override fun markDirty() {}
+        override fun openInventory() {}
+        fun readFromNBT(tagCompound: NBTTagCompound) {
+            val tagList = tagCompound.getTagList("Inventory", 10)
+            for (i in 0 until tagList.tagCount()) {
+                val tag = tagList.getCompoundTagAt(i)
+                val slot = tag.getByte("Slot")
+                if (slot >= 0 && slot < inv.size) {
+                    inv[slot.toInt()] = ItemStack.loadItemStackFromNBT(tag)
+                }
+            }
+        }
+
+        override fun setInventorySlotContents(slot: Int, stack: ItemStack) {
+            inv[slot] = stack
+            if (stack != null && stack.stackSize > inventoryStackLimit) {
+                stack.stackSize = inventoryStackLimit
+            }
+            update = true
+        }
+
+        fun writeToNBT(tagCompound: NBTTagCompound) {
+            val itemList = NBTTagList()
+            for (i in inv.indices) {
+                val stack = inv[i]
+                if (stack != null) {
+                    val tag = NBTTagCompound()
+                    tag.setByte("Slot", i.toByte())
+                    stack.writeToNBT(tag)
+                    itemList.appendTag(tag)
+                }
+            }
+            tagCompound.setTag("Inventory", itemList)
+        }
+    }
+
+    var listeners: MutableList<IContainerListener> = ArrayList()
+    private val gridBlock: ECFluidGridBlock
+    private var node: IGridNode? = null
+    var tanks = arrayOfNulls<FluidTank>(6)
+    var fluidFilter = arrayOfNulls<Int>(tanks.size)
+    var doNextUpdate = false
+    private var wasIdle = false
+    private var tickCount = 0
+    private var update = false
+    private var patternHandlers: MutableList<ICraftingPatternDetails> = ArrayList()
+    private val patternConvert = HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails>()
+    private val requestedItems: List<IAEItemStack> = ArrayList()
+    private val removeList: List<IAEItemStack> = ArrayList()
+    val inventory: FluidInterfaceInventory
+    private var toExport: IAEItemStack? = null
+    private val encodedPattern = AEApi.instance().definitions().items().encodedPattern()
+            .maybeItem().orNull()
+    private val export: MutableList<IAEStack<*>> = ArrayList()
+    private val addToExport: MutableList<IAEStack<*>> = ArrayList()
+    private val watcherList: List<IAEItemStack> = ArrayList()
+    private var isFirstGetGridNode = true
+    override fun canDrain(from: ForgeDirection, fluid: Fluid): Boolean {
+        if (from == ForgeDirection.UNKNOWN) return false
+        val tankFluid = tanks[from.ordinal]!!.fluid
+        return tankFluid != null && tankFluid.getFluid() === fluid
+    }
+
+    override fun canFill(from: ForgeDirection, fluid: Fluid): Boolean {
+        return (from != ForgeDirection.UNKNOWN
+                && tanks[from.ordinal]!!.fill(FluidStack(fluid, 1), false) > 0)
+    }
+
+    override fun drain(from: ForgeDirection, resource: FluidStack,
+                       doDrain: Boolean): FluidStack {
+        val tankFluid = tanks[from.ordinal]!!.fluid
+        return if (resource == null || tankFluid == null || tankFluid.getFluid() !== resource.getFluid()) null else drain(
+                from, resource.amount, doDrain)
+    }
+
+    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack {
+        if (from == ForgeDirection.UNKNOWN) return null
+        val drained = tanks[from.ordinal]
+                .drain(maxDrain, doDrain)
+        if (drained != null) if (getWorldObj() != null) getWorldObj().markBlockForUpdate(xCoord, yCoord,
+                zCoord)
+        doNextUpdate = true
+        return drained
+    }
+
+    override fun fill(from: ForgeDirection, resource: FluidStack, doFill: Boolean): Int {
+        if (from == ForgeDirection.UNKNOWN || resource == null) return 0
+        if ((tanks[from.ordinal]!!.fluid == null || tanks[from
+                        .ordinal]!!.fluid.getFluid() === resource.getFluid())
+                && resource.getFluid() === FluidRegistry
+                        .getFluid(fluidFilter[from.ordinal]!!)) {
+            var added = tanks[from.ordinal]
+                    .fill(resource.copy(), doFill)
+            if (added == resource.amount) {
+                doNextUpdate = true
+                return added
+            }
+            added += fillToNetwork(FluidStack(resource.getFluid(),
+                    resource.amount - added), doFill)
+            doNextUpdate = true
+            return added
+        }
+        var filled = 0
+        filled += fillToNetwork(resource, doFill)
+        if (filled < resource.amount) filled += tanks[from.ordinal]!!.fill(FluidStack(
+                resource.getFluid(), resource.amount - filled), doFill)
+        if (filled > 0) if (getWorldObj() != null) getWorldObj().markBlockForUpdate(xCoord, yCoord,
+                zCoord)
+        doNextUpdate = true
+        return filled
+    }
+
+    fun fillToNetwork(resource: FluidStack?, doFill: Boolean): Int {
+        val node = getGridNode(ForgeDirection.UNKNOWN)
+        if (node == null || resource == null) return 0
+        val grid = node.grid ?: return 0
+        val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return 0
+        val notRemoved: IAEFluidStack?
+        val copy = resource.copy()
+        notRemoved = if (doFill) {
+            storage.fluidInventory.injectItems(
+                    AEApi.instance().storage().createFluidStack(resource),
+                    Actionable.MODULATE, MachineSource(this))
+        } else {
+            storage.fluidInventory.injectItems(
+                    AEApi.instance().storage().createFluidStack(resource),
+                    Actionable.SIMULATE, MachineSource(this))
+        }
+        return if (notRemoved == null) resource.amount else (resource.amount - notRemoved.stackSize).toInt()
+    }
+
+    private fun forceUpdate() {
+        getWorldObj().markBlockForUpdate(yCoord, yCoord, zCoord)
+        for (listener in listeners) {
+            listener?.updateContainer()
+        }
+        doNextUpdate = false
+    }
+
+    override fun getActionableNode(): IGridNode {
+        if (FMLCommonHandler.instance().effectiveSide.isClient) return null
+        if (node == null) {
+            node = AEApi.instance().createGridNode(gridBlock)
+        }
+        return node!!
+    }
+
+    override fun getCableConnectionType(dir: ForgeDirection): AECableType {
+        return AECableType.DENSE
+    }
+
+    override fun getDescriptionPacket(): Packet {
+        val nbtTag = NBTTagCompound()
+        writeToNBTWithoutExport(nbtTag)
+        return S35PacketUpdateTileEntity(xCoord, yCoord,
+                zCoord, 1, nbtTag)
+    }
+
+    override fun getFilter(side: ForgeDirection?): Fluid? {
+        return if (side == null || side == ForgeDirection.UNKNOWN) null else FluidRegistry.getFluid(
+                fluidFilter[side.ordinal]!!)
+    }
+
+    override fun getFluidInventory(): IMEMonitor<IAEFluidStack> {
+        return getFluidInventory(ForgeDirection.UNKNOWN)!!
+    }
+
+    override fun getFluidTank(side: ForgeDirection?): IFluidTank? {
+        return if (side == null || side == ForgeDirection.UNKNOWN) null else tanks[side.ordinal]
+    }
+
+    override fun getGridNode(dir: ForgeDirection): IGridNode {
+        if (FMLCommonHandler.instance().side.isClient
+                && (getWorldObj() == null || getWorldObj().isRemote)) return null
+        if (isFirstGetGridNode) {
+            isFirstGetGridNode = false
+            actionableNode.updateState()
+        }
+        return node!!
+    }
+
+    override fun getItemInventory(): IMEMonitor<IAEItemStack> {
+        return EmptyMeItemMonitor()
+    }
+
+    override val location: DimensionalCoord
+        get() = DimensionalCoord(this)
+
+    override fun getMonitorable(side: ForgeDirection,
+                                src: BaseActionSource): IStorageMonitorable {
+        return this
+    }
+
+    override val patternInventory: IInventory
+        get() = inventory
+    override val powerUsage: Double
+        get() = 1.0
+
+    override fun getTankInfo(from: ForgeDirection): Array<FluidTankInfo> {
+        return if (from == ForgeDirection.UNKNOWN) null else arrayOf(tanks[from.ordinal]!!.info)
+    }
+
+    override fun getWailaBody(list: MutableList<String>, tag: NBTTagCompound,
+                              side: ForgeDirection?): List<String> {
+        if (side == null || side == ForgeDirection.UNKNOWN) return list
+        list.add(StatCollector.translateToLocal("extracells.tooltip.direction."
+                + side.ordinal))
+        val tanks = arrayOfNulls<FluidTank>(6)
+        for (i in tanks.indices) {
+            tanks[i] = object : FluidTank(10000) {
+                override fun readFromNBT(nbt: NBTTagCompound): FluidTank {
+                    if (!nbt.hasKey("Empty")) {
+                        val fluid = FluidStack
+                                .loadFluidStackFromNBT(nbt)
+                        setFluid(fluid)
+                    } else {
+                        setFluid(null)
+                    }
+                    return this
+                }
+            }
+        }
+        for (i in tanks.indices) {
+            if (tag.hasKey("tank#$i")) tanks[i]!!.readFromNBT(tag.getCompoundTag("tank#$i"))
+        }
+        val tank = tanks[side.ordinal]
+        if (tank == null || tank.fluid == null || tank.fluid.getFluid() == null) {
+            list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
+                    + ": "
+                    + StatCollector
+                    .translateToLocal("extracells.tooltip.empty1"))
+            list.add(StatCollector
+                    .translateToLocal("extracells.tooltip.amount")
+                    + ": 0mB / 10000mB")
+        } else {
+            list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
+                    + ": " + tank.fluid.localizedName)
+            list.add(StatCollector
+                    .translateToLocal("extracells.tooltip.amount")
+                    + ": "
+                    + tank.fluidAmount + "mB / 10000mB")
+        }
+        return list
+    }
+
+    override fun getWailaTag(tag: NBTTagCompound): NBTTagCompound {
+        for (i in tanks.indices) {
+            tag.setTag("tank#$i",
+                    tanks[i]!!.writeToNBT(NBTTagCompound()))
+        }
+        return tag
+    }
+
+    override fun isBusy(): Boolean {
+        return !export.isEmpty()
+    }
+
+    private fun makeCraftingPatternItem(details: ICraftingPatternDetails?): ItemStack? {
+        if (details == null) return null
+        val `in` = NBTTagList()
+        val out = NBTTagList()
+        for (s in details.inputs) {
+            if (s == null) `in`.appendTag(NBTTagCompound()) else `in`.appendTag(
+                    s.itemStack.writeToNBT(NBTTagCompound()))
+        }
+        for (s in details.outputs) {
+            if (s == null) out.appendTag(NBTTagCompound()) else out.appendTag(s.itemStack.writeToNBT(NBTTagCompound()))
+        }
+        val itemTag = NBTTagCompound()
+        itemTag.setTag("in", `in`)
+        itemTag.setTag("out", out)
+        itemTag.setBoolean("crafting", details.isCraftable)
+        val pattern = ItemStack(encodedPattern)
+        pattern.tagCompound = itemTag
+        return pattern
+    }
+
+    override fun onDataPacket(net: NetworkManager, pkt: S35PacketUpdateTileEntity) {
+        readFromNBT(pkt.func_148857_g())
+    }
+
+    override fun provideCrafting(craftingTracker: ICraftingProviderHelper) {
+        patternHandlers = ArrayList()
+        patternConvert.clear()
+        for (currentPatternStack in inventory.inv) {
+            if (currentPatternStack != null && currentPatternStack.item != null && currentPatternStack.item is ICraftingPatternItem) {
+                val currentPattern = currentPatternStack
+                        .item as ICraftingPatternItem
+                if (currentPattern != null
+                        && currentPattern.getPatternForItem(
+                                currentPatternStack, getWorldObj()) != null) {
+                    val pattern: IFluidCraftingPatternDetails = CraftingPattern2(
+                            currentPattern.getPatternForItem(
+                                    currentPatternStack, getWorldObj()))
+                    patternHandlers.add(pattern)
+                    val `is` = makeCraftingPatternItem(pattern) ?: continue
+                    val p = (`is`
+                            .item as ICraftingPatternItem).getPatternForItem(`is`, getWorldObj())
+                    patternConvert[p] = pattern
+                    craftingTracker.addCraftingOption(this, p)
+                }
+            }
+        }
+    }
+
+    private fun pushItems() {
+        export.addAll(addToExport)
+        addToExport.clear()
+        if (!hasWorldObj() || export.isEmpty()) return
+        val directions = ForgeDirection.VALID_DIRECTIONS
+        for (dir in directions) {
+            val tile = getWorldObj().getTileEntity(
+                    xCoord + dir.offsetX, yCoord + dir.offsetY,
+                    zCoord + dir.offsetZ)
+            if (tile != null) {
+                val stack0 = export[0]
+                val stack = stack0.copy()
+                if (stack is IAEItemStack && tile is IInventory) {
+                    if (tile is ISidedInventory) {
+                        val inv = tile as ISidedInventory
+                        for (i in inv.getAccessibleSlotsFromSide(dir
+                                .opposite.ordinal)) {
+                            if (inv.canInsertItem(i, stack
+                                            .itemStack, dir.opposite
+                                            .ordinal)) {
+                                if (inv.getStackInSlot(i) == null) {
+                                    inv.setInventorySlotContents(i,
+                                            stack
+                                                    .itemStack)
+                                    export.removeAt(0)
+                                    return
+                                } else if (ItemUtils.areItemEqualsIgnoreStackSize(
+                                                inv.getStackInSlot(i),
+                                                stack.itemStack)) {
+                                    val max = inv.inventoryStackLimit
+                                    val current = inv.getStackInSlot(i).stackSize
+                                    val outStack = stack.getStackSize().toInt()
+                                    if (max == current) continue
+                                    if (current + outStack <= max) {
+                                        val s = inv.getStackInSlot(i)
+                                                .copy()
+                                        s.stackSize = s.stackSize + outStack
+                                        inv.setInventorySlotContents(i, s)
+                                        export.removeAt(0)
+                                        return
+                                    } else {
+                                        val s = inv.getStackInSlot(i)
+                                                .copy()
+                                        s.stackSize = max
+                                        inv.setInventorySlotContents(i, s)
+                                        export[0].stackSize = outStack - max + current.toLong()
+                                        return
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        val inv = tile as IInventory
+                        for (i in 0 until inv.sizeInventory) {
+                            if (inv.isItemValidForSlot(i,
+                                            stack.itemStack)) {
+                                if (inv.getStackInSlot(i) == null) {
+                                    inv.setInventorySlotContents(i,
+                                            stack
+                                                    .itemStack)
+                                    export.removeAt(0)
+                                    return
+                                } else if (ItemUtils.areItemEqualsIgnoreStackSize(
+                                                inv.getStackInSlot(i),
+                                                stack.itemStack)) {
+                                    val max = inv.inventoryStackLimit
+                                    val current = inv.getStackInSlot(i).stackSize
+                                    val outStack = stack.getStackSize().toInt()
+                                    if (max == current) continue
+                                    if (current + outStack <= max) {
+                                        val s = inv.getStackInSlot(i)
+                                                .copy()
+                                        s.stackSize = s.stackSize + outStack
+                                        inv.setInventorySlotContents(i, s)
+                                        export.removeAt(0)
+                                        return
+                                    } else {
+                                        val s = inv.getStackInSlot(i)
+                                                .copy()
+                                        s.stackSize = max
+                                        inv.setInventorySlotContents(i, s)
+                                        export[0].stackSize = outStack - max + current.toLong()
+                                        return
+                                    }
+                                }
+                            }
+                        }
+                    }
+                } else if (stack is IAEFluidStack
+                        && tile is IFluidHandler) {
+                    val handler = tile as IFluidHandler
+                    val fluid = stack
+                    if (handler.canFill(dir.opposite, fluid.copy()
+                                    .fluid)) {
+                        val amount = handler.fill(dir.opposite, fluid
+                                .fluidStack.copy(), false)
+                        if (amount == 0) continue
+                        if (amount.toLong() == fluid.stackSize) {
+                            handler.fill(dir.opposite, fluid
+                                    .fluidStack.copy(), true)
+                            export.removeAt(0)
+                        } else {
+                            val fl = fluid.fluidStack.copy()
+                            fl.amount = amount
+                            export[0].stackSize = fluid.stackSize - handler.fill(dir.opposite, fl, true)
+                            return
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    override fun pushPattern(patDetails: ICraftingPatternDetails,
+                             table: InventoryCrafting): Boolean {
+        if (isBusy || !patternConvert.containsKey(patDetails)) return false
+        val patternDetails: ICraftingPatternDetails? = patternConvert[patDetails]
+        if (patternDetails is CraftingPattern) {
+            val patter = patternDetails
+            val fluids = HashMap<Fluid, Long>()
+            for (stack in patter.condensedFluidInputs) {
+                if (fluids.containsKey(stack!!.fluid)) {
+                    val amount = (fluids[stack!!.fluid]!!
+                            + stack!!.stackSize)
+                    fluids.remove(stack!!.fluid)
+                    fluids[stack!!.fluid] = amount
+                } else {
+                    fluids[stack!!.fluid] = stack!!.stackSize
+                }
+            }
+            val grid = node!!.grid ?: return false
+            val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return false
+            for (fluid in fluids.keys) {
+                val amount = fluids[fluid]
+                val extractFluid = storage.fluidInventory
+                        .extractItems(
+                                AEApi.instance()
+                                        .storage()
+                                        .createFluidStack(
+                                                FluidStack(fluid,
+                                                        (amount!! + 0).toInt())),
+                                Actionable.SIMULATE, MachineSource(this))
+                if (extractFluid == null
+                        || extractFluid.stackSize != amount) {
+                    return false
+                }
+            }
+            for (fluid in fluids.keys) {
+                val amount = fluids[fluid]
+                val extractFluid = storage.fluidInventory
+                        .extractItems(
+                                AEApi.instance()
+                                        .storage()
+                                        .createFluidStack(
+                                                FluidStack(fluid,
+                                                        (amount!! + 0).toInt())),
+                                Actionable.MODULATE, MachineSource(this))
+                export.add(extractFluid)
+            }
+            for (s in patter.condensedInputs) {
+                if (s == null) continue
+                if (s.item === ItemEnum.FLUIDPATTERN.item) {
+                    toExport = s.copy()
+                    continue
+                }
+                export.add(s)
+            }
+        }
+        return true
+    }
+
+    fun readFilter(tag: NBTTagCompound) {
+        for (i in fluidFilter.indices) {
+            if (tag.hasKey("fluid#$i")) fluidFilter[i] = tag.getInteger("fluid#$i")
+        }
+    }
+
+    override fun readFromNBT(tag: NBTTagCompound) {
+        super.readFromNBT(tag)
+        for (i in tanks.indices) {
+            if (tag.hasKey("tank#$i")) tanks[i]!!.readFromNBT(tag.getCompoundTag("tank#$i"))
+            if (tag.hasKey("filter#$i")) fluidFilter[i] = tag.getInteger("filter#$i")
+        }
+        if (hasWorldObj()) {
+            val node = getGridNode(ForgeDirection.UNKNOWN)
+            if (tag.hasKey("nodes") && node != null) {
+                node.loadFromNBT("node0", tag.getCompoundTag("nodes"))
+                node.updateState()
+            }
+        }
+        if (tag.hasKey("inventory")) inventory.readFromNBT(tag.getCompoundTag("inventory"))
+        if (tag.hasKey("export")) readOutputFromNBT(tag.getCompoundTag("export"))
+    }
+
+    private fun readOutputFromNBT(tag: NBTTagCompound) {
+        addToExport.clear()
+        export.clear()
+        var i = tag.getInteger("add")
+        for (j in 0 until i) {
+            if (tag.getBoolean("add-$j-isItem")) {
+                val s = AEApi
+                        .instance()
+                        .storage()
+                        .createItemStack(
+                                ItemStack.loadItemStackFromNBT(tag
+                                        .getCompoundTag("add-$j")))
+                s.stackSize = tag.getLong("add-$j-amount")
+                addToExport.add(s)
+            } else {
+                val s = AEApi
+                        .instance()
+                        .storage()
+                        .createFluidStack(
+                                FluidStack.loadFluidStackFromNBT(tag
+                                        .getCompoundTag("add-$j")))
+                s.stackSize = tag.getLong("add-$j-amount")
+                addToExport.add(s)
+            }
+        }
+        i = tag.getInteger("export")
+        for (j in 0 until i) {
+            if (tag.getBoolean("export-$j-isItem")) {
+                val s = AEApi
+                        .instance()
+                        .storage()
+                        .createItemStack(
+                                ItemStack.loadItemStackFromNBT(tag
+                                        .getCompoundTag("export-$j")))
+                s.stackSize = tag.getLong("export-$j-amount")
+                export.add(s)
+            } else {
+                val s = AEApi
+                        .instance()
+                        .storage()
+                        .createFluidStack(
+                                FluidStack.loadFluidStackFromNBT(tag
+                                        .getCompoundTag("export-$j")))
+                s.stackSize = tag.getLong("export-$j-amount")
+                export.add(s)
+            }
+        }
+    }
+
+    fun registerListener(listener: IContainerListener) {
+        listeners.add(listener)
+    }
+
+    fun removeListener(listener: IContainerListener) {
+        listeners.remove(listener)
+    }
+
+    override fun securityBreak() {}
+    override fun setFilter(side: ForgeDirection?, fluid: Fluid?) {
+        if (side == null || side == ForgeDirection.UNKNOWN) return
+        if (fluid == null) {
+            fluidFilter[side.ordinal] = -1
+            doNextUpdate = true
+            return
+        }
+        fluidFilter[side.ordinal] = fluid.id
+        doNextUpdate = true
+    }
+
+    override fun setFluid(_index: Int, _fluid: Fluid?, _player: EntityPlayer?) {
+        setFilter(ForgeDirection.getOrientation(_index), _fluid)
+    }
+
+    override fun setFluidTank(side: ForgeDirection?, fluid: FluidStack?) {
+        if (side == null || side == ForgeDirection.UNKNOWN) return
+        tanks[side.ordinal]!!.fluid = fluid
+        doNextUpdate = true
+    }
+
+    private fun tick() {
+        if (tickCount >= 40 || !wasIdle) {
+            tickCount = 0
+            wasIdle = true
+        } else {
+            tickCount++
+            return
+        }
+        if (node == null) return
+        val grid = node!!.grid ?: return
+        val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return
+        if (toExport != null) {
+            storage.itemInventory.injectItems(toExport,
+                    Actionable.MODULATE, MachineSource(this))
+            toExport = null
+        }
+        for (i in tanks.indices) {
+            if (tanks[i]!!.fluid != null
+                    && FluidRegistry.getFluid(fluidFilter[i]!!) !== tanks[i]
+                            .getFluid().getFluid()) {
+                val s = tanks[i]!!.drain(125, false)
+                if (s != null) {
+                    val notAdded = storage.fluidInventory
+                            .injectItems(
+                                    AEApi.instance().storage()
+                                            .createFluidStack(s.copy()),
+                                    Actionable.SIMULATE,
+                                    MachineSource(this))
+                    if (notAdded != null) {
+                        val toAdd = (s.amount - notAdded.stackSize).toInt()
+                        storage.fluidInventory.injectItems(
+                                AEApi.instance()
+                                        .storage()
+                                        .createFluidStack(
+                                                tanks[i]
+                                                        .drain(toAdd, true)),
+                                Actionable.MODULATE, MachineSource(this))
+                        doNextUpdate = true
+                        wasIdle = false
+                    } else {
+                        storage.fluidInventory.injectItems(
+                                AEApi.instance()
+                                        .storage()
+                                        .createFluidStack(
+                                                tanks[i]!!.drain(s.amount,
+                                                        true)),
+                                Actionable.MODULATE, MachineSource(this))
+                        doNextUpdate = true
+                        wasIdle = false
+                    }
+                }
+            }
+            if ((tanks[i]!!.fluid == null || tanks[i]!!.fluid
+                            .getFluid() === FluidRegistry.getFluid(fluidFilter[i]!!))
+                    && FluidRegistry.getFluid(fluidFilter[i]!!) != null) {
+                val extracted = storage
+                        .fluidInventory
+                        .extractItems(
+                                AEApi.instance()
+                                        .storage()
+                                        .createFluidStack(
+                                                FluidStack(
+                                                        FluidRegistry
+                                                                .getFluid(fluidFilter[i]!!),
+                                                        125)),
+                                Actionable.SIMULATE, MachineSource(this))
+                        ?: continue
+                val accepted = tanks[i]!!.fill(extracted.fluidStack,
+                        false)
+                if (accepted == 0) continue
+                tanks[i]
+                        .fill(storage
+                                .fluidInventory
+                                .extractItems(
+                                        AEApi.instance()
+                                                .storage()
+                                                .createFluidStack(
+                                                        FluidStack(
+                                                                FluidRegistry
+                                                                        .getFluid(fluidFilter[i]!!),
+                                                                accepted)),
+                                        Actionable.MODULATE,
+                                        MachineSource(this))
+                                .fluidStack, true)
+                doNextUpdate = true
+                wasIdle = false
+            }
+        }
+    }
+
+    override fun updateEntity() {
+        if (getWorldObj() == null || getWorldObj().provider == null || getWorldObj().isRemote) return
+        if (update) {
+            update = false
+            if (getGridNode(ForgeDirection.UNKNOWN) != null
+                    && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
+                getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+                        MENetworkCraftingPatternChange(this,
+                                getGridNode(ForgeDirection.UNKNOWN)))
+            }
+        }
+        pushItems()
+        if (doNextUpdate) forceUpdate()
+        tick()
+    }
+
+    fun writeFilter(tag: NBTTagCompound): NBTTagCompound {
+        for (i in fluidFilter.indices) {
+            tag.setInteger("fluid#$i", fluidFilter[i]!!)
+        }
+        return tag
+    }
+
+    private fun writeOutputToNBT(tag: NBTTagCompound): NBTTagCompound {
+        var i = 0
+        i = 0
+        for (s in addToExport) {
+            if (s != null) {
+                tag.setBoolean("add-$i-isItem", s.isItem)
+                val data = NBTTagCompound()
+                if (s.isItem) {
+                    (s as IAEItemStack).itemStack.writeToNBT(data)
+                } else {
+                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
+                }
+                tag.setTag("add-$i", data)
+                tag.setLong("add-$i-amount", s.stackSize)
+            }
+            i++
+        }
+        tag.setInteger("add", addToExport.size)
+        i = 0
+        for (s in export) {
+            if (s != null) {
+                tag.setBoolean("export-$i-isItem", s.isItem)
+                val data = NBTTagCompound()
+                if (s.isItem) {
+                    (s as IAEItemStack).itemStack.writeToNBT(data)
+                } else {
+                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
+                }
+                tag.setTag("export-$i", data)
+                tag.setLong("export-$i-amount", s.stackSize)
+            }
+            i++
+        }
+        tag.setInteger("export", export.size)
+        return tag
+    }
+
+    override fun writeToNBT(data: NBTTagCompound) {
+        writeToNBTWithoutExport(data)
+        val tag = NBTTagCompound()
+        writeOutputToNBT(tag)
+        data.setTag("export", tag)
+    }
+
+    fun writeToNBTWithoutExport(tag: NBTTagCompound) {
+        super.writeToNBT(tag)
+        for (i in tanks.indices) {
+            tag.setTag("tank#$i",
+                    tanks[i]!!.writeToNBT(NBTTagCompound()))
+            tag.setInteger("filter#$i", fluidFilter[i]!!)
+        }
+        if (!hasWorldObj()) return
+        val node = getGridNode(ForgeDirection.UNKNOWN)
+        if (node != null) {
+            val nodeTag = NBTTagCompound()
+            node.saveToNBT("node0", nodeTag)
+            tag.setTag("nodes", nodeTag)
+        }
+        val inventory = NBTTagCompound()
+        this.inventory.writeToNBT(inventory)
+        tag.setTag("inventory", inventory)
+    }
+
+    init {
+        inventory = FluidInterfaceInventory()
+        gridBlock = ECFluidGridBlock(this)
+        for (i in tanks.indices) {
+            tanks[i] = object : FluidTank(10000) {
+                override fun readFromNBT(nbt: NBTTagCompound): FluidTank {
+                    if (!nbt.hasKey("Empty")) {
+                        val fluid = FluidStack
+                                .loadFluidStackFromNBT(nbt)
+                        setFluid(fluid)
+                    } else {
+                        setFluid(null)
+                    }
+                    return this
+                }
+            }
+            fluidFilter[i] = -1
+        }
+    }
 }

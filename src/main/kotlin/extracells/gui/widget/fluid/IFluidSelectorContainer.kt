@@ -1,8 +1,7 @@
-package extracells.gui.widget.fluid;
+package extracells.gui.widget.fluid
 
-import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.Fluid
 
-public interface IFluidSelectorContainer {
-
-	void setSelectedFluid(Fluid _fluid);
+interface IFluidSelectorContainer {
+    fun setSelectedFluid(_fluid: Fluid?)
 }

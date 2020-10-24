@@ -1,8 +1,6 @@
-package extracells.gui.widget.fluid;
+package extracells.gui.widget.fluid
 
-public interface IFluidWidgetGui {
-
-	int guiLeft();
-
-	int guiTop();
+interface IFluidWidgetGui {
+    fun guiLeft(): Int
+    fun guiTop(): Int
 }

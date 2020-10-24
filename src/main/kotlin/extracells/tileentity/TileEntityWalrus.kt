@@ -1,11 +1,9 @@
-package extracells.tileentity;
+package extracells.tileentity
 
-import net.minecraft.tileentity.TileEntity;
+import net.minecraft.tileentity.TileEntity
 
-public class TileEntityWalrus extends TileEntity {
-
-	@Override
-	public boolean canUpdate() {
-		return false;
-	}
+class TileEntityWalrus : TileEntity() {
+    override fun canUpdate(): Boolean {
+        return false
+    }
 }

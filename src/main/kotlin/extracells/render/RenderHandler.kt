@@ -1,62 +1,55 @@
-package extracells.render;
+package extracells.render
 
-import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler;
-import extracells.block.BlockCertusTank;
-import extracells.render.model.ModelCertusTank;
-import net.minecraft.block.Block;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.tileentity.TileEntity;
-import net.minecraft.world.IBlockAccess;
+import cpw.mods.fml.client.registry.ISimpleBlockRenderingHandler
+import extracells.block.BlockCertusTank
+import extracells.render.model.ModelCertusTank
+import net.minecraft.block.Block
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.world.IBlockAccess
 
-public class RenderHandler implements ISimpleBlockRenderingHandler {
+class RenderHandler(id: Int) : ISimpleBlockRenderingHandler {
+    var tank = ModelCertusTank()
+    override fun getRenderId(): Int {
+        return id
+    }
 
-	public static int getId() {
-		return renderID;
-	}
+    override fun renderInventoryBlock(block: Block, metadata: Int, modelID: Int,
+                                      renderer: RenderBlocks) {
+    }
 
-	private static int renderID = 0;
-	ModelCertusTank tank = new ModelCertusTank();
+    override fun renderWorldBlock(world: IBlockAccess, x: Int, y: Int, z: Int,
+                                  block: Block, modelId: Int, renderer: RenderBlocks): Boolean {
+        if (block is BlockCertusTank) {
+            val tessellator = Tessellator.instance
+            tessellator.setColorOpaque_F(1f, 1f, 1f)
+            val oldAO = renderer.enableAO
+            renderer.enableAO = false
+            if (renderPass == 0) {
+                tank.renderOuterBlock(block, x, y, z, renderer, world)
+            } else {
+                tank.renderInnerBlock(block, x, y, z, renderer, world)
+                val tileEntity = world.getTileEntity(x, y, z)
+                tank.renderFluid(tileEntity, x.toDouble(), y.toDouble(), z.toDouble(), renderer)
+            }
+            renderer.enableAO = oldAO
+            return true
+        }
+        return false
+    }
 
-	public static int renderPass;
+    override fun shouldRender3DInInventory(modelId: Int): Boolean {
+        return true
+    }
 
-	public RenderHandler(int id) {
-		RenderHandler.renderPass = 0;
-		renderID = id;
-	}
+    companion object {
+        var id = 0
+            private set
+        var renderPass = 0
+    }
 
-	@Override
-	public int getRenderId() {
-		return getId();
-	}
-
-	@Override
-	public void renderInventoryBlock(Block block, int metadata, int modelID,
-			RenderBlocks renderer) {}
-
-	@Override
-	public boolean renderWorldBlock(IBlockAccess world, int x, int y, int z,
-			Block block, int modelId, RenderBlocks renderer) {
-		if (block instanceof BlockCertusTank) {
-			Tessellator tessellator = Tessellator.instance;
-			tessellator.setColorOpaque_F(1, 1, 1);
-			boolean oldAO = renderer.enableAO;
-			renderer.enableAO = false;
-			if (RenderHandler.renderPass == 0) {
-				this.tank.renderOuterBlock(block, x, y, z, renderer, world);
-			} else {
-				this.tank.renderInnerBlock(block, x, y, z, renderer, world);
-				TileEntity tileEntity = world.getTileEntity(x, y, z);
-				this.tank.renderFluid(tileEntity, x, y, z, renderer);
-			}
-			renderer.enableAO = oldAO;
-			return true;
-		}
-		return false;
-	}
-
-	@Override
-	public boolean shouldRender3DInInventory(int modelId) {
-		return true;
-	}
+    init {
+        renderPass = 0
+        Companion.id = id
+    }
 }

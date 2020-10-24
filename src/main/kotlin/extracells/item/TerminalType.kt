@@ -1,9 +1,5 @@
-package extracells.item;
+package extracells.item
 
-public enum TerminalType {
-    ITEM,
-    FLUID,
-    GAS,
-    ESSENTIA,
-    CRAFTING
+enum class TerminalType {
+    ITEM, FLUID, GAS, ESSENTIA, CRAFTING
 }

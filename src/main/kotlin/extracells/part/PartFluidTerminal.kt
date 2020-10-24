@@ -1,319 +1,266 @@
-package extracells.part;
+package extracells.part
 
-import appeng.api.config.Actionable;
-import appeng.api.config.SecurityPermissions;
-import appeng.api.networking.IGridNode;
-import appeng.api.networking.security.MachineSource;
-import appeng.api.networking.ticking.IGridTickable;
-import appeng.api.networking.ticking.TickRateModulation;
-import appeng.api.networking.ticking.TickingRequest;
-import appeng.api.parts.IPart;
-import appeng.api.parts.IPartCollisionHelper;
-import appeng.api.parts.IPartHost;
-import appeng.api.parts.IPartRenderHelper;
-import appeng.api.storage.IMEMonitor;
-import appeng.api.storage.data.IAEFluidStack;
-import appeng.api.util.AEColor;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
-import extracells.container.ContainerFluidTerminal;
-import extracells.gridblock.ECBaseGridBlock;
-import extracells.gui.GuiFluidTerminal;
-import extracells.network.packet.part.PacketFluidTerminal;
-import extracells.render.TextureManager;
-import extracells.util.FluidUtil;
-import extracells.util.PermissionUtil;
-import extracells.util.inventory.ECPrivateInventory;
-import extracells.util.inventory.IInventoryUpdateReceiver;
-import net.minecraft.client.renderer.RenderBlocks;
-import net.minecraft.client.renderer.Tessellator;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.Vec3;
-import net.minecraftforge.common.util.ForgeDirection;
-import net.minecraftforge.fluids.Fluid;
-import net.minecraftforge.fluids.FluidStack;
-import org.apache.commons.lang3.tuple.MutablePair;
+import appeng.api.config.Actionable
+import appeng.api.config.SecurityPermissions
+import appeng.api.networking.IGridNode
+import appeng.api.networking.security.MachineSource
+import appeng.api.networking.ticking.IGridTickable
+import appeng.api.networking.ticking.TickRateModulation
+import appeng.api.networking.ticking.TickingRequest
+import appeng.api.parts.IPart
+import appeng.api.parts.IPartCollisionHelper
+import appeng.api.parts.IPartRenderHelper
+import appeng.api.util.AEColor
+import cpw.mods.fml.relauncher.Side
+import cpw.mods.fml.relauncher.SideOnly
+import extracells.container.ContainerFluidTerminal
+import extracells.gui.GuiFluidTerminal
+import extracells.network.packet.part.PacketFluidTerminal
+import extracells.render.TextureManager
+import extracells.util.FluidUtil
+import extracells.util.PermissionUtil
+import extracells.util.inventory.ECPrivateInventory
+import extracells.util.inventory.IInventoryUpdateReceiver
+import net.minecraft.client.renderer.RenderBlocks
+import net.minecraft.client.renderer.Tessellator
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.inventory.IInventory
+import net.minecraft.item.ItemStack
+import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.util.Vec3
+import net.minecraftforge.common.util.ForgeDirection
+import net.minecraftforge.fluids.Fluid
+import net.minecraftforge.fluids.FluidStack
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver {
+    protected var currentFluid: Fluid? = null
+    private val containers: MutableList<Any> = ArrayList()
+    protected var inventory: ECPrivateInventory = object : ECPrivateInventory(
+            "extracells.part.fluid.terminal", 2, 64, this) {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+            return isItemValidForInputSlot(i, itemStack)
+        }
+    }
 
-public class PartFluidTerminal extends PartECBase implements IGridTickable,
-		IInventoryUpdateReceiver {
+    protected fun isItemValidForInputSlot(i: Int, itemStack: ItemStack?): Boolean {
+        return FluidUtil.isFluidContainer(itemStack)
+    }
 
-	protected Fluid currentFluid;
-	private final List<Object> containers = new ArrayList<Object>();
-	protected ECPrivateInventory inventory = new ECPrivateInventory(
-			"extracells.part.fluid.terminal", 2, 64, this) {
+    protected var machineSource = MachineSource(this)
+    override fun getDrops(drops: MutableList<ItemStack>, wrenched: Boolean) {
+        for (stack in inventory.slots) {
+            if (stack == null) continue
+            drops.add(stack)
+        }
+    }
 
-		@Override
-		public boolean isItemValidForSlot(int i, ItemStack itemStack) {
-			return isItemValidForInputSlot(i, itemStack);
-		}
-	};
+    override fun getLightLevel(): Int {
+        return if (this.isPowered) 9 else 0
+    }
 
-	protected boolean isItemValidForInputSlot(int i, ItemStack itemStack) {
-		return FluidUtil.isFluidContainer(itemStack);
-	}
-	protected MachineSource machineSource = new MachineSource(this);
+    fun addContainer(containerTerminalFluid: ContainerFluidTerminal) {
+        containers.add(containerTerminalFluid)
+        sendCurrentFluid()
+    }
 
-	@Override
-	public void getDrops( List<ItemStack> drops, boolean wrenched) {
-		for (ItemStack stack : inventory.slots) {
-			if (stack == null)
-				continue;
-			drops.add(stack);
-		}
-	}
+    //	public void addContainer(ContainerGasTerminal containerTerminalGas) {
+    //		this.containers.add(containerTerminalGas);
+    //		sendCurrentFluid();
+    //	}
+    override fun cableConnectionRenderTo(): Int {
+        return 1
+    }
 
-	@Override
-	public int getLightLevel() {
-		return this.isPowered() ? 9 : 0;
-	}
+    fun decreaseFirstSlot() {
+        val slot = inventory.getStackInSlot(0)
+        slot!!.stackSize--
+        if (slot.stackSize <= 0) inventory.setInventorySlotContents(0, null)
+    }
 
-	public void addContainer(ContainerFluidTerminal containerTerminalFluid) {
-		this.containers.add(containerTerminalFluid);
-		sendCurrentFluid();
-	}
+    fun doWork() {
+        val secondSlot = inventory.getStackInSlot(1)
+        if (secondSlot != null && secondSlot.stackSize >= secondSlot.maxStackSize) return
+        var container = inventory.getStackInSlot(0)
+        if (!FluidUtil.isFluidContainer(container)) return
+        container = container!!.copy()
+        container.stackSize = 1
+        val gridBlock = gridBlock ?: return
+        val monitor = gridBlock.fluidMonitor ?: return
+        if (FluidUtil.isEmpty(container)) {
+            if (currentFluid == null) return
+            val capacity = FluidUtil.getCapacity(container)
+            val result = monitor.extractItems(FluidUtil.createAEFluidStack(currentFluid, capacity.toLong()),
+                    Actionable.SIMULATE, machineSource)
+            val proposedAmount = if (result == null) 0 else Math.min(capacity.toLong(), result.stackSize).toInt()
+            if (proposedAmount == 0) return
+            val filledContainer = FluidUtil.fillStack(container, FluidStack(currentFluid, proposedAmount))
+            if (filledContainer!!.getLeft()!! > proposedAmount) return
+            if (fillSecondSlot(filledContainer.getRight())) {
+                monitor.extractItems(FluidUtil.createAEFluidStack(currentFluid, filledContainer.getLeft()),
+                        Actionable.MODULATE, machineSource)
+                decreaseFirstSlot()
+            }
+        } else {
+            val containerFluid = FluidUtil.getFluidFromContainer(container)
+            val notInjected = monitor.injectItems(FluidUtil.createAEFluidStack(containerFluid), Actionable.SIMULATE,
+                    machineSource)
+            if (notInjected != null) return
+            val drainedContainer = FluidUtil.drainStack(container, containerFluid)
+            val emptyContainer = drainedContainer!!.getRight()
+            if (emptyContainer == null || fillSecondSlot(emptyContainer)) {
+                monitor.injectItems(FluidUtil.createAEFluidStack(containerFluid), Actionable.MODULATE, machineSource)
+                decreaseFirstSlot()
+            }
+        }
+    }
 
-//	public void addContainer(ContainerGasTerminal containerTerminalGas) {
-//		this.containers.add(containerTerminalGas);
-//		sendCurrentFluid();
-//	}
+    fun fillSecondSlot(itemStack: ItemStack?): Boolean {
+        if (itemStack == null) return false
+        val secondSlot = inventory.getStackInSlot(1)
+        return if (secondSlot == null) {
+            inventory.setInventorySlotContents(1, itemStack)
+            true
+        } else {
+            if (!secondSlot.isItemEqual(itemStack) || !ItemStack.areItemStackTagsEqual(itemStack,
+                            secondSlot)) return false
+            inventory.incrStackSize(1, itemStack.stackSize)
+            true
+        }
+    }
 
-	@Override
-	public int cableConnectionRenderTo() {
-		return 1;
-	}
+    override fun getBoxes(bch: IPartCollisionHelper) {
+        bch.addBox(2.0, 2.0, 14.0, 14.0, 14.0, 16.0)
+        bch.addBox(4.0, 4.0, 13.0, 12.0, 12.0, 14.0)
+        bch.addBox(5.0, 5.0, 12.0, 11.0, 11.0, 13.0)
+    }
 
-	public void decreaseFirstSlot() {
-		ItemStack slot = this.inventory.getStackInSlot(0);
-		slot.stackSize--;
-		if (slot.stackSize <= 0)
-			this.inventory.setInventorySlotContents(0, null);
-	}
+    override fun getClientGuiElement(player: EntityPlayer): Any? {
+        return GuiFluidTerminal(this, player)
+    }
 
-	public void doWork() {
-		ItemStack secondSlot = this.inventory.getStackInSlot(1);
-		if (secondSlot != null && secondSlot.stackSize >= secondSlot.getMaxStackSize())
-			return;
-		ItemStack container = this.inventory.getStackInSlot(0);
-		if (!FluidUtil.isFluidContainer(container))
-			return;
-		container = container.copy();
-		container.stackSize = 1;
+    fun getInventory(): IInventory {
+        return inventory
+    }
 
-		ECBaseGridBlock gridBlock = getGridBlock();
-		if (gridBlock == null)
-			return;
-		IMEMonitor<IAEFluidStack> monitor = gridBlock.getFluidMonitor();
-		if (monitor == null)
-			return;
+    override val powerUsage: Double
+        get() = 0.5
 
-		if (FluidUtil.isEmpty(container)) {
-			if (this.currentFluid == null)
-				return;
-			int capacity = FluidUtil.getCapacity(container);
-			IAEFluidStack result = monitor.extractItems(FluidUtil.createAEFluidStack(this.currentFluid, capacity), Actionable.SIMULATE, this.machineSource);
-			int proposedAmount = result == null ? 0 : (int) Math.min(capacity, result.getStackSize());
-			if(proposedAmount == 0)
-				return;
-			MutablePair<Integer, ItemStack> filledContainer = FluidUtil.fillStack(container, new FluidStack(this.currentFluid, proposedAmount));
-			if(filledContainer.getLeft() > proposedAmount)
-				return;
-			if (fillSecondSlot(filledContainer.getRight())) {
-				monitor.extractItems(FluidUtil.createAEFluidStack(this.currentFluid, filledContainer.getLeft()), Actionable.MODULATE, this.machineSource);
-				decreaseFirstSlot();
-			}
-		} else {
-			FluidStack containerFluid = FluidUtil.getFluidFromContainer(container);
-			IAEFluidStack notInjected = monitor.injectItems(FluidUtil.createAEFluidStack(containerFluid), Actionable.SIMULATE, this.machineSource);
-			if (notInjected != null)
-				return;
-			MutablePair<Integer, ItemStack> drainedContainer = FluidUtil.drainStack(container, containerFluid);
-			ItemStack emptyContainer = drainedContainer.getRight();
-			if (emptyContainer == null || fillSecondSlot(emptyContainer)) {
-				monitor.injectItems(FluidUtil.createAEFluidStack(containerFluid), Actionable.MODULATE, this.machineSource);
-				decreaseFirstSlot();
-			}
-		}
-	}
+    override fun getServerGuiElement(player: EntityPlayer): Any? {
+        return ContainerFluidTerminal(this, player)
+    }
 
-	public boolean fillSecondSlot(ItemStack itemStack) {
-		if (itemStack == null)
-			return false;
-		ItemStack secondSlot = this.inventory.getStackInSlot(1);
-		if (secondSlot == null) {
-			this.inventory.setInventorySlotContents(1, itemStack);
-			return true;
-		} else {
-			if (!secondSlot.isItemEqual(itemStack) || !ItemStack.areItemStackTagsEqual(itemStack, secondSlot))
-				return false;
-			this.inventory.incrStackSize(1, itemStack.stackSize);
-			return true;
-		}
-	}
+    override fun getTickingRequest(node: IGridNode): TickingRequest {
+        return TickingRequest(1, 20, false, false)
+    }
 
-	@Override
-	public void getBoxes(IPartCollisionHelper bch) {
-		bch.addBox(2, 2, 14, 14, 14, 16);
-		bch.addBox(4, 4, 13, 12, 12, 14);
-		bch.addBox(5, 5, 12, 11, 11, 13);
-	}
+    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+        return if (isActive && (PermissionUtil.hasPermission(player, SecurityPermissions.INJECT,
+                        this as IPart) || PermissionUtil.hasPermission(player, SecurityPermissions.EXTRACT,
+                        this as IPart))) super.onActivate(player, pos) else false
+    }
 
-	@Override
-	public Object getClientGuiElement(EntityPlayer player) {
-		return new GuiFluidTerminal(this, player);
-	}
+    override fun onInventoryChanged() {
+        saveData()
+    }
 
-	public IInventory getInventory() {
-		return this.inventory;
-	}
+    override fun readFromNBT(data: NBTTagCompound) {
+        super.readFromNBT(data)
+        inventory.readFromNBT(data.getTagList("inventory", 10))
+    }
 
-	@Override
-	public double getPowerUsage() {
-		return 0.5D;
-	}
+    fun removeContainer(containerTerminalFluid: ContainerFluidTerminal) {
+        containers.remove(containerTerminalFluid)
+    }
 
-	@Override
-	public Object getServerGuiElement(EntityPlayer player) {
-		return new ContainerFluidTerminal(this, player);
-	}
+    //	public void removeContainer(ContainerGasTerminal containerTerminalGas) {
+    //		this.containers.remove(containerTerminalGas);
+    //	}
+    @SideOnly(Side.CLIENT)
+    override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        val side = TextureManager.TERMINAL_SIDE.texture
+        rh.setTexture(side)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderInventoryBox(renderer)
+        rh.setTexture(side, side, side, TextureManager.BUS_BORDER.texture,
+                side, side)
+        rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
+        rh.renderInventoryBox(renderer)
+        ts.setBrightness(13 shl 20 or 13 shl 4)
+        rh.setInvColor(0xFFFFFF)
+        rh.renderInventoryFace(TextureManager.BUS_BORDER.texture,
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(3f, 3f, 15f, 13f, 13f, 16f)
+        rh.setInvColor(AEColor.Transparent.blackVariant)
+        rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.textures[0],
+                ForgeDirection.SOUTH, renderer)
+        rh.setInvColor(AEColor.Transparent.mediumVariant)
+        rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.textures[1],
+                ForgeDirection.SOUTH, renderer)
+        rh.setInvColor(AEColor.Transparent.whiteVariant)
+        rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.textures[2],
+                ForgeDirection.SOUTH, renderer)
+        rh.setBounds(5f, 5f, 12f, 11f, 11f, 13f)
+        renderInventoryBusLights(rh, renderer)
+    }
 
-	@Override
-	public TickingRequest getTickingRequest(IGridNode node) {
-		return new TickingRequest(1, 20, false, false);
-	}
+    @SideOnly(Side.CLIENT)
+    override fun renderStatic(x: Int, y: Int, z: Int, rh: IPartRenderHelper, renderer: RenderBlocks) {
+        val ts = Tessellator.instance
+        val side = TextureManager.TERMINAL_SIDE.texture
+        rh.setTexture(side)
+        rh.setBounds(4f, 4f, 13f, 12f, 12f, 14f)
+        rh.renderBlock(x, y, z, renderer)
+        rh.setTexture(side, side, side, TextureManager.BUS_BORDER.texture, side, side)
+        rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
+        rh.renderBlock(x, y, z, renderer)
+        if (isActive) Tessellator.instance.setBrightness(13 shl 20 or 13 shl 4)
+        ts.setColorOpaque_I(0xFFFFFF)
+        rh.renderFace(x, y, z, TextureManager.BUS_BORDER.texture, ForgeDirection.SOUTH, renderer)
+        val host = host
+        rh.setBounds(3f, 3f, 15f, 13f, 13f, 16f)
+        ts.setColorOpaque_I(host!!.color.blackVariant)
+        rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.textures[0], ForgeDirection.SOUTH, renderer)
+        ts.setColorOpaque_I(host.color.mediumVariant)
+        rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.textures[1], ForgeDirection.SOUTH, renderer)
+        ts.setColorOpaque_I(host.color.whiteVariant)
+        rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.textures[2], ForgeDirection.SOUTH, renderer)
+        rh.setBounds(5f, 5f, 12f, 11f, 11f, 13f)
+        renderStaticBusLights(x, y, z, rh, renderer)
+    }
 
-	@Override
-	public boolean onActivate(EntityPlayer player, Vec3 pos) {
-		if (isActive() && (PermissionUtil.hasPermission(player, SecurityPermissions.INJECT, (IPart) this) || PermissionUtil.hasPermission(player, SecurityPermissions.EXTRACT, (IPart) this)))
-			return super.onActivate(player, pos);
-		return false;
-	}
+    fun sendCurrentFluid() {
+        for (containerFluidTerminal in containers) {
+            sendCurrentFluid(containerFluidTerminal)
+        }
+    }
 
-	@Override
-	public void onInventoryChanged() {
-		saveData();
-	}
-
-	@Override
-	public void readFromNBT(NBTTagCompound data) {
-		super.readFromNBT(data);
-		this.inventory.readFromNBT(data.getTagList("inventory", 10));
-	}
-
-	public void removeContainer(ContainerFluidTerminal containerTerminalFluid) {
-		this.containers.remove(containerTerminalFluid);
-	}
-
-//	public void removeContainer(ContainerGasTerminal containerTerminalGas) {
-//		this.containers.remove(containerTerminalGas);
-//	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
-
-		IIcon side = TextureManager.TERMINAL_SIDE.getTexture();
-		rh.setTexture(side);
-		rh.setBounds(4, 4, 13, 12, 12, 14);
-		rh.renderInventoryBox(renderer);
-		rh.setTexture(side, side, side, TextureManager.BUS_BORDER.getTexture(),
-				side, side);
-		rh.setBounds(2, 2, 14, 14, 14, 16);
-		rh.renderInventoryBox(renderer);
-
-		ts.setBrightness(13 << 20 | 13 << 4);
-
-		rh.setInvColor(0xFFFFFF);
-		rh.renderInventoryFace(TextureManager.BUS_BORDER.getTexture(),
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(3, 3, 15, 13, 13, 16);
-		rh.setInvColor(AEColor.Transparent.blackVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[0],
-				ForgeDirection.SOUTH, renderer);
-		rh.setInvColor(AEColor.Transparent.mediumVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[1],
-				ForgeDirection.SOUTH, renderer);
-		rh.setInvColor(AEColor.Transparent.whiteVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[2],
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(5, 5, 12, 11, 11, 13);
-		renderInventoryBusLights(rh, renderer);
-	}
-
-	@SideOnly(Side.CLIENT)
-	@Override
-	public void renderStatic(int x, int y, int z, IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
-
-		IIcon side = TextureManager.TERMINAL_SIDE.getTexture();
-		rh.setTexture(side);
-		rh.setBounds(4, 4, 13, 12, 12, 14);
-		rh.renderBlock(x, y, z, renderer);
-		rh.setTexture(side, side, side, TextureManager.BUS_BORDER.getTexture(), side, side);
-		rh.setBounds(2, 2, 14, 14, 14, 16);
-		rh.renderBlock(x, y, z, renderer);
-
-		if (isActive())
-			Tessellator.instance.setBrightness(13 << 20 | 13 << 4);
-
-		ts.setColorOpaque_I(0xFFFFFF);
-		rh.renderFace(x, y, z, TextureManager.BUS_BORDER.getTexture(), ForgeDirection.SOUTH, renderer);
-
-		IPartHost host = getHost();
-		rh.setBounds(3, 3, 15, 13, 13, 16);
-		ts.setColorOpaque_I(host.getColor().blackVariant);
-		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[0], ForgeDirection.SOUTH, renderer);
-		ts.setColorOpaque_I(host.getColor().mediumVariant);
-		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[1], ForgeDirection.SOUTH, renderer);
-		ts.setColorOpaque_I(host.getColor().whiteVariant);
-		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[2], ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(5, 5, 12, 11, 11, 13);
-		renderStaticBusLights(x, y, z, rh, renderer);
-	}
-
-	public void sendCurrentFluid() {
-		for (Object containerFluidTerminal : this.containers) {
-			sendCurrentFluid(containerFluidTerminal);
-		}
-	}
-
-	public void sendCurrentFluid(Object container) {
-		if(container instanceof ContainerFluidTerminal){
-			ContainerFluidTerminal containerFluidTerminal = (ContainerFluidTerminal) container;
-			new PacketFluidTerminal(containerFluidTerminal.getPlayer(), this.currentFluid).sendPacketToPlayer(containerFluidTerminal.getPlayer());
-		}
-//		else if(container instanceof ContainerGasTerminal){
+    fun sendCurrentFluid(container: Any?) {
+        if (container is ContainerFluidTerminal) {
+            val containerFluidTerminal = container
+            PacketFluidTerminal(containerFluidTerminal.player, currentFluid).sendPacketToPlayer(
+                    containerFluidTerminal.player)
+        }
+        //		else if(container instanceof ContainerGasTerminal){
 //			ContainerGasTerminal containerGasTerminal = (ContainerGasTerminal) container;
 //			new PacketFluidTerminal(containerGasTerminal.getPlayer(), this.currentFluid).sendPacketToPlayer(containerGasTerminal.getPlayer());
 //		}
+    }
 
-	}
+    fun setCurrentFluid(_currentFluid: Fluid?) {
+        currentFluid = _currentFluid
+        sendCurrentFluid()
+    }
 
-	public void setCurrentFluid(Fluid _currentFluid) {
-		this.currentFluid = _currentFluid;
-		sendCurrentFluid();
-	}
+    override fun tickingRequest(node: IGridNode,
+                                TicksSinceLastCall: Int): TickRateModulation {
+        doWork()
+        return TickRateModulation.FASTER
+    }
 
-	@Override
-	public TickRateModulation tickingRequest(IGridNode node,
-			int TicksSinceLastCall) {
-		doWork();
-		return TickRateModulation.FASTER;
-	}
-
-	@Override
-	public void writeToNBT(NBTTagCompound data) {
-		super.writeToNBT(data);
-		data.setTag("inventory", this.inventory.writeToNBT());
-	}
+    override fun writeToNBT(data: NBTTagCompound) {
+        super.writeToNBT(data)
+        data.setTag("inventory", inventory.writeToNBT())
+    }
 }

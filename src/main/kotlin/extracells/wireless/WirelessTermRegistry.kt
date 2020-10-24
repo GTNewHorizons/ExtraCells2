@@ -1,39 +1,30 @@
-package extracells.wireless;
+package extracells.wireless
 
-import extracells.api.IWirelessGasFluidTermHandler;
-import net.minecraft.item.ItemStack;
+import extracells.api.IWirelessGasFluidTermHandler
+import net.minecraft.item.ItemStack
+import java.util.*
 
-import java.util.ArrayList;
-import java.util.List;
+object WirelessTermRegistry {
+    fun getWirelessTermHandler(`is`: ItemStack?): IWirelessGasFluidTermHandler? {
+        if (`is` == null) return null
+        for (handler in handlers) {
+            if (handler.canHandle(`is`)) return handler
+        }
+        return null
+    }
 
-public class WirelessTermRegistry {
+    fun isWirelessItem(`is`: ItemStack?): Boolean {
+        if (`is` == null) return false
+        for (handler in handlers) {
+            if (handler.canHandle(`is`)) return true
+        }
+        return false
+    }
 
-	public static IWirelessGasFluidTermHandler getWirelessTermHandler(ItemStack is) {
-		if (is == null)
-			return null;
-		for (IWirelessGasFluidTermHandler handler : handlers) {
-			if (handler.canHandle(is))
-				return handler;
-		}
-		return null;
-	}
+    fun registerWirelessTermHandler(
+            handler: IWirelessGasFluidTermHandler) {
+        if (!handlers.contains(handler)) handlers.add(handler)
+    }
 
-	public static boolean isWirelessItem(ItemStack is) {
-		if (is == null)
-			return false;
-		for (IWirelessGasFluidTermHandler handler : handlers) {
-			if (handler.canHandle(is))
-				return true;
-		}
-		return false;
-	}
-
-	public static void registerWirelessTermHandler(
-			IWirelessGasFluidTermHandler handler) {
-		if (!handlers.contains(handler))
-			handlers.add(handler);
-	}
-
-	static List<IWirelessGasFluidTermHandler> handlers = new ArrayList<IWirelessGasFluidTermHandler>();
-
+    var handlers: MutableList<IWirelessGasFluidTermHandler> = ArrayList()
 }

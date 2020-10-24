@@ -1,47 +1,29 @@
-package extracells.definitions;
+package extracells.definitions
 
-import appeng.api.definitions.IItemDefinition;
-import com.google.common.base.Optional;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.world.IBlockAccess;
+import appeng.api.definitions.IItemDefinition
+import com.google.common.base.Optional
+import net.minecraft.item.Item
+import net.minecraft.item.ItemStack
+import net.minecraft.world.IBlockAccess
 
-public class ItemItemDefinitions implements IItemDefinition {
-
-	public final Item item;
-	public final int meta;
-
-	public ItemItemDefinitions(Item _item) {
-		this(_item, 0);
-	}
-
-	public ItemItemDefinitions(Item _item, int _meta) {
-		this.item = _item;
-		this.meta = _meta;
-	}
-
-	@Override
-	public Optional<Item> maybeItem() {
-		return Optional.fromNullable(this.item);
-	}
-
-    @Override
-    public Optional<ItemStack> maybeStack(int stackSize) {
-        return Optional.of(new ItemStack(this.item, stackSize, this.meta));
+class ItemItemDefinitions @JvmOverloads constructor(val item: Item?, val meta: Int = 0) : IItemDefinition {
+    override fun maybeItem(): Optional<Item> {
+        return Optional.fromNullable(item)
     }
 
-	@Override
-	public boolean isEnabled() {
-		return true;
-	}
-
-	@Override
-    public boolean isSameAs(ItemStack comparableStack) {
-        return comparableStack != null && comparableStack.isItemEqual(maybeStack(1).get());
+    override fun maybeStack(stackSize: Int): Optional<ItemStack> {
+        return Optional.of(ItemStack(item, stackSize, meta))
     }
 
-    @Override
-    public boolean isSameAs(IBlockAccess world, int x, int y, int z) {
-        return false;
+    override fun isEnabled(): Boolean {
+        return true
+    }
+
+    override fun isSameAs(comparableStack: ItemStack): Boolean {
+        return comparableStack != null && comparableStack.isItemEqual(maybeStack(1).get())
+    }
+
+    override fun isSameAs(world: IBlockAccess, x: Int, y: Int, z: Int): Boolean {
+        return false
     }
 }

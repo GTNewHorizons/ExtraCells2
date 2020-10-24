@@ -1,10 +1,8 @@
-package extracells.gui.widget.fluid;
+package extracells.gui.widget.fluid
 
-import appeng.api.storage.data.IAEFluidStack;
+import appeng.api.storage.data.IAEFluidStack
 
-public interface IFluidSelectorGui extends IFluidWidgetGui {
-
-	IFluidSelectorContainer getContainer();
-
-	IAEFluidStack getCurrentFluid();
+interface IFluidSelectorGui : IFluidWidgetGui {
+    val container: IFluidSelectorContainer
+    val currentFluid: IAEFluidStack?
 }

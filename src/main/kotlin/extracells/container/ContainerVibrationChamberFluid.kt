@@ -1,43 +1,36 @@
-package extracells.container;
+package extracells.container
 
-import extracells.tileentity.TileEntityVibrationChamberFluid;
-import net.minecraft.entity.player.EntityPlayer;
-import net.minecraft.entity.player.InventoryPlayer;
-import net.minecraft.inventory.Container;
-import net.minecraft.inventory.Slot;
+import extracells.tileentity.TileEntityVibrationChamberFluid
+import net.minecraft.entity.player.EntityPlayer
+import net.minecraft.entity.player.InventoryPlayer
+import net.minecraft.inventory.Container
+import net.minecraft.inventory.Slot
 
-public class ContainerVibrationChamberFluid extends Container {
-
-    public TileEntityVibrationChamberFluid tileentity;
-
-    public ContainerVibrationChamberFluid(InventoryPlayer player,
-                                TileEntityVibrationChamberFluid tileentity) {
-        this.tileentity = tileentity;
-
-        bindPlayerInventory(player);
-    }
-
-    protected void bindPlayerInventory(InventoryPlayer inventoryPlayer) {
-        for (int i = 0; i < 3; i++) {
-            for (int j = 0; j < 9; j++) {
-                addSlotToContainer(new Slot(inventoryPlayer, j + i * 9 + 9,
-                        8 + j * 18, i * 18 + 84));
+class ContainerVibrationChamberFluid(player: InventoryPlayer?,
+                                     var tileentity: TileEntityVibrationChamberFluid) : Container() {
+    protected fun bindPlayerInventory(inventoryPlayer: InventoryPlayer?) {
+        for (i in 0..2) {
+            for (j in 0..8) {
+                addSlotToContainer(Slot(inventoryPlayer, j + i * 9 + 9,
+                        8 + j * 18, i * 18 + 84))
             }
         }
-
-        for (int i = 0; i < 9; i++) {
-            addSlotToContainer(new Slot(inventoryPlayer, i, 8 + i * 18, 142));
+        for (i in 0..8) {
+            addSlotToContainer(Slot(inventoryPlayer, i, 8 + i * 18, 142))
         }
     }
 
-    @Override
-    public boolean canInteractWith(EntityPlayer entityplayer) {
-        return tileentity.hasWorldObj() && tileentity.getWorldObj().getTileEntity(tileentity.xCoord, tileentity.yCoord, tileentity.zCoord) == this.tileentity;
+    override fun canInteractWith(entityplayer: EntityPlayer): Boolean {
+        return tileentity.hasWorldObj() && tileentity.worldObj.getTileEntity(tileentity.xCoord, tileentity.yCoord,
+                tileentity.zCoord) === tileentity
     }
 
-    @Override
-    protected void retrySlotClick(int par1, int par2, boolean par3,
-                                  EntityPlayer par4EntityPlayer) {
+    override fun retrySlotClick(par1: Int, par2: Int, par3: Boolean,
+                                par4EntityPlayer: EntityPlayer) {
         // DON'T DO ANYTHING, YOU SHITTY METHOD!
+    }
+
+    init {
+        bindPlayerInventory(player)
     }
 }
