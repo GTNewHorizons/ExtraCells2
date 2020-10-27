@@ -3,26 +3,56 @@ buildscript {
         mavenCentral()
         maven {
             name = "forge"
-            url = "https://files.minecraftforge.net/maven"
+            url = "http://files.minecraftforge.net/maven"
+        }
+        maven {
+            name = "jitpack"
+            url = "https://jitpack.io"
         }
         maven {
             name = "sonatype"
             url = "https://oss.sonatype.org/content/repositories/snapshots/"
         }
-        maven {
-            url = "https://jitpack.io"
-	    }
     }
+
     dependencies {
-        classpath 'com.github.CDAGaming:ForgeGradle:1c670759c5'
+        //Defaults to Java 8 & UTF-8 encoding
+        classpath ("com.github.GTNH2:ForgeGradle:FG_1.2-SNAPSHOT")
+        classpath ("org.jetbrains.kotlin:kotlin-gradle-plugin:1.4.10")
     }
 }
 
-apply plugin: 'scala'
-apply plugin: 'forge'
-apply plugin: 'idea'
+apply plugin: "java"
+apply plugin: "scala"
+apply plugin: "kotlin"
+apply plugin: "forge"
+apply plugin: "idea"
 
-ext.buildProps = file "build.properties"
+sourceSets {
+    main {
+        scala {
+            srcDirs = ["src/main/scala"]
+        }
+        java {
+            srcDirs = ["src/main/java"]
+        }
+        kotlin {
+            srcDirs = ["src/main/kotlin","src/main/java"]
+        }
+    }
+}
+
+tasks.compileKotlin.dependsOn.add(tasks.compileScala)
+tasks.compileScala.dependsOn.remove("compileJava")
+
+compileKotlin.classpath += files(compileScala.destinationDir)
+tasks.withType(org.jetbrains.kotlin.gradle.tasks.KotlinCompile).all {
+    kotlinOptions {
+        jvmTarget = "1.8"
+    }
+}
+
+ext.buildProps = file("build.properties")
 
 version = "NIGHTLY"
 if (System.getenv("BUILD_NUMBER") != null) {
@@ -38,7 +68,7 @@ buildProps.withReader {
     ext.config = new ConfigSlurper().parse prop
 }
 
-version = "${config.version.minecraft}-${config.version.mod.major}.${config.version.mod.minor}.${config.version.mod.revis}b" + getBuildNumber()
+version = "${config.version.minecraft}-${config.version.mod.major}.${config.version.mod.minor}.${config.version.mod.revis}b" + getBuildNumber() + "-kotlin-mod"
 group = "extracells"
 archivesBaseName = "ExtraCells"
 
@@ -57,16 +87,16 @@ minecraft {
 
 repositories {
     maven {
-        name 'Mobius Repo'
+        name "Mobius Repo"
         url "http://mobiusstrip.eu/maven"
     }
     maven {
-        name 'CB Repo'
+        name "CB Repo"
         url "http://chickenbones.net/maven/"
     }
 	
 	maven {
-		name 'Open Computers'
+		name "Open Computers"
 		url "http://maven.cil.li/"
 	}
 
@@ -76,7 +106,7 @@ repositories {
     }
 
 	maven {
-        name = 'IGW'
+        name = "IGW"
         url = "http://maven.k-4u.nl/"
     }
 
@@ -86,11 +116,11 @@ repositories {
     }
 	
 	maven {
-		name 'GT6 Maven'
+		name "GT6 Maven"
 		url "https://gregtech.overminddl1.com/"
 	}
 	maven {
-		name 'GTNH Maven'
+		name "GTNH Maven"
 		url "http://jenkins.usrv.eu:8081/nexus/content/repositories/releases/"
 	}
 
@@ -102,59 +132,49 @@ repositories {
     }
 }
 
-configurations {
-	provided
-	embedded
-	compile.extendsFrom embedded
-}
-
 dependencies {
-    provided name: 'CoFHCore', version: config.cofhcore.version, ext: 'jar'
-	compile ("appeng:appliedenergistics2:${config.version.ae}:api") {
-        transitive = false
-    }
-	compile ("appeng:appliedenergistics2:${config.version.ae}:dev") {
-        transitive = false
-    }
-	compile ("mcp.mobius.waila:Waila:${config.version.waila}"){
+    implementation(files("${projectDir}/libs"))
+    //implementation name: "CoFHCore", version: config.cofhcore.version, ext: "jar"
+	implementation ("mcp.mobius.waila:Waila:${config.version.waila}"){
         transitive = false
 	}
-	compile "li.cil.oc:OpenComputers:${config.version.oc}:dev"
-	compile "codechicken:CodeChickenLib:${config.version.minecraft}-${config.version.ccl}:dev"
-    compile "codechicken:CodeChickenCore:${config.version.minecraft}-${config.version.ccc}:dev"
-    compile "codechicken:NotEnoughItems:${config.version.minecraft}-${config.version.nei}:dev"
-	compile "igwmod:IGW-Mod-${config.version.minecraft}:${config.version.igw}:userdev"
-    compile name: "buildcraft", version: "${config.version.bc}", classifier: "dev", ext: 'jar'
-    // compile name: 'WirelessCraftingTerminal', version: config.version.wc, ext: 'jar'
+	implementation ("li.cil.oc:OpenComputers:${config.version.oc}:dev")
+	implementation ("codechicken:CodeChickenLib:${config.version.minecraft}-${config.version.ccl}:dev")
+    implementation ("codechicken:CodeChickenCore:${config.version.minecraft}-${config.version.ccc}:dev")
+    implementation ("codechicken:NotEnoughItems:${config.version.minecraft}-${config.version.nei}:dev")
+	implementation ("igwmod:IGW-Mod-${config.version.minecraft}:${config.version.igw}:userdev")
+    implementation (group: "", name: "buildcraft", version: "${config.version.bc}", classifier: "dev", ext: "jar")
+    // implementation name: "WirelessCraftingTerminal", version: config.version.wc, ext: "jar"
 }
 
 processResources {
     from(sourceSets.main.resources.srcDirs) {
-        include '**/*.lang'
-        include '**/*.info'
-        include '**/*.properties'
+        include ("**/*.lang")
+        include ("**/*.info")
+        include ("**/*.properties")
 
-        expand 'version': project.version, 'mcversion': project.minecraft.version
+        expand ("version": project.version, "mcversion": project.minecraft.version)
     }
 
     from(sourceSets.main.resources.srcDirs) {
-        include '**/*.lang'
-        include '**/*.info'
-        include '**/*.properties'
+        include ("**/*.lang")
+        include ("**/*.info")
+        include ("**/*.properties")
 
-        expand 'version': "${config.version.mod.major}.${config.version.mod.minor}.${config.version.mod.revis}", 'mcversion': project.minecraft.version
+        expand ("version": "${config.version.mod.major}.${config.version.mod.minor}.${config.version.mod.revis}", "mcversion": project.minecraft.version)
     }
 }
 
 task deobfJar(type: Jar) {
-    from sourceSets.main.output
-    from sourceSets.main.scala
-    from sourceSets.main.java
-    appendix = 'deobf'
+    from (sourceSets.main.output)
+    from (sourceSets.main.scala)
+    from (sourceSets.main.kotlin)
+    from (sourceSets.main.java)
+    getArchiveAppendix().set("deobf")
 }
 
 artifacts {
-    archives deobfJar
+    archives(deobfJar)
 }
 
 def static getBuildNumber() {
@@ -169,6 +189,6 @@ def static getBuildNumber() {
 
 idea {
     module {
-        outputDir = file('build/classes/main')
+        outputDir = file("build/classes/main")
     }
 }
