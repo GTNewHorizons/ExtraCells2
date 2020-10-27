@@ -65,7 +65,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
     private var isActive = false
     private var isPowerd = false
     private var owner: EntityPlayer? = null
-    private val `is`: ItemStack
+    private val `is`: ItemStack = ItemStack(ItemEnum.PARTITEM.item, 1, PartEnum.getPartID(this))
     override fun addToWorld() {
         if (FMLCommonHandler.instance().effectiveSide.isClient) return
         gridBlock = ECBaseGridBlock(this)
@@ -91,21 +91,21 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
     protected fun extractFluid(toExtract: IAEFluidStack?,
                                action: Actionable?): IAEFluidStack? {
         if (gridBlock == null || facingTank == null) return null
-        val monitor = gridBlock.getFluidMonitor() ?: return null
+        val monitor = gridBlock?.fluidMonitor ?: return null
         return monitor.extractItems(toExtract, action, MachineSource(this))
     }
 
     protected fun extractGasFluid(toExtract: IAEFluidStack?,
                                   action: Actionable?): IAEFluidStack? {
         if (gridBlock == null || facingGasTank == null) return null
-        val monitor = gridBlock.getFluidMonitor() ?: return null
+        val monitor = gridBlock?.fluidMonitor ?: return null
         return monitor.extractItems(toExtract, action, MachineSource(this))
     }
 
     protected fun extractGas(toExtract: IAEFluidStack?,
                              action: Actionable?): IAEFluidStack? {
         if (gridBlock == null || facingGasTank == null) return null
-        val monitor = gridBlock.getFluidMonitor() ?: return null
+        val monitor = gridBlock?.fluidMonitor ?: return null
         return monitor.extractItems(toExtract, action, MachineSource(this))
     }
 
@@ -114,7 +114,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
     }
 
     abstract override fun getBoxes(bch: IPartCollisionHelper)
-    override fun getBreakingTexture(): IIcon {
+    override fun getBreakingTexture(): IIcon? {
         return TextureManager.BUS_SIDE.texture
     }
 
@@ -127,7 +127,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
     }
 
     override fun getDrops(drops: MutableList<ItemStack>, wrenched: Boolean) {}
-    override fun getExternalFacingNode(): IGridNode {
+    override fun getExternalFacingNode(): IGridNode? {
         return null
     }
 
@@ -136,15 +136,15 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         return facingGasTank as IGasHandler?
     }
 
-    override fun getGridNode(): IGridNode {
-        return node!!
+    override fun getGridNode(): IGridNode? {
+        return node
     }
 
-    override fun getGridNode(dir: ForgeDirection): IGridNode {
-        return node!!
+    override fun getGridNode(dir: ForgeDirection?): IGridNode? {
+        return node
     }
 
-    override fun getItemStack(type: PartItemStack): ItemStack {
+    override fun getItemStack(type: PartItemStack?): ItemStack? {
         return `is`
     }
 
@@ -156,7 +156,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         get() = DimensionalCoord(tile!!.worldObj, tile!!.xCoord,
                 tile!!.yCoord, tile!!.zCoord)
 
-    open fun getServerGuiElement(player: EntityPlayer): Any? {
+    open fun getServerGuiElement(player: EntityPlayer?): Any? {
         return null
     }
 
@@ -179,7 +179,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         if (gridBlock == null || facingTank == null) {
             return toInject
         }
-        val monitor = gridBlock.getFluidMonitor() ?: return toInject
+        val monitor = gridBlock?.fluidMonitor ?: return toInject
         return monitor.injectItems(toInject, action, MachineSource(this))
     }
 
@@ -187,7 +187,7 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         if (gridBlock == null || facingGasTank == null) {
             return toInject
         }
-        val monitor = gridBlock.getFluidMonitor() ?: return toInject
+        val monitor = gridBlock?.fluidMonitor ?: return toInject
         return monitor.injectItems(toInject, action, MachineSource(this))
     }
 
@@ -215,10 +215,12 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         return false
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
-        if (player != null && player is EntityPlayerMP) launchGui(getGuiId(this), player,
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
+        if (player != null && player is EntityPlayerMP) getGuiId(this)?.let {
+            launchGui(it, player,
                 hostTile!!.worldObj, hostTile!!.xCoord,
                 hostTile!!.yCoord, hostTile!!.zCoord)
+        }
         return true
     }
 
@@ -389,7 +391,4 @@ abstract class PartECBase : IPart, IGridHost, IActionHost, IPowerChannelState {
         data.writeBoolean(isPowerd)
     }
 
-    init {
-        `is` = ItemStack(ItemEnum.PARTITEM.item, 1, PartEnum.Companion.getPartID(this))
-    }
 }

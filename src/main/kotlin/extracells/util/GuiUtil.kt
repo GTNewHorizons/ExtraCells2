@@ -64,13 +64,13 @@ object GuiUtil {
 
     fun renderOverlay(zLevel: Float, guiLeft: Int, guiTop: Int,
                       fluidSlot: WidgetFluidSlot?, mouseX: Int, mouseY: Int): Boolean {
-        if (isPointInRegion(guiLeft.toFloat(), guiTop, fluidSlot.getPosX(),
-                        fluidSlot.getPosY(), 18, 18, mouseX, mouseY)) {
+        if (fluidSlot?.let { isPointInRegion(guiLeft.toFloat(), guiTop, it.posX,
+                        it.posY, 18, 18, mouseX, mouseY)} == true) {
             GL11.glDisable(GL11.GL_LIGHTING)
             GL11.glDisable(GL11.GL_DEPTH_TEST)
-            drawGradientRect(zLevel, fluidSlot.getPosX() + 1,
-                    fluidSlot.getPosY() + 1, fluidSlot.getPosX() + 17,
-                    fluidSlot.getPosY() + 17, -0x7F000001, -0x7F000001)
+            drawGradientRect(zLevel, fluidSlot.posX + 1,
+                    fluidSlot.posY + 1, fluidSlot.posX + 17,
+                    fluidSlot.posY + 17, -0x7F000001, -0x7F000001)
             GL11.glEnable(GL11.GL_LIGHTING)
             GL11.glEnable(GL11.GL_DEPTH_TEST)
             return true

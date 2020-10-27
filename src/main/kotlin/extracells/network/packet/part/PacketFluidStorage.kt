@@ -14,13 +14,12 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
-
-class PacketFluidStorage : AbstractPacket {
+open class PacketFluidStorage : AbstractPacket {
     private var fluidStackList: IItemList<IAEFluidStack?>? = null
     private var currentFluid: Fluid? = null
     private var hasTermHandler = false
 
-    constructor() {}
+    constructor()
     constructor(_player: EntityPlayer?) : super(_player) {
         mode = 2
     }
@@ -41,7 +40,7 @@ class PacketFluidStorage : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> case0()
             1 -> if (player != null && player!!.openContainer is ContainerFluidStorage) {
                 (player!!.openContainer as ContainerFluidStorage).receiveSelectedFluid(currentFluid)
@@ -92,20 +91,20 @@ class PacketFluidStorage : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 fluidStackList = AEApi.instance().storage().createFluidList()
                 while (`in`.readableBytes() > 0) {
-                    val fluid: Fluid = AbstractPacket.Companion.readFluid(`in`)
+                    val fluid: Fluid? = AbstractPacket.readFluid(`in`)
                     val fluidAmount = `in`.readLong()
                     if (fluid != null) {
                         val stack = AEApi.instance().storage().createFluidStack(FluidStack(fluid, 1))
                         stack.stackSize = fluidAmount
-                        fluidStackList.add(stack)
+                        (fluidStackList as IItemList<IAEFluidStack>?)?.add(stack)
                     }
                 }
             }
-            1 -> currentFluid = AbstractPacket.Companion.readFluid(`in`)
+            1 -> currentFluid = AbstractPacket.readFluid(`in`)
             2 -> {
             }
             3 -> hasTermHandler = `in`.readBoolean()
@@ -113,13 +112,13 @@ class PacketFluidStorage : AbstractPacket {
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> for (stack in fluidStackList!!) {
                 val fluidStack = stack!!.fluidStack
-                AbstractPacket.Companion.writeFluid(fluidStack.getFluid(), out)
+                AbstractPacket.writeFluid(fluidStack.getFluid(), out)
                 out.writeLong(fluidStack.amount.toLong())
             }
-            1 -> AbstractPacket.Companion.writeFluid(currentFluid, out)
+            1 -> AbstractPacket.writeFluid(currentFluid, out)
             2 -> {
             }
             3 -> out.writeBoolean(hasTermHandler)

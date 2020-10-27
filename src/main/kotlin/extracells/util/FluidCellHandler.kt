@@ -14,10 +14,9 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.util.IIcon
 import net.minecraftforge.common.util.ForgeDirection
-
-class FluidCellHandler : ICellHandler {
+open class FluidCellHandler : ICellHandler {
     override fun cellIdleDrain(`is`: ItemStack, handler: IMEInventory<*>?): Double {
-        return 0
+        return 0.0
     }
 
     override fun getCellInventory(itemStack: ItemStack, saveProvider: ISaveProvider, channel: StorageChannel): IMEInventoryHandler<*>? {
@@ -45,15 +44,15 @@ class FluidCellHandler : ICellHandler {
         } else 1
     }
 
-    override fun getTopTexture_Dark(): IIcon {
+    override fun getTopTexture_Dark(): IIcon? {
         return TextureManager.TERMINAL_FRONT.textures[0]
     }
 
-    override fun getTopTexture_Light(): IIcon {
+    override fun getTopTexture_Light(): IIcon? {
         return TextureManager.TERMINAL_FRONT.textures[2]
     }
 
-    override fun getTopTexture_Medium(): IIcon {
+    override fun getTopTexture_Medium(): IIcon? {
         return TextureManager.TERMINAL_FRONT.textures[1]
     }
 

@@ -126,7 +126,7 @@ open class PartFluidStorageMonitor : PartECBase(), IStackWatcherHost {
         return tag
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         if (player == null || player.worldObj == null) return true
         if (player.worldObj.isRemote) return true
         val s = player.currentEquippedItem
@@ -165,7 +165,7 @@ open class PartFluidStorageMonitor : PartECBase(), IStackWatcherHost {
     }
 
     override fun onStackChange(arg0: IItemList<*>?, arg1: IAEStack<*>?, arg2: IAEStack<*>?,
-                               arg3: BaseActionSource, arg4: StorageChannel) {
+                               arg3: BaseActionSource?, arg4: StorageChannel?) {
         if (fluid != null) {
             val n = gridNode ?: return
             val g = n.grid ?: return
@@ -213,7 +213,7 @@ open class PartFluidStorageMonitor : PartECBase(), IStackWatcherHost {
         val tess = Tessellator.instance
         if (!isActive) return
         val ais = FluidUtil.createAEFluidStack(fluid)
-        ais!!.stackSize = amount
+        ais.stackSize = amount
         if (ais != null) {
             GL11.glPushMatrix()
             GL11.glTranslated(x + 0.5, y + 0.5, z + 0.5)
@@ -300,8 +300,12 @@ open class PartFluidStorageMonitor : PartECBase(), IStackWatcherHost {
         var qty = fluidStack.stackSize
         if (qty > 999999999999L) qty = 999999999999L
         var msg = qty.toString() + "mB"
-        if (qty > 1000000000) msg = qty / 1000000000.toString() + "MB" else if (qty > 1000000) msg = qty / 1000000.toString() + "KB" else if (qty > 9999) msg = java.lang.Long.toString(
-                qty / 1000) + 'B'
+        when {
+            qty > 1000000000 -> msg = (qty / 1000000000).toString() + "MB"
+            qty > 1000000 -> msg = (qty / 1000000).toString() + "KB"
+            qty > 9999 -> msg = java.lang.Long.toString(
+                    qty / 1000) + 'B'
+        }
         val fr = Minecraft.getMinecraft().fontRenderer
         val width = fr.getStringWidth(msg)
         GL11.glTranslatef(-0.5f * width, 0.0f, -1.0f)

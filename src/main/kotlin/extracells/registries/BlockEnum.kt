@@ -10,7 +10,7 @@ import net.minecraft.block.Block
 import net.minecraft.item.ItemBlock
 import net.minecraft.util.StatCollector
 
-enum class BlockEnum @JvmOverloads constructor(val internalName: String, val block: Block, _itemBlockClass: Class<out ItemBlock> = ItemBlock::class.java, _mod: Integration.Mods? = null) {
+enum class BlockEnum constructor(val internalName: String, val block: Block, _itemBlockClass: Class<out ItemBlock> = ItemBlock::class.java, _mod: Integration.Mods? = null) {
     CERTUSTANK("certustank", BlockCertusTank(), ItemBlockCertusTank::class.java), WALRUS("walrus",
             BlockWalrus()),
     FLUIDCRAFTER("fluidcrafter", BlockFluidCrafter()), ECBASEBLOCK("ecbaseblock", ECBaseBlock(),
@@ -23,8 +23,7 @@ enum class BlockEnum @JvmOverloads constructor(val internalName: String, val blo
     val mod: Integration.Mods?
 
     constructor(_internalName: String, _block: Block, _mod: Integration.Mods) : this(_internalName, _block,
-            ItemBlock::class.java, _mod) {
-    }
+            ItemBlock::class.java, _mod)
 
     val statName: String
         get() = StatCollector.translateToLocal(block.unlocalizedName + ".name")

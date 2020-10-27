@@ -21,13 +21,12 @@ import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidStack
-
-class DriverFluidExportBus : SidedBlock {
+open class DriverFluidExportBus : SidedBlock {
     override fun worksWith(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): Boolean {
         return getExportBus(world, x, y, z, side) != null
     }
 
-    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment {
+    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment? {
         val tile = world.getTileEntity(x, y, z)
         return if (tile == null || tile !is IPartHost) null else Environment(
                 tile as IPartHost)
@@ -131,7 +130,7 @@ class DriverFluidExportBus : SidedBlock {
     }
 
     internal class Provider : EnvironmentProvider {
-        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment> {
+        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment>? {
             if (stack == null) return null
             return if (stack.item === ItemEnum.PARTITEM.item && stack.itemDamage == PartEnum.FLUIDEXPORT.ordinal) Environment::class.java else null
         }

@@ -21,8 +21,7 @@ import net.minecraft.network.Packet
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 import net.minecraftforge.common.util.ForgeDirection
 import java.util.*
-
-class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellContainer, IInventoryUpdateReceiver {
+open class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellContainer, IInventoryUpdateReceiver {
     private val priority = 0
     var isFirstGridNode = true
     var cellStatuses = ByteArray(3)
@@ -32,7 +31,7 @@ class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellConta
     private val inventory: ECPrivateInventory = object : ECPrivateInventory(
             "extracells.part.drive", 3, 1, this) {
         val cellRegistry = AEApi.instance().registries().cell()
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             return cellRegistry.isCellHandled(itemStack)
         }
     }
@@ -43,7 +42,7 @@ class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellConta
 
     var node: IGridNode? = null
     override fun blinkCell(i: Int) {}
-    override fun getActionableNode(): IGridNode {
+    override fun getActionableNode(): IGridNode? {
         return getGridNode(ForgeDirection.UNKNOWN)
     }
 
@@ -59,19 +58,19 @@ class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellConta
     override val location: DimensionalCoord
         get() = DimensionalCoord(this)
     override val powerUsage: Double
-        get() = 0
+        get() = 0.0
 
-    override fun getGridNode(forgeDirection: ForgeDirection): IGridNode {
+    override fun getGridNode(forgeDirection: ForgeDirection): IGridNode? {
         if (isFirstGridNode && hasWorldObj() && !getWorldObj().isRemote) {
             isFirstGridNode = false
             try {
                 node = AEApi.instance().createGridNode(gridBlock)
-                node.updateState()
+                node?.updateState()
             } catch (e: Exception) {
                 isFirstGridNode = true
             }
         }
-        return node!!
+        return node
     }
 
     override fun getCableConnectionType(forgeDirection: ForgeDirection): AECableType {
@@ -153,10 +152,8 @@ class TileEntityHardMeDrive : TileBase(), IActionHost, IECTileEntity, ICellConta
     override fun getDescriptionPacket(): Packet {
         val nbtTag = NBTTagCompound()
         writeToNBT(nbtTag)
-        var i = 0
-        for (aCellStati in cellStatuses) {
+        for ((i, aCellStati) in cellStatuses.withIndex()) {
             nbtTag.setByte("status#$i", aCellStati)
-            i++
         }
         return S35PacketUpdateTileEntity(xCoord, yCoord, zCoord, 1, nbtTag)
     }

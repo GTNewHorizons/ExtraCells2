@@ -16,12 +16,11 @@ import net.minecraftforge.fluids.FluidStack
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
 import java.util.*
-
-class WidgetFluidSlot @JvmOverloads constructor(private val player: EntityPlayer?, private val part: IFluidSlotPartOrBlock?,
+open class WidgetFluidSlot @JvmOverloads constructor(private val player: EntityPlayer?, private val part: IFluidSlotPartOrBlock?,
                                                 private val id: Int, val posX: Int, val posY: Int, private val configurable: IConfigurable? = null,
                                                 private val configOption: Byte = 0.toByte()) : Gui() {
     interface IConfigurable {
-        val configState: Byte
+        var configState: Byte
     }
 
     //	@Optional.Method(modid = "MekanismAPI|gas")
@@ -34,8 +33,7 @@ class WidgetFluidSlot @JvmOverloads constructor(private val player: EntityPlayer
     var fluid: Fluid? = null
 
     constructor(_player: EntityPlayer?, _part: IFluidSlotPartOrBlock?,
-                _posX: Int, _posY: Int) : this(_player, _part, 0, _posX, _posY, null, 0.toByte()) {
-    }
+                _posX: Int, _posY: Int) : this(_player, _part, 0, _posX, _posY, null, 0.toByte())
 
     fun canRender(): Boolean {
         return (configurable == null

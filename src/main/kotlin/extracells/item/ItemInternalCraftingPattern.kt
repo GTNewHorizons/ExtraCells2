@@ -6,9 +6,8 @@ import extracells.crafting.CraftingPattern
 import extracells.crafting.CraftingPattern2
 import net.minecraft.item.ItemStack
 import net.minecraft.world.World
-
-class ItemInternalCraftingPattern : ItemECBase(), ICraftingPatternItem {
-    override fun getPatternForItem(`is`: ItemStack, w: World): ICraftingPatternDetails {
+open class ItemInternalCraftingPattern : ItemECBase(), ICraftingPatternItem {
+    override fun getPatternForItem(`is`: ItemStack?, w: World?): ICraftingPatternDetails? {
         return if (`is` == null || w == null) null else when (`is`.itemDamage) {
             0 -> {
                 if (`is`.hasTagCompound() && `is`.tagCompound.hasKey("item")) {

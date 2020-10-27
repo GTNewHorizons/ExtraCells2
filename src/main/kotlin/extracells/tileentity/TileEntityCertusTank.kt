@@ -8,8 +8,7 @@ import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 import net.minecraft.tileentity.TileEntity
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.*
-
-class TileEntityCertusTank : TileEntity(), IFluidHandler {
+open class TileEntityCertusTank : TileEntity(), IFluidHandler {
     private var lastBeforeUpdate: FluidStack? = null
     var tank: FluidTank = object : FluidTank(32000) {
         override fun readFromNBT(nbt: NBTTagCompound): FluidTank {
@@ -88,7 +87,7 @@ class TileEntityCertusTank : TileEntity(), IFluidHandler {
                 }
                 break
             }
-            return mainTank?.drain(fluid, doDrain, false)
+            return mainTank.drain(fluid, doDrain, false)
         }
         val drained = tank.drain(fluid.amount, doDrain)
         compareAndUpdate()
@@ -107,13 +106,13 @@ class TileEntityCertusTank : TileEntity(), IFluidHandler {
         return drained
     }
 
-    override fun drain(from: ForgeDirection, resource: FluidStack,
-                       doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection, resource: FluidStack?,
+                       doDrain: Boolean): FluidStack? {
         return if (tank.fluid == null || resource == null || resource.getFluid() !== tank.fluid.getFluid()) null else drain(
                 resource, doDrain, true)!!
     }
 
-    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack? {
         return if (tank.fluid == null) null else drain(from, FluidStack(tank.fluid, maxDrain),
                 doDrain)
     }
@@ -139,7 +138,7 @@ class TileEntityCertusTank : TileEntity(), IFluidHandler {
                 }
                 break
             }
-            return mainTank?.fill(fluid, doFill, false) ?: 0
+            return mainTank.fill(fluid, doFill, false)
         }
         val filled = tank.fill(fluid, doFill)
         compareAndUpdate()

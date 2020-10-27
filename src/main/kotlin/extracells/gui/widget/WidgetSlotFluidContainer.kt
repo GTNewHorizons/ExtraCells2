@@ -12,8 +12,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
-
-class WidgetSlotFluidContainer(private val player: EntityPlayer,
+open class WidgetSlotFluidContainer(private val player: EntityPlayer,
                                private val fluidFiller: TileEntityFluidFiller, val posX: Int, val posY: Int) : Gui() {
     private val configurable: WidgetFluidSlot.IConfigurable? = null
     private val configOption: Byte = 0

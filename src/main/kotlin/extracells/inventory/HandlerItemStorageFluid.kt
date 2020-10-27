@@ -48,8 +48,7 @@ open class HandlerItemStorageFluid(_storageStack: ItemStack,
         return false
     }
 
-    override fun extractItems(request: IAEFluidStack, mode: Actionable,
-                              src: BaseActionSource): IAEFluidStack? {
+    override fun extractItems(request: IAEFluidStack?, mode: Actionable?, src: BaseActionSource?): IAEFluidStack? {
         if (request == null || !allowedByFormat(request.fluid)) return null
         val removedStack: IAEFluidStack?
         val currentFluids: MutableList<FluidStack?> = Lists.newArrayList(fluidStacks)
@@ -87,10 +86,10 @@ open class HandlerItemStorageFluid(_storageStack: ItemStack,
         return AccessRestriction.READ_WRITE
     }
 
-    override fun getAvailableItems(
-            out: IItemList<IAEFluidStack>): IItemList<IAEFluidStack> {
-        for (fluidStack in fluidStacks) if (fluidStack != null) out.add(
-                AEApi.instance().storage().createFluidStack(fluidStack))
+    override fun getAvailableItems(out: IItemList<IAEFluidStack?>?): IItemList<IAEFluidStack?>? {
+        for (fluidStack in fluidStacks)
+            if (fluidStack != null)
+                out?.add(AEApi.instance().storage().createFluidStack(fluidStack))
         return out
     }
 
@@ -106,8 +105,8 @@ open class HandlerItemStorageFluid(_storageStack: ItemStack,
         return 0
     }
 
-    override fun injectItems(input: IAEFluidStack, mode: Actionable,
-                             src: BaseActionSource): IAEFluidStack? {
+    override fun injectItems(input: IAEFluidStack?, mode: Actionable?,
+                             src: BaseActionSource?): IAEFluidStack? {
         if (input == null || !allowedByFormat(input.fluid)) return input
         var notAdded = input.copy()
         val currentFluids: MutableList<FluidStack?> = Lists.newArrayList(fluidStacks)
@@ -175,7 +174,7 @@ open class HandlerItemStorageFluid(_storageStack: ItemStack,
     }
 
     private fun requestSave() {
-        if (saveProvider != null) saveProvider.saveChanges(this)
+        saveProvider?.saveChanges(this)
     }
 
     override fun totalBytes(): Int {

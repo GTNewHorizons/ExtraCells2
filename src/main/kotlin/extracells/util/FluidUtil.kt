@@ -72,7 +72,7 @@ object FluidUtil {
                     filled?.amount ?: 0, filledContainer)
         } else if (item === ItemEnum.FLUIDPATTERN.item) {
             return MutablePair(0,
-                    ItemFluidPattern.Companion.getPatternForFluid(fluid.getFluid()))
+                    ItemFluidPattern.getPatternForFluid(fluid.getFluid()))
         }
         return null
     }
@@ -101,7 +101,7 @@ object FluidUtil {
         return if (item is IFluidContainerItem) {
             (item as IFluidContainerItem).getFluid(container)
         } else if (item === ItemEnum.FLUIDPATTERN.item) {
-            FluidStack(ItemFluidPattern.Companion.getFluid(itemStack), 0)
+            FluidStack(ItemFluidPattern.getFluid(itemStack), 0)
         } else {
             FluidContainerRegistry.getFluidForFilledItem(container)
         }

@@ -26,8 +26,8 @@ open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCrafti
         return if (int1 < int2) -1 else 1
     }
 
-    override fun compareTo(o: CraftingPattern): Int {
-        return compareInt(o.priority, this.priority)
+    override fun compareTo(other: CraftingPattern): Int {
+        return compareInt(other.priority, this.priority)
     }
 
     override fun equals(obj: Any?): Boolean {
@@ -45,12 +45,12 @@ open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCrafti
             return fluidsCondensed
         }
 
-    override fun getCondensedInputs(): Array<IAEItemStack> {
+    override fun getCondensedInputs(): Array<IAEItemStack?>? {
         return removeFluidContainers(pattern!!.condensedInputs, true)
     }
 
-    override fun getCondensedOutputs(): Array<IAEItemStack> {
-        return pattern!!.condensedOutputs
+    override fun getCondensedOutputs(): Array<IAEItemStack?>? {
+        return pattern?.condensedOutputs
     }
 
     override val fluidInputs: Array<IAEFluidStack?>?
@@ -61,11 +61,11 @@ open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCrafti
             return fluids
         }
 
-    override fun getInputs(): Array<IAEItemStack> {
+    override fun getInputs(): Array<IAEItemStack?>? {
         return removeFluidContainers(pattern!!.inputs, false)
     }
 
-    override fun getOutput(craftingInv: InventoryCrafting, world: World): ItemStack {
+    override fun getOutput(craftingInv: InventoryCrafting, world: World): ItemStack? {
         val input = pattern!!.inputs
         for (i in input.indices) {
             val stack = input[i]
@@ -101,11 +101,11 @@ open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCrafti
         return returnStack
     }
 
-    override fun getOutputs(): Array<IAEItemStack> {
-        return pattern!!.outputs
+    override fun getOutputs(): Array<IAEItemStack?>? {
+        return pattern?.outputs
     }
 
-    override fun getPattern(): ItemStack {
+    override fun getPattern(): ItemStack? {
         val p = pattern!!.pattern ?: return null
         val s = ItemStack(ItemEnum.CRAFTINGPATTERN.item)
         val tag = NBTTagCompound()
@@ -128,7 +128,7 @@ open class CraftingPattern(val pattern: ICraftingPatternDetails?) : IFluidCrafti
     }
 
     fun removeFluidContainers(requirements: Array<IAEItemStack?>,
-                              isCondenced: Boolean): Array<IAEItemStack> {
+                              isCondenced: Boolean): Array<IAEItemStack?>? {
         var returnStack = arrayOfNulls<IAEItemStack>(requirements.size)
         val fluidStacks = arrayOfNulls<IAEFluidStack>(requirements.size)
         var removed = 0

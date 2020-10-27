@@ -8,20 +8,19 @@ import extracells.gui.GuiOreDictExport
 import extracells.network.AbstractPacket
 import io.netty.buffer.ByteBuf
 import net.minecraft.entity.player.EntityPlayer
-
-class PacketOreDictExport : AbstractPacket {
-    private var filter: String? = null
+open class PacketOreDictExport : AbstractPacket {
+    private var filter: String = ""
     private var side: Side? = null
 
-    constructor() {}
-    constructor(_player: EntityPlayer?, filter: String?, side: Side?) : super(_player) {
+    constructor()
+    constructor(_player: EntityPlayer?, filter: String, side: Side?) : super(_player) {
         mode = 0
         this.filter = filter
         this.side = side
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> if (side!!.isClient) try {
                 handleClient()
             } catch (e: Throwable) {
@@ -31,7 +30,7 @@ class PacketOreDictExport : AbstractPacket {
 
     @SideOnly(Side.CLIENT)
     private fun handleClient() {
-        GuiOreDictExport.Companion.updateFilter(filter)
+        GuiOreDictExport.updateFilter(filter)
     }
 
     private fun handleServer() {
@@ -42,7 +41,7 @@ class PacketOreDictExport : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 if (`in`.readBoolean()) side = Side.SERVER else side = Side.CLIENT
                 filter = ByteBufUtils.readUTF8String(`in`)
@@ -51,7 +50,7 @@ class PacketOreDictExport : AbstractPacket {
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 out.writeBoolean(side!!.isServer)
                 ByteBufUtils.writeUTF8String(out, filter)

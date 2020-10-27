@@ -9,8 +9,7 @@ import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
-
-class GuiFluidCrafter(player: InventoryPlayer?, tileentity: IInventory) : GuiContainer(
+open class GuiFluidCrafter(player: InventoryPlayer?, tileentity: IInventory) : GuiContainer(
         ContainerFluidCrafter(player, tileentity)) {
     private val guiTexture = ResourceLocation("extracells",
             "textures/gui/fluidcrafter.png")

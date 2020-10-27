@@ -5,8 +5,7 @@ import com.google.common.base.Optional
 import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.world.IBlockAccess
-
-class ItemItemDefinitions @JvmOverloads constructor(val item: Item?, val meta: Int = 0) : IItemDefinition {
+open class ItemItemDefinitions @JvmOverloads constructor(val item: Item?, val meta: Int = 0) : IItemDefinition {
     override fun maybeItem(): Optional<Item> {
         return Optional.fromNullable(item)
     }
@@ -19,7 +18,7 @@ class ItemItemDefinitions @JvmOverloads constructor(val item: Item?, val meta: I
         return true
     }
 
-    override fun isSameAs(comparableStack: ItemStack): Boolean {
+    override fun isSameAs(comparableStack: ItemStack?): Boolean {
         return comparableStack != null && comparableStack.isItemEqual(maybeStack(1).get())
     }
 

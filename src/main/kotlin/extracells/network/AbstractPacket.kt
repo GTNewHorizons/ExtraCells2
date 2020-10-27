@@ -67,13 +67,13 @@ abstract class AbstractPacket : IMessage {
         val clientWorld: World
             get() = Minecraft.getMinecraft().theWorld
 
-        fun readFluid(`in`: ByteBuf): Fluid {
+        fun readFluid(`in`: ByteBuf): Fluid? {
             return FluidRegistry.getFluid(readString(`in`))
         }
 
-        fun readPart(`in`: ByteBuf): PartECBase {
+        fun readPart(`in`: ByteBuf): PartECBase? {
             return (readTileEntity(`in`) as IPartHost)
-                    .getPart(ForgeDirection.getOrientation(`in`.readByte().toInt())) as PartECBase
+                    .getPart(ForgeDirection.getOrientation(`in`.readByte().toInt())) as PartECBase?
         }
 
         fun readPlayer(`in`: ByteBuf): EntityPlayer? {
@@ -84,13 +84,13 @@ abstract class AbstractPacket : IMessage {
             return playerWorld!!.getPlayerEntityByName(readString(`in`))
         }
 
-        fun readString(`in`: ByteBuf): String {
+        fun readString(`in`: ByteBuf): String? {
             val stringBytes = ByteArray(`in`.readInt())
             `in`.readBytes(stringBytes)
             return String(stringBytes, Charsets.UTF_8)
         }
 
-        fun readTileEntity(`in`: ByteBuf): TileEntity {
+        fun readTileEntity(`in`: ByteBuf): TileEntity? {
             return readWorld(`in`)!!.getTileEntity(`in`.readInt(), `in`.readInt(),
                     `in`.readInt())
         }
@@ -111,8 +111,8 @@ abstract class AbstractPacket : IMessage {
         }
 
         fun writePart(part: PartECBase?, out: ByteBuf) {
-            writeTileEntity(part.getHost().tile, out)
-            out.writeByte(part.getSide().ordinal)
+            writeTileEntity(part?.host?.tile, out)
+            part?.side?.ordinal?.let { out.writeByte(it) }
         }
 
         fun writePlayer(player: EntityPlayer?, out: ByteBuf) {
@@ -126,8 +126,7 @@ abstract class AbstractPacket : IMessage {
         }
 
         fun writeString(string: String, out: ByteBuf) {
-            val stringBytes: ByteArray
-            stringBytes = string.toByteArray(Charsets.UTF_8)
+            val stringBytes = string.toByteArray(Charsets.UTF_8)
             out.writeInt(stringBytes.size)
             out.writeBytes(stringBytes)
         }

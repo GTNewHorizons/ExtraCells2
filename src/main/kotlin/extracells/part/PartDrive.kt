@@ -33,18 +33,17 @@ import net.minecraft.util.Vec3
 import net.minecraftforge.common.util.ForgeDirection
 import java.io.IOException
 import java.util.*
-
-class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
-    private val priority = 0 // TODO
-    private val blinkTimers // TODO
-            : ShortArray
+open class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
+    private val priority = 0
+    private val blinkTimers
+            : ShortArray = TODO()
     private val cellStatuses = ByteArray(6)
     var fluidHandlers: List<IMEInventoryHandler<*>> = ArrayList()
     var itemHandlers: List<IMEInventoryHandler<*>> = ArrayList()
     val inventory: ECPrivateInventory = object : ECPrivateInventory(
             "extracells.part.drive", 6, 1, this) {
         val cellRegistry = AEApi.instance().registries().cell()
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             return cellRegistry.isCellHandled(itemStack)
         }
     }
@@ -96,11 +95,11 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         return priority
     }
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
-        return ContainerDrive(this, player)
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
+        return player?.let { ContainerDrive(this, it) }
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)
@@ -134,7 +133,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         if (node != null) {
             val grid = node.grid
             grid?.postEvent(MENetworkCellArrayUpdate())
-            host.markForUpdate()
+            host?.markForUpdate()
         }
         saveData()
     }
@@ -147,7 +146,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
         }
         node!!.grid.postEvent(MENetworkCellArrayUpdate())
@@ -171,7 +170,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         val side = TextureManager.DRIVE_SIDE.texture
         val front = TextureManager.DRIVE_FRONT.textures
         rh.setBounds(2f, 2f, 14f, 14f, 14f, 15.999f)
-        rh.renderInventoryFace(front!![3], ForgeDirection.SOUTH, renderer)
+        rh.renderInventoryFace(front[3], ForgeDirection.SOUTH, renderer)
         rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
         rh.setTexture(side, side, side, front[0], side, side)
         rh.renderInventoryBox(renderer)
@@ -186,7 +185,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         val side = TextureManager.DRIVE_SIDE.texture
         val front = TextureManager.DRIVE_FRONT.textures
         rh.setBounds(2f, 2f, 14f, 14f, 14f, 15.999f)
-        rh.renderFace(x, y, z, front!![3], ForgeDirection.SOUTH, renderer)
+        rh.renderFace(x, y, z, front[3], ForgeDirection.SOUTH, renderer)
         rh.setBounds(2f, 2f, 14f, 14f, 14f, 16f)
         rh.setTexture(side, side, side, front[0], side, side)
         rh.renderBlock(x, y, z, renderer)
@@ -194,8 +193,8 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         for (i in 0..1) {
             for (j in 0..2) {
                 if (cellStatuses[j + i * 3] > 0) {
-                    if (if (getSide() == ForgeDirection.EAST
-                                    || getSide() == ForgeDirection.WEST) i == 1 else i == 0) rh.setBounds(8f,
+                    if (if (this.side == ForgeDirection.EAST
+                                    || this.side == ForgeDirection.WEST) i == 1 else i == 0) rh.setBounds(8f,
                             12 - j * 3.toFloat(), 14f, 13f, 10 - j * 3.toFloat(), 16f) else rh.setBounds(3f,
                             12 - j * 3.toFloat(), 14f, 8f, 10 - j * 3.toFloat(), 16f)
                     rh.renderFace(x, y, z, front[1], ForgeDirection.SOUTH,
@@ -205,8 +204,8 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
         }
         for (i in 0..1) {
             for (j in 0..2) {
-                if (if (getSide() == ForgeDirection.EAST
-                                || getSide() == ForgeDirection.WEST) i == 1 else i == 0) rh.setBounds(8f,
+                if (if (this.side == ForgeDirection.EAST
+                                || this.side == ForgeDirection.WEST) i == 1 else i == 0) rh.setBounds(8f,
                         12 - j * 3.toFloat(), 14f, 13f, 10 - j * 3.toFloat(), 16f) else rh.setBounds(3f,
                         12 - j * 3.toFloat(), 14f, 8f, 10 - j * 3.toFloat(), 16f)
                 ts.setColorOpaque_I(getColorByStatus(cellStatuses[j + i
@@ -220,7 +219,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
     }
 
     override fun saveChanges(cellInventory: IMEInventory<*>?) {
-        host.markForSave()
+        host?.markForSave()
     }
 
     override fun setPartHostInfo(_side: ForgeDirection, _host: IPartHost,
@@ -237,7 +236,7 @@ class PartDrive : PartECBase(), ICellContainer, IInventoryUpdateReceiver {
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
         }
         node!!.grid.postEvent(MENetworkCellArrayUpdate())

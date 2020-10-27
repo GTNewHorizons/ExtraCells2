@@ -9,8 +9,7 @@ import net.minecraftforge.client.IItemRenderer
 import net.minecraftforge.client.IItemRenderer.ItemRenderType
 import net.minecraftforge.client.IItemRenderer.ItemRendererHelper
 import org.lwjgl.opengl.GL11
-
-class ItemRendererFluidPattern : IItemRenderer {
+open class ItemRendererFluidPattern : IItemRenderer {
     override fun handleRenderType(itemStack: ItemStack, type: ItemRenderType): Boolean {
         return type != ItemRenderType.ENTITY
     }
@@ -18,7 +17,7 @@ class ItemRendererFluidPattern : IItemRenderer {
     override fun renderItem(type: ItemRenderType, itemStack: ItemStack,
                             vararg data: Any) {
         val item = ItemEnum.FLUIDPATTERN.item
-        val fluid = item!!.getIcon(itemStack, 0)
+        val fluid = item.getIcon(itemStack, 0)
         val texture = item.getIcon(itemStack, 1)
         GL11.glEnable(GL11.GL_BLEND)
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA)

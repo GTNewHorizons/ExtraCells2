@@ -8,8 +8,7 @@ import net.minecraftforge.client.IItemRenderer
 import net.minecraftforge.client.IItemRenderer.ItemRenderType
 import net.minecraftforge.client.IItemRenderer.ItemRendererHelper
 import net.minecraftforge.fluids.FluidRegistry
-
-class ItemRendererFluid : IItemRenderer {
+open class ItemRendererFluid : IItemRenderer {
     override fun handleRenderType(item: ItemStack, type: ItemRenderType): Boolean {
         return true
     }

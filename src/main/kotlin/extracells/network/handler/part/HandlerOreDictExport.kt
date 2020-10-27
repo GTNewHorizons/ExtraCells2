@@ -4,8 +4,7 @@ import cpw.mods.fml.common.network.simpleimpl.IMessage
 import cpw.mods.fml.common.network.simpleimpl.IMessageHandler
 import cpw.mods.fml.common.network.simpleimpl.MessageContext
 import extracells.network.packet.part.PacketOreDictExport
-
-class HandlerOreDictExport : IMessageHandler<PacketOreDictExport, IMessage?> {
+open class HandlerOreDictExport : IMessageHandler<PacketOreDictExport, IMessage?> {
     override fun onMessage(message: PacketOreDictExport, ctx: MessageContext): IMessage? {
         message.execute()
         return null

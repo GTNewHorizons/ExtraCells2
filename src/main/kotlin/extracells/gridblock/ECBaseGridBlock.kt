@@ -11,8 +11,7 @@ import extracells.part.PartECBase
 import net.minecraft.item.ItemStack
 import net.minecraftforge.common.util.ForgeDirection
 import java.util.*
-
-class ECBaseGridBlock(protected var host: PartECBase) : IGridBlock {
+open class ECBaseGridBlock(protected var host: PartECBase) : IGridBlock {
     protected var color: AEColor? = null
     protected var grid: IGrid? = null
     protected var usedChannels = 0
@@ -24,7 +23,7 @@ class ECBaseGridBlock(protected var host: PartECBase) : IGridBlock {
         return EnumSet.of(GridFlags.REQUIRE_CHANNEL)
     }
 
-    val fluidMonitor: IMEMonitor<IAEFluidStack>?
+    val fluidMonitor: IMEMonitor<IAEFluidStack?>?
         get() {
             val node = host.gridNode ?: return null
             val grid = node.grid ?: return null
@@ -48,7 +47,7 @@ class ECBaseGridBlock(protected var host: PartECBase) : IGridBlock {
         return host
     }
 
-    override fun getMachineRepresentation(): ItemStack {
+    override fun getMachineRepresentation(): ItemStack? {
         return host.getItemStack(PartItemStack.Network)
     }
 

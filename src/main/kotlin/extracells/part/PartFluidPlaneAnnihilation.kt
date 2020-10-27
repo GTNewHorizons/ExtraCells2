@@ -23,8 +23,7 @@ import net.minecraft.util.Vec3
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.IFluidBlock
-
-class PartFluidPlaneAnnihilation : PartECBase() {
+open class PartFluidPlaneAnnihilation : PartECBase() {
     override fun cableConnectionRenderTo(): Int {
         return 2
     }
@@ -42,7 +41,7 @@ class PartFluidPlaneAnnihilation : PartECBase() {
     override val powerUsage: Double
         get() = 1.0
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)

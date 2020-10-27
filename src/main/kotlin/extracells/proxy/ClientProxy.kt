@@ -16,8 +16,7 @@ import net.minecraft.item.Item
 import net.minecraftforge.client.MinecraftForgeClient
 import net.minecraftforge.client.event.TextureStitchEvent
 import net.minecraftforge.common.MinecraftForge
-
-class ClientProxy : CommonProxy() {
+open class ClientProxy : CommonProxy() {
     override fun registerRenderers() {
         MinecraftForgeClient.registerItemRenderer(Item.getItemFromBlock(BlockEnum.CERTUSTANK.block),
                 ItemRendererCertusTank())

@@ -234,16 +234,14 @@ object RendererHardMEDrive : ISimpleBlockRenderingHandler {
                 renderer.renderMaxY = 1.0
                 renderer.renderMaxZ = 1.0
     }
-
-    class RenderInformation(private val pos: Double, private val color: Int) {
+open class RenderInformation(private val pos: Double, private val color: Int) {
         constructor(pos: Int,color: Int) : this(pos.toDouble(), color)
         fun getIcon(): Icon = i3
         fun getIcon2(): Icon = i3
         fun getPos(): Double = pos
         fun getColor(): Int = color
     }
-
-    class Icon(private val minU: Float, private val maxU: Float, private val minV: Float, private val maxV: Float) : IIcon {
+open class Icon(private val minU: Float, private val maxU: Float, private val minV: Float, private val maxV: Float) : IIcon {
         override fun getIconHeight(): Int = throw NotImplementedError()
         override fun getMinU(): Float = minU
         override fun getMaxU(): Float = maxU

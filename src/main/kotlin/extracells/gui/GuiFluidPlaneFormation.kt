@@ -15,8 +15,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.fluids.Fluid
 import org.lwjgl.opengl.GL11
-
-class GuiFluidPlaneFormation(_part: PartFluidPlaneFormation,
+open class GuiFluidPlaneFormation(_part: PartFluidPlaneFormation,
                              _player: EntityPlayer) : ECGuiContainer(
         ContainerPlaneFormation(_part, _player)), IFluidSlotGui {
     private val part: PartFluidPlaneFormation
@@ -76,18 +75,22 @@ class GuiFluidPlaneFormation(_part: PartFluidPlaneFormation,
         if (slot != null && slot.stack != null && AEApi.instance().definitions().items().networkTool().isSameAs(
                         slot.stack)) return
         super.mouseClicked(mouseX, mouseY, mouseBtn)
-        if (isPointInRegion(fluidSlot.posX, fluidSlot.posY,
-                        18, 18, mouseX, mouseY)) fluidSlot!!.mouseClicked(player.inventory.itemStack)
+        if (fluidSlot?.let {
+                    isPointInRegion(it.posX, it.posY,
+                            18, 18, mouseX, mouseY)
+                } == true) fluidSlot!!.mouseClicked(player.inventory.itemStack)
     }
 
-    fun renderOverlay(fluidSlot: WidgetFluidSlot?, mouseX: Int,
-                      mouseY: Int): Boolean {
-        if (isPointInRegion(fluidSlot.getPosX(), fluidSlot.getPosY(), 18, 18,
-                        mouseX, mouseY)) {
+    private fun renderOverlay(fluidSlot: WidgetFluidSlot?, mouseX: Int,
+                              mouseY: Int): Boolean {
+        if (fluidSlot?.let {
+                    isPointInRegion(it.posX, it.posY, 18, 18,
+                            mouseX, mouseY)
+                } == true) {
             GL11.glDisable(GL11.GL_LIGHTING)
             GL11.glDisable(GL11.GL_DEPTH_TEST)
-            drawGradientRect(fluidSlot.getPosX() + 1, fluidSlot.getPosY() + 1,
-                    fluidSlot.getPosX() + 17, fluidSlot.getPosY() + 17,
+            drawGradientRect(fluidSlot.posX + 1, fluidSlot.posY + 1,
+                    fluidSlot.posX + 17, fluidSlot.posY + 17,
                     -0x7F000001, -0x7F000001)
             GL11.glEnable(GL11.GL_LIGHTING)
             GL11.glEnable(GL11.GL_DEPTH_TEST)
@@ -99,12 +102,11 @@ class GuiFluidPlaneFormation(_part: PartFluidPlaneFormation,
     fun shiftClick(itemStack: ItemStack?) {
         val containerFluid = FluidUtil.getFluidFromContainer(itemStack)
         val fluid = containerFluid?.getFluid()
-        if (fluidSlot.fluid == null || fluid != null
-                && fluidSlot.fluid === fluid) fluidSlot!!.mouseClicked(itemStack)
+        if (fluidSlot?.fluid == null || fluid != null && fluidSlot!!.fluid === fluid) fluidSlot!!.mouseClicked(itemStack)
     }
 
     override fun updateFluids(fluidList: List<Fluid?>?) {
-        fluidSlot.fluid = fluidList!![0]
+        fluidSlot?.fluid = fluidList!![0]
     }
 
     companion object {

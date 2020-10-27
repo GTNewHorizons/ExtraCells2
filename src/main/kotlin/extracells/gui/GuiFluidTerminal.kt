@@ -21,8 +21,7 @@ import org.lwjgl.input.Keyboard
 import org.lwjgl.input.Mouse
 import org.lwjgl.opengl.GL11
 import java.util.*
-
-class GuiFluidTerminal(_terminal: PartFluidTerminal?, _player: EntityPlayer) : GuiContainer(
+open class GuiFluidTerminal(_terminal: PartFluidTerminal?, _player: EntityPlayer) : GuiContainer(
         ContainerFluidTerminal(_terminal, _player)), IFluidSelectorGui {
     val terminal: PartFluidTerminal?
     private val player: EntityPlayer
@@ -48,8 +47,8 @@ class GuiFluidTerminal(_terminal: PartFluidTerminal?, _player: EntityPlayer) : G
             val currentFluidAmount = currentFluid!!.stackSize
             var amountToText = currentFluidAmount.toString() + "mB"
             if (shortenedBuckets) {
-                if (currentFluidAmount > 1000000000L) amountToText = currentFluidAmount / 1000000000L.toString() + "MegaB" else if (currentFluidAmount > 1000000L) amountToText = currentFluidAmount / 1000000L.toString() + "KiloB" else if (currentFluidAmount > 9999L) {
-                    amountToText = currentFluidAmount / 1000L.toString() + "B"
+                if (currentFluidAmount > 1000000000L) amountToText = (currentFluidAmount / 1000000000L).toString() + "MegaB" else if (currentFluidAmount > 1000000L) amountToText = (currentFluidAmount / 1000000L).toString() + "KiloB" else if (currentFluidAmount > 9999L) {
+                    amountToText = (currentFluidAmount / 1000L).toString() + "B"
                 }
             }
             fontRendererObj.drawString(
@@ -117,18 +116,18 @@ class GuiFluidTerminal(_terminal: PartFluidTerminal?, _player: EntityPlayer) : G
         Collections.sort(fluidWidgets, FluidWidgetComparator())
         searchbar = object : GuiTextField(fontRendererObj,
                 guiLeft + 81, guiTop + 6, 88, 10) {
-            private val xPos = 0
-            private val yPos = 0
-            private val width = 0
-            private val height = 0
+            private val xPos1 = 0
+            private val yPos1 = 0
+            private val width1 = 0
+            private val height1 = 0
             override fun mouseClicked(x: Int, y: Int, mouseBtn: Int) {
-                val flag = x >= xPos && x < xPos + this.width && y >= yPos && y < yPos + this.height
+                val flag = x >= xPos1 && x < xPos1 + this.width1 && y >= yPos1 && y < yPos1 + this.height
                 if (flag && mouseBtn == 3) text = ""
             }
         }
-        searchbar.setEnableBackgroundDrawing(false)
-        searchbar.setFocused(true)
-        searchbar.setMaxStringLength(15)
+        (searchbar as GuiTextField).enableBackgroundDrawing = false
+        (searchbar as GuiTextField).isFocused = true
+        (searchbar as GuiTextField).maxStringLength = 15
     }
 
     override fun keyTyped(key: Char, keyID: Int) {

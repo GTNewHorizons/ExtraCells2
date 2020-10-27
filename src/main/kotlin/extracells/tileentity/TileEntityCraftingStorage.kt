@@ -4,8 +4,7 @@ import appeng.tile.crafting.TileCraftingStorageTile
 import appeng.tile.crafting.TileCraftingTile
 import extracells.registries.BlockEnum
 import net.minecraft.item.ItemStack
-
-class TileEntityCraftingStorage : TileCraftingStorageTile() {
+open class TileEntityCraftingStorage : TileCraftingStorageTile() {
     override fun getItemFromTile(obj: Any): ItemStack? {
         val storage = (obj as TileCraftingTile).storageBytes / KILO_SCALAR
         when (storage) {

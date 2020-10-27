@@ -7,9 +7,8 @@ import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
 import net.minecraftforge.fluids.FluidContainerRegistry
-
-class ContainerFluidEmitter(var part: PartFluidLevelEmitter,
-                            var player: EntityPlayer) : Container() {
+open class ContainerFluidEmitter(var part: PartFluidLevelEmitter,
+                            var player: EntityPlayer?) : Container() {
     protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {
         for (i in 0..2) {
             for (j in 0..8) {
@@ -26,8 +25,7 @@ class ContainerFluidEmitter(var part: PartFluidLevelEmitter,
         return part.isValid
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
-        val itemstack: ItemStack? = null
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {
             val fluidItem = slot.stack.copy()
@@ -41,6 +39,6 @@ class ContainerFluidEmitter(var part: PartFluidLevelEmitter,
     }
 
     init {
-        bindPlayerInventory(player.inventory)
+        bindPlayerInventory(player?.inventory)
     }
 }

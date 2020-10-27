@@ -12,21 +12,19 @@ import net.minecraft.util.StatCollector
 import net.minecraft.world.World
 import net.minecraftforge.fluids.FluidStack
 import net.minecraftforge.fluids.IFluidContainerItem
-
-class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem {
+open class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem {
     private val capacity = 32000
     @SideOnly(Side.CLIENT)
-    override fun addInformation(stack: ItemStack, player: EntityPlayer, list: MutableList<*>,
+    override fun addInformation(stack: ItemStack?, player: EntityPlayer, list: MutableList<Any?>,
                                 par4: Boolean) {
         if (stack != null && stack.hasTagCompound()) {
             if (FluidStack.loadFluidStackFromNBT(stack.tagCompound
-                            .getCompoundTag("tileEntity")) != null) list.add(FluidStack.loadFluidStackFromNBT(stack
-                    .tagCompound.getCompoundTag("tileEntity")).amount
-                    .toString() + "mB")
+                            .getCompoundTag("tileEntity")) != null)
+                                list.add(FluidStack.loadFluidStackFromNBT(stack.tagCompound.getCompoundTag("tileEntity")).amount.toString() + "mB")
         }
     }
 
-    override fun drain(container: ItemStack, maxDrain: Int, doDrain: Boolean): FluidStack {
+    override fun drain(container: ItemStack, maxDrain: Int, doDrain: Boolean): FluidStack? {
         if (container.stackTagCompound == null || !container.stackTagCompound.hasKey("tileEntity")
                 || container.stackTagCompound.getCompoundTag("tileEntity")
                         .hasKey("Empty")) {
@@ -109,7 +107,7 @@ class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem
         return capacity
     }
 
-    override fun getFluid(container: ItemStack): FluidStack {
+    override fun getFluid(container: ItemStack): FluidStack? {
         return if (container.stackTagCompound == null
                 || !container.stackTagCompound.hasKey("tileEntity")) {
             null
@@ -117,14 +115,14 @@ class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem
                 .getCompoundTag("tileEntity"))
     }
 
-    override fun getItemStackDisplayName(itemstack: ItemStack): String {
+    override fun getItemStackDisplayName(itemstack: ItemStack?): String {
         if (itemstack != null) {
             if (itemstack.hasTagCompound()) {
                 try {
                     val fluidInTank = FluidStack
                             .loadFluidStackFromNBT(itemstack.tagCompound
                                     .getCompoundTag("tileEntity"))
-                    if (fluidInTank != null && fluidInTank.getFluid() != null) {
+                    if (fluidInTank?.getFluid() != null) {
                         return (StatCollector
                                 .translateToLocal(getUnlocalizedName(itemstack))
                                 + " - "
@@ -140,7 +138,7 @@ class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem
         return ""
     }
 
-    override fun placeBlockAt(stack: ItemStack, player: EntityPlayer,
+    override fun placeBlockAt(stack: ItemStack?, player: EntityPlayer,
                               world: World, x: Int, y: Int, z: Int, side: Int, hitX: Float, hitY: Float,
                               hitZ: Float, metadata: Int): Boolean {
         if (!world.setBlock(x, y, z, field_150939_a, metadata, 3)) {
@@ -150,7 +148,7 @@ class ItemBlockCertusTank(block: Block?) : ItemBlock(block), IFluidContainerItem
             field_150939_a.onBlockPlacedBy(world, x, y, z, player, stack)
             field_150939_a.onPostBlockPlaced(world, x, y, z, metadata)
         }
-        if (stack != null && stack.hasTagCompound()) {
+        if (stack?.hasTagCompound() == true) {
             (world.getTileEntity(x, y, z) as TileEntityCertusTank)
                     .readFromNBTWithoutCoords(stack.tagCompound
                             .getCompoundTag("tileEntity"))

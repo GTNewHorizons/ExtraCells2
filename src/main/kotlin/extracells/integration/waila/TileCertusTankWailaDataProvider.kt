@@ -13,8 +13,7 @@ import net.minecraft.world.World
 import net.minecraftforge.fluids.FluidContainerRegistry
 import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.FluidStack
-
-class TileCertusTankWailaDataProvider : IWailaDataProvider {
+open class TileCertusTankWailaDataProvider : IWailaDataProvider {
     override fun getNBTData(player: EntityPlayerMP, tile: TileEntity,
                             tag: NBTTagCompound, world: World, x: Int, y: Int, z: Int): NBTTagCompound {
         if (tile is TileEntityCertusTank) {

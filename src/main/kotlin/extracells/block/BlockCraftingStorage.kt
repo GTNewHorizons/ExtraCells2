@@ -6,8 +6,7 @@ import extracells.tileentity.TileEntityCraftingStorage
 import net.minecraft.client.renderer.texture.IIconRegister
 import net.minecraft.item.ItemStack
 import net.minecraft.util.IIcon
-
-class BlockCraftingStorage : BlockCraftingStorage() {
+open class BlockCraftingStorage : BlockCraftingStorage() {
     override fun getUnlocalizedName(`is`: ItemStack): String {
         return getItemUnlocalizedName(`is`)
     }
@@ -27,7 +26,7 @@ class BlockCraftingStorage : BlockCraftingStorage() {
         icons[7] = ir.registerIcon("extracells:crafting.storage.16384k.fit")
     }
 
-    override fun getIcon(side: Int, meta: Int): IIcon {
+    override fun getIcon(side: Int, meta: Int): IIcon? {
         return when (meta and 4.inv()) {
             0 -> icons[0]!!
             1 -> icons[2]!!

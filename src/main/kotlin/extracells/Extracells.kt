@@ -37,12 +37,10 @@ object Extracells {
     var VERSION: String = ""
     var bcBurnTimeMultiplicator: Int = 4
     lateinit var configFolder: File
-    @JvmStatic
     var shortenedBuckets: Boolean = true
     var dynamicTypes: Boolean = true
     val integration: Integration = Integration()
 
-    @JvmStatic
     val ModTab : CreativeTabs = object : CreativeTabs("Extra_Cells") {
         override fun getIconItemStack() = ItemStack(ItemEnum.FLUIDSTORAGE.item)
         override fun getTabIconItem() = ItemEnum.FLUIDSTORAGE.item

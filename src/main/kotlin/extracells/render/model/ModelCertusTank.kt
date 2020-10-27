@@ -11,8 +11,7 @@ import net.minecraft.world.IBlockAccess
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidRegistry
 import org.lwjgl.opengl.GL11
-
-class ModelCertusTank : ModelBase() {
+open class ModelCertusTank : ModelBase() {
     var Shape1: ModelRenderer
     fun render(f: Float) {
         Shape1.render(f)

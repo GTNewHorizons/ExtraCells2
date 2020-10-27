@@ -9,8 +9,7 @@ import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Gui
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraftforge.fluids.Fluid
-
-class PacketBusFluidIO : AbstractPacket {
+open class PacketBusFluidIO : AbstractPacket {
     private val filterFluids: List<Fluid>? = null
     private var part: PartFluidIO? = null
     private var action: Byte = 0
@@ -18,7 +17,7 @@ class PacketBusFluidIO : AbstractPacket {
     private var filterSize: Byte = 0
     private var redstoneControlled = false
 
-    constructor() {}
+    constructor()
     constructor(_redstoneControlled: Boolean) : super() {
         mode = 4
         redstoneControlled = _redstoneControlled
@@ -48,7 +47,7 @@ class PacketBusFluidIO : AbstractPacket {
 
     override fun execute() {
         val gui: Gui
-        when (mode) {
+        when (mode.toInt()) {
             0 -> part!!.loopRedstoneMode(player)
             1 -> {
                 gui = Minecraft.getMinecraft().currentScreen
@@ -73,26 +72,26 @@ class PacketBusFluidIO : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
-                part = AbstractPacket.Companion.readPart(`in`) as PartFluidIO
+                part = AbstractPacket.readPart(`in`) as PartFluidIO
                 action = `in`.readByte()
             }
             1 -> ordinal = `in`.readByte()
-            2 -> part = AbstractPacket.Companion.readPart(`in`) as PartFluidIO
+            2 -> part = AbstractPacket.readPart(`in`) as PartFluidIO
             3 -> filterSize = `in`.readByte()
             4 -> redstoneControlled = `in`.readBoolean()
         }
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
-                AbstractPacket.Companion.writePart(part, out)
+                AbstractPacket.writePart(part, out)
                 out.writeByte(action.toInt())
             }
             1 -> out.writeByte(ordinal.toInt())
-            2 -> AbstractPacket.Companion.writePart(part, out)
+            2 -> AbstractPacket.writePart(part, out)
             3 -> out.writeByte(filterSize.toInt())
             4 -> out.writeBoolean(redstoneControlled)
         }

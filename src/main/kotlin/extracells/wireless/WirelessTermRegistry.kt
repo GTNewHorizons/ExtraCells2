@@ -1,11 +1,11 @@
 package extracells.wireless
 
-import extracells.api.IWirelessGasFluidTermHandler
+import extracells.api.IWirelessFluidTermHandler
 import net.minecraft.item.ItemStack
 import java.util.*
 
 object WirelessTermRegistry {
-    fun getWirelessTermHandler(`is`: ItemStack?): IWirelessGasFluidTermHandler? {
+    fun getWirelessTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler? {
         if (`is` == null) return null
         for (handler in handlers) {
             if (handler.canHandle(`is`)) return handler
@@ -22,9 +22,9 @@ object WirelessTermRegistry {
     }
 
     fun registerWirelessTermHandler(
-            handler: IWirelessGasFluidTermHandler) {
+            handler: IWirelessFluidTermHandler) {
         if (!handlers.contains(handler)) handlers.add(handler)
     }
 
-    var handlers: MutableList<IWirelessGasFluidTermHandler> = ArrayList()
+    var handlers: MutableList<IWirelessFluidTermHandler> = ArrayList()
 }

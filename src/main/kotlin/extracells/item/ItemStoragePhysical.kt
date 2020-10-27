@@ -34,16 +34,17 @@ import net.minecraft.util.MathHelper
 import net.minecraft.util.StatCollector
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
+import kotlin.math.min
 
 @Optional.Interface(iface = "cofh.api.energy.IEnergyContainerItem", modid = "CoFHAPI|energy")
-class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEnergyContainerItem {
-    private var icons: Array<IIcon>
+open class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEnergyContainerItem {
+    private lateinit var icons: Array<IIcon?>
     private val MAX_POWER = 32000
-    override fun addInformation(itemStack: ItemStack, player: EntityPlayer,
-                                list: MutableList<*>, par4: Boolean) {
+    override fun addInformation(itemStack: ItemStack?, player: EntityPlayer,
+                                list: MutableList<Any?>, par4: Boolean) {
         val cellRegistry = AEApi.instance().registries().cell()
         val invHandler: IMEInventoryHandler<IAEItemStack> = cellRegistry
-                .getCellInventory(itemStack, null, StorageChannel.ITEMS)
+                .getCellInventory(itemStack, null, StorageChannel.ITEMS) as IMEInventoryHandler<IAEItemStack>
         val inventoryHandler = invHandler as ICellInventoryHandler
         val cellInv = inventoryHandler.cellInv
         val usedBytes = cellInv.usedBytes
@@ -59,32 +60,36 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
                 cellInv.storedItemCount))
     }
 
-    override fun getBytesPerType(cellItem: ItemStack): Int {
-        return if (dynamicTypes) bytes_cell[MathHelper.clamp_int(
-                cellItem.itemDamage, 0, suffixes.size - 1)] / 128 else 8
+    override fun getBytesPerType(cellItem: ItemStack?): Int {
+        if (cellItem != null) {
+            return if (dynamicTypes) bytes_cell[MathHelper.clamp_int(
+                    cellItem.itemDamage, 0, suffixes.size - 1)] / 128 else 8
+        }
+        return -1
     }
 
     @Deprecated("")
-    override fun BytePerType(cellItem: ItemStack): Int {
+    override fun BytePerType(cellItem: ItemStack?): Int {
         return getBytesPerType(cellItem)
     }
 
     private fun ensureTagCompound(itemStack: ItemStack): NBTTagCompound {
-        if (!itemStack.hasTagCompound()) itemStack.tagCompound = NBTTagCompound()
+        if (!itemStack.hasTagCompound()) 
+            itemStack.tagCompound = NBTTagCompound()
         return itemStack.tagCompound
     }
 
-    override fun extractAEPower(itemStack: ItemStack, amt: Double): Double {
+    override fun extractAEPower(itemStack: ItemStack??, amt: Double): Double {
         if (itemStack == null || itemStack.itemDamage != 4) return 0.0
         val tagCompound = ensureTagCompound(itemStack)
         val currentPower = tagCompound.getDouble("power")
-        val toExtract = Math.min(amt, currentPower)
+        val toExtract = min(amt, currentPower)
         tagCompound.setDouble("power", currentPower - toExtract)
         return toExtract
     }
 
     @Optional.Method(modid = "CoFHAPI|energy")
-    override fun extractEnergy(container: ItemStack, maxExtract: Int,
+    override fun extractEnergy(container: ItemStack??, maxExtract: Int,
                                simulate: Boolean): Int {
         if (container == null || container.itemDamage != 4) return 0
         return if (simulate) {
@@ -98,51 +103,56 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
         }
     }
 
-    override fun getAECurrentPower(itemStack: ItemStack): Double {
+    override fun getAECurrentPower(itemStack: ItemStack?): Double {
         if (itemStack == null || itemStack.itemDamage != 4) return 0.0
         val tagCompound = ensureTagCompound(itemStack)
         return tagCompound.getDouble("power")
     }
 
-    override fun getAEMaxPower(itemStack: ItemStack): Double {
+    override fun getAEMaxPower(itemStack: ItemStack?): Double {
         return if (itemStack == null || itemStack.itemDamage != 4) 0.0 else MAX_POWER.toDouble()
     }
 
-    override fun getBytes(cellItem: ItemStack): Int {
-        return bytes_cell[MathHelper.clamp_int(cellItem.itemDamage, 0,
-                suffixes.size - 1)]
+    override fun getBytes(cellItem: ItemStack?): Int {
+        if (cellItem != null) {
+            return bytes_cell[MathHelper.clamp_int(cellItem.itemDamage, 0,
+                    suffixes.size - 1)]
+        }
+        return -1
     }
 
-    override fun getConfigInventory(`is`: ItemStack): IInventory {
-        return ECCellInventory(`is`, "config", 63, 1)
+    override fun getConfigInventory(`is`: ItemStack?): ECCellInventory? {
+        return `is`?.let { ECCellInventory(it, "config", 63, 1) }
     }
 
-    override fun getDurabilityForDisplay(itemStack: ItemStack): Double {
+    override fun getDurabilityForDisplay(itemStack: ItemStack?): Double {
         return if (itemStack == null || itemStack.itemDamage != 4) super.getDurabilityForDisplay(
                 itemStack) else 1 - getAECurrentPower(itemStack) / MAX_POWER
     }
 
     @Optional.Method(modid = "CoFHAPI|energy")
-    override fun getEnergyStored(arg0: ItemStack): Int {
+    override fun getEnergyStored(arg0: ItemStack?): Int {
         return PowerUnits.AE.convertTo(PowerUnits.RF,
                 getAECurrentPower(arg0)).toInt()
     }
 
-    override fun getFuzzyMode(`is`: ItemStack): FuzzyMode {
+    override fun getFuzzyMode(`is`: ItemStack?): FuzzyMode? {
+        if (`is` == null)
+            return null
         if (!`is`.hasTagCompound()) `is`.tagCompound = NBTTagCompound()
         return FuzzyMode.values()[`is`.tagCompound.getInteger("fuzzyMode")]
     }
 
-    override fun getIconFromDamage(dmg: Int): IIcon {
+    override fun getIconFromDamage(dmg: Int): IIcon? {
         return icons[MathHelper.clamp_int(dmg, 0, suffixes.size - 1)]
     }
 
     override fun getIdleDrain(): Double {
-        return 0
+        return 0.0
     }
 
     @SideOnly(Side.CLIENT)
-    override fun getItemStackDisplayName(stack: ItemStack): String {
+    override fun getItemStackDisplayName(stack: ItemStack??): String {
         if (stack == null) return super.getItemStackDisplayName(stack)
         if (stack.itemDamage == 4) {
             try {
@@ -171,17 +181,17 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
     }
 
     @Optional.Method(modid = "CoFHAPI|energy")
-    override fun getMaxEnergyStored(arg0: ItemStack): Int {
+    override fun getMaxEnergyStored(arg0: ItemStack?): Int {
         return PowerUnits.AE
                 .convertTo(PowerUnits.RF, getAEMaxPower(arg0)).toInt()
     }
 
-    override fun getPowerFlow(itemStack: ItemStack): AccessRestriction {
+    override fun getPowerFlow(itemStack: ItemStack??): AccessRestriction? {
         if (itemStack == null) return null
         return if (itemStack.itemDamage == 4) AccessRestriction.READ_WRITE else AccessRestriction.NO_ACCESS
     }
 
-    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<Any?>) {
         for (i in suffixes.indices) {
             itemList.add(ItemStack(item, 1, i))
             if (i == 4) {
@@ -193,44 +203,47 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
         }
     }
 
-    override fun getTotalTypes(cellItem: ItemStack): Int {
-        return types_cell[MathHelper.clamp_int(cellItem.itemDamage, 0,
-                suffixes.size - 1)]
+    override fun getTotalTypes(cellItem: ItemStack?): Int {
+        if (cellItem != null) {
+            return types_cell[MathHelper.clamp_int(cellItem.itemDamage, 0,
+                    suffixes.size - 1)]
+        }
+        return -1
     }
 
-    override fun getUnlocalizedName(itemStack: ItemStack): String {
-        return ("extracells.item.storage.physical."
-                + suffixes[itemStack.itemDamage])
+    override fun getUnlocalizedName(itemStack: ItemStack??): String {
+        return if (itemStack != null) ("extracells.item.storage.physical."
+                + suffixes[itemStack.itemDamage]) else "null"
     }
 
-    override fun getUpgradesInventory(`is`: ItemStack): IInventory {
+    override fun getUpgradesInventory(`is`: ItemStack?): IInventory {
         return ECCellInventory(`is`, "upgrades", 2, 1)
     }
 
-    override fun injectAEPower(itemStack: ItemStack, amt: Double): Double {
+    override fun injectAEPower(itemStack: ItemStack??, amt: Double): Double {
         if (itemStack == null || itemStack.itemDamage != 4) return 0.0
         val tagCompound = ensureTagCompound(itemStack)
         val currentPower = tagCompound.getDouble("power")
-        val toInject = Math.min(amt, MAX_POWER - currentPower)
+        val toInject = min(amt, MAX_POWER - currentPower)
         tagCompound.setDouble("power", currentPower + toInject)
         return toInject
     }
 
-    override fun isBlackListed(cellItem: ItemStack,
+    override fun isBlackListed(cellItem: ItemStack?,
                                requestedAddition: IAEItemStack): Boolean {
         return false
     }
 
-    override fun isEditable(`is`: ItemStack): Boolean {
+    override fun isEditable(`is`: ItemStack?): Boolean {
         return true
     }
 
-    override fun isStorageCell(i: ItemStack): Boolean {
+    override fun isStorageCell(i: ItemStack?): Boolean {
         return true
     }
 
-    override fun onItemRightClick(itemStack: ItemStack, world: World,
-                                  entityPlayer: EntityPlayer): ItemStack {
+    override fun onItemRightClick(itemStack: ItemStack?, world: World,
+                                  entityPlayer: EntityPlayer): ItemStack? {
         if (itemStack == null) return itemStack
         if (itemStack.itemDamage == 4 && !world.isRemote && entityPlayer.isSneaking) {
             when (itemStack.tagCompound.getInteger("mode")) {
@@ -251,7 +264,7 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
         }
         if (!entityPlayer.isSneaking) return itemStack
         val invHandler: IMEInventoryHandler<IAEItemStack> = AEApi.instance().registries().cell().getCellInventory(
-                itemStack, null, StorageChannel.ITEMS)
+                itemStack, null, StorageChannel.ITEMS) as IMEInventoryHandler<IAEItemStack>
         val inventoryHandler = invHandler as ICellInventoryHandler
         val cellInv = inventoryHandler.cellInv
         return if (cellInv.usedBytes == 0L && entityPlayer.inventory.addItemStackToInventory(
@@ -259,7 +272,7 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
                 itemStack.itemDamage) else itemStack
     }
 
-    override fun onItemUse(itemstack: ItemStack, player: EntityPlayer,
+    override fun onItemUse(itemstack: ItemStack?, player: EntityPlayer,
                            world: World, x: Int, y: Int, z: Int, side: Int, xOffset: Float,
                            yOffset: Float, zOffset: Float): Boolean {
         if (itemstack == null || player == null) return false
@@ -518,14 +531,14 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
         }
     }
 
-    fun placeBlock(itemstack: ItemStack, world: World?,
+    fun placeBlock(itemstack: ItemStack?, world: World?,
                    player: EntityPlayer, x: Int, y: Int, z: Int, side: Int, xOffset: Float,
                    yOffset: Float, zOffset: Float) {
         var x = x
         var y = y
         var z = z
         extractAEPower(player.currentEquippedItem, 20.0)
-        val itemblock = itemstack.item as ItemBlock
+        val itemblock = itemstack?.item as ItemBlock
         when (ForgeDirection.getOrientation(side)) {
             ForgeDirection.DOWN -> {
                 itemblock.onItemUseFirst(itemstack, player, world, x, y++, z, side,
@@ -571,7 +584,7 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
     }
 
     @Optional.Method(modid = "CoFHAPI|energy")
-    override fun receiveEnergy(container: ItemStack, maxReceive: Int,
+    override fun receiveEnergy(container: ItemStack?, maxReceive: Int,
                                simulate: Boolean): Int {
         if (container == null || container.itemDamage != 4) return 0
         return if (simulate) {
@@ -598,12 +611,14 @@ class ItemStoragePhysical : ItemECBase(), IStorageCell, IAEItemPowerStorage, IEn
         }
     }
 
-    override fun setFuzzyMode(`is`: ItemStack, fzMode: FuzzyMode) {
-        if (!`is`.hasTagCompound()) `is`.tagCompound = NBTTagCompound()
-        `is`.tagCompound.setInteger("fuzzyMode", fzMode.ordinal)
+    override fun setFuzzyMode(`is`: ItemStack?, fzMode: FuzzyMode) {
+        if (`is` != null) {
+            if (!`is`.hasTagCompound()) `is`.tagCompound = NBTTagCompound()
+        }
+        `is`?.tagCompound?.setInteger("fuzzyMode", fzMode.ordinal)
     }
 
-    override fun showDurabilityBar(itemStack: ItemStack): Boolean {
+    override fun showDurabilityBar(itemStack: ItemStack?): Boolean {
         return if (itemStack == null) false else itemStack.itemDamage == 4
     }
 

@@ -25,14 +25,13 @@ import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidStack
-
-class DriverFluidInterface : SidedBlock {
+open class DriverFluidInterface : SidedBlock {
     override fun worksWith(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): Boolean {
         val tile = world.getTileEntity(x, y, z)
         return tile != null && (getFluidInterface(world, x, y, z, side) != null || tile is IFluidInterface)
     }
 
-    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment {
+    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment? {
         val tile = world.getTileEntity(x, y, z)
         return if (tile == null || !(tile is IPartHost || tile is IFluidInterface)) null else Environment(tile)
     }
@@ -108,7 +107,7 @@ class DriverFluidInterface : SidedBlock {
     }
 
     internal class Provider : EnvironmentProvider {
-        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment> {
+        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment>? {
             if (stack == null) return null
             if (stack.item === ItemEnum.PARTITEM.item && stack.itemDamage == PartEnum.INTERFACE.ordinal) return Environment::class.java
             return if (stack.item === Item.getItemFromBlock(

@@ -17,20 +17,20 @@ interface ExtraCellsApi {
     fun canFluidSeeInTerminal(fluid: Fluid?): Boolean
     fun canStoreFluid(fluid: Fluid?): Boolean
 
-    @get:Deprecated("incorrect spelling")
+    @get:Deprecated("incorrect spelling", ReplaceWith("version","extracells.api"))
     val verion: String?
     val version: String?
 
     @Deprecated("")
     fun getWirelessFluidTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler?
-    fun getWirelessTermHandler(`is`: ItemStack?): IWirelessGasFluidTermHandler?
+    fun getWirelessTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler?
     fun isWirelessFluidTerminal(`is`: ItemStack?): Boolean
     fun items(): IItemDefinition
 
     @Deprecated("")
-    fun openPortableCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack?
+    fun openPortableCellGui(player: EntityPlayer?, stack: ItemStack?, world: World?): ItemStack?
     fun openPortableGasCellGui(player: EntityPlayer?, stack: ItemStack, world: World?): ItemStack
-    fun openPortableFluidCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack?
+    fun openPortableFluidCellGui(player: EntityPlayer?, stack: ItemStack?, world: World?): ItemStack?
 
     @Deprecated("")
     fun openWirelessTerminal(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack?
@@ -40,7 +40,7 @@ interface ExtraCellsApi {
     @Deprecated("")
     fun openWirelessTerminal(player: EntityPlayer?, stack: ItemStack?, world: World, x: Int, y: Int, z: Int, key: Long?): ItemStack?
     fun parts(): IPartDefinition
-    fun registerWirelessTermHandler(handler: IWirelessGasFluidTermHandler)
+    fun registerWirelessTermHandler(handler: IWirelessFluidTermHandler)
 
     @Deprecated("")
     fun registerWirelessFluidTermHandler(handler: IWirelessFluidTermHandler)

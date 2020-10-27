@@ -9,8 +9,7 @@ import extracells.api.IECTileEntity
 import extracells.container.ContainerFluidStorage
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.event.world.BlockEvent.BreakEvent
-
-class ExtraCellsEventHandler {
+open class ExtraCellsEventHandler {
     @SubscribeEvent
     fun onBlockBreak(event: BreakEvent) {
         val tile = event.world.getTileEntity(event.x, event.y, event.z)

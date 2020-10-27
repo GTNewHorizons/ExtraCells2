@@ -50,18 +50,20 @@ object ItemStoragePortableFluidCell : PowerItem(), IPortableFluidStorageCell {
         list2.add(StatCollector.translateToLocal("gui.appliedenergistics2.StoredEnergy") + ": " + aeCurrentPower + " AE - " + Math.floor(aeCurrentPower / ItemStoragePortableFluidCell.MAX_POWER * 1e4) / 1e2 + "%")
     }
 
-    override fun getConfigInventory(its: ItemStack): IInventory {
+    override fun getConfigInventory(its: ItemStack?): IInventory? {
         return ECFluidFilterInventory("configFluidCell", 63, its)
     }
 
-    override fun getDurabilityForDisplay(itemStack: ItemStack): Double {
+    override fun getDurabilityForDisplay(itemStack: ItemStack?): Double {
+        if (itemStack == null)
+            return -1.0
         return 1 - getAECurrentPower(itemStack) / ItemStoragePortableFluidCell.MAX_POWER
     }
 
-    override fun getFilter(stack: ItemStack): ArrayList<Fluid>? {
+    override fun getFilter(stack: ItemStack?): ArrayList<Fluid?>? {
         val inventory: ECFluidFilterInventory = ECFluidFilterInventory("", 63, stack)
         val stacks: Array<ItemStack?> = inventory.slots
-        val filter: ArrayList<Fluid> = ArrayList()
+        val filter: ArrayList<Fluid?> = ArrayList()
         if (stacks.isEmpty())
             return null
         for (s:ItemStack? in stacks) {
@@ -86,15 +88,15 @@ object ItemStoragePortableFluidCell : PowerItem(), IPortableFluidStorageCell {
         return this.icon
     }
 
-    override fun getMaxBytes(its: ItemStack): Int {
+    override fun getMaxBytes(its: ItemStack?): Int {
         return 512
     }
 
-    override fun getMaxTypes(unused: ItemStack): Int {
+    override fun getMaxTypes(unused: ItemStack?): Int {
         return 3
     }
 
-    override fun getPowerFlow(itemStack: ItemStack): AccessRestriction {
+    override fun getPowerFlow(itemStack: ItemStack?): AccessRestriction {
         return AccessRestriction.READ_WRITE
     }
 
@@ -108,24 +110,24 @@ object ItemStoragePortableFluidCell : PowerItem(), IPortableFluidStorageCell {
         itemList2.add(itemStack)
     }
 
-    override fun getUnlocalizedName(itemStack: ItemStack): String {
+    override fun getUnlocalizedName(itemStack: ItemStack?): String {
         return "extracells.item.storage.fluid.portable"
     }
 
-    override fun getUpgradesInventory(its: ItemStack): IInventory {
+    override fun getUpgradesInventory(its: ItemStack?): IInventory {
         return ECPrivateInventory("configInventory", 0, 64)
     }
 
-    override fun hasPower(player: EntityPlayer, amount: Double, its: ItemStack): Boolean {
-        return getAECurrentPower(its) >= amount
+    override fun hasPower(player: EntityPlayer?, amount: Double, its: ItemStack?): Boolean {
+        return its?.let { getAECurrentPower(it ) >= amount } == true
     }
 
     override fun isEditable(its: ItemStack?): Boolean {
         return its != null && its.item == this
     }
 
-    override fun onItemRightClick(itemStack: ItemStack, world: World, player: EntityPlayer): ItemStack {
-        return ECApi.instance().openPortableFluidCellGui(player, itemStack, world)
+    override fun onItemRightClick(itemStack: ItemStack?, world: World?, player: EntityPlayer?): ItemStack? {
+        return ECApi.instance()?.openPortableFluidCellGui(player, itemStack, world)
     }
 
     override fun registerIcons(iconRegister: IIconRegister) {
@@ -139,12 +141,14 @@ object ItemStoragePortableFluidCell : PowerItem(), IPortableFluidStorageCell {
         tag.setString("fuzzyMode", fzMode.name)
     }
 
-    override fun showDurabilityBar(itemStack: ItemStack): Boolean {
+    override fun showDurabilityBar(itemStack: ItemStack?): Boolean {
         return true
     }
 
-    override fun usePower(player: EntityPlayer, amount: Double, its: ItemStack): Boolean {
-        extractAEPower(its, amount)
+    override fun usePower(player: EntityPlayer?, amount: Double, its: ItemStack?): Boolean {
+        if (its != null) {
+            extractAEPower(its, amount)
+        }
         return true
     }
 }

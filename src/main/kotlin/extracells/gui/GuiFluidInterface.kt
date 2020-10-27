@@ -19,8 +19,7 @@ import net.minecraft.util.ResourceLocation
 import net.minecraft.util.StatCollector
 import net.minecraftforge.common.util.ForgeDirection
 import org.lwjgl.opengl.GL11
-
-class GuiFluidInterface(player: EntityPlayer, fluidInterface: IFluidInterface) : ECGuiContainer(
+open class GuiFluidInterface(player: EntityPlayer, fluidInterface: IFluidInterface) : ECGuiContainer(
         ContainerFluidInterface(player, fluidInterface)) {
     var fluidInterface: IFluidInterface
     var tanks = arrayOfNulls<WidgetFluidTank>(6)

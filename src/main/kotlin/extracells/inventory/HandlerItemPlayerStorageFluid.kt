@@ -7,8 +7,7 @@ import net.minecraft.nbt.NBTTagCompound
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
-
-class HandlerItemPlayerStorageFluid : HandlerItemStorageFluid {
+open class HandlerItemPlayerStorageFluid : HandlerItemStorageFluid {
     private val player: EntityPlayer
 
     constructor(_storageStack: ItemStack,

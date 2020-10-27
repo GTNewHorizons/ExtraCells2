@@ -9,8 +9,7 @@ import net.minecraft.util.MathHelper
 import net.minecraft.world.IBlockAccess
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
-
-class BlockWalrus : BlockEC(Material.clay, 2.0f, 10.0f) {
+open class BlockWalrus : BlockEC(Material.clay, 2.0f, 10.0f) {
     override fun createNewTileEntity(world: World, meta: Int): TileEntity {
         return TileEntityWalrus()
     }

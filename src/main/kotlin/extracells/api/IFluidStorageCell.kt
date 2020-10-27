@@ -12,7 +12,7 @@ interface IFluidStorageCell : ICellWorkbenchItem {
      * @return the Fluid Filter. An empty ArrayList or null if the cell accepts
      * all Fluids
      */
-    fun getFilter(`is`: ItemStack): ArrayList<Fluid>?
-    fun getMaxBytes(`is`: ItemStack): Int
+    fun getFilter(`is`: ItemStack?): ArrayList<Fluid?>?
+    fun getMaxBytes(`is`: ItemStack?): Int
     fun getMaxTypes(`is`: ItemStack?): Int
 }

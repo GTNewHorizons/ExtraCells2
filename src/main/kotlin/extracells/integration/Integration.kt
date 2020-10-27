@@ -8,9 +8,8 @@ import extracells.integration.nei.Nei
 import extracells.integration.opencomputers.OpenComputers
 import extracells.integration.waila.Waila
 import net.minecraftforge.common.config.Configuration
-
-class Integration {
-    enum class Mods @JvmOverloads constructor(val modID: String, val modName: String = modID, private val side: Side? = null) {
+open class Integration {
+    enum class Mods constructor(val modID: String, val modName: String = modID, private val side: Side? = null) {
         WAILA("Waila"), OPENCOMPUTERS("OpenComputers"), BCFUEL("BuildCraftAPI|fuels", "BuildCraftFuel"), NEI(
                 "NotEnoughItems", Side.CLIENT),
         MEKANISMGAS("MekanismAPI|gas", "MekanismGas"), IGW("IGWMod", "IngameWikiMod",
@@ -20,7 +19,7 @@ class Integration {
 
         private var shouldLoad = true
 
-        constructor(modid: String, side: Side) : this(modid, modid, side) {}
+        constructor(modid: String, side: Side) : this(modid, modid, side)
 
         val isOnClient: Boolean
             get() = side != Side.SERVER

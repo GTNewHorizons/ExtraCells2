@@ -8,14 +8,13 @@ import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.client.gui.Gui
 import net.minecraft.entity.player.EntityPlayer
-
-class PacketFluidEmitter : AbstractPacket {
+open class PacketFluidEmitter : AbstractPacket {
     private var wantedAmount: Long = 0
     private var part: PartFluidLevelEmitter? = null
     private var redstoneMode: RedstoneMode? = null
     private var toggle = false
 
-    constructor() {}
+    constructor()
     constructor(_toggle: Boolean, _part: PartFluidLevelEmitter?,
                 _player: EntityPlayer?) {
         mode = 3
@@ -53,7 +52,7 @@ class PacketFluidEmitter : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> part!!.changeWantedAmount(wantedAmount.toInt(), player)
             1 -> part!!.setWantedAmount(wantedAmount, player)
             2 -> if (player != null && player!!.isClientWorld) {
@@ -77,38 +76,38 @@ class PacketFluidEmitter : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 wantedAmount = `in`.readLong()
-                part = AbstractPacket.Companion.readPart(`in`) as PartFluidLevelEmitter
+                part = AbstractPacket.readPart(`in`) as PartFluidLevelEmitter
             }
             1 -> {
                 wantedAmount = `in`.readLong()
-                part = AbstractPacket.Companion.readPart(`in`) as PartFluidLevelEmitter
+                part = AbstractPacket.readPart(`in`) as PartFluidLevelEmitter
             }
             2 -> wantedAmount = `in`.readLong()
             3 -> {
                 toggle = `in`.readBoolean()
-                part = AbstractPacket.Companion.readPart(`in`) as PartFluidLevelEmitter
+                part = AbstractPacket.readPart(`in`) as PartFluidLevelEmitter
             }
             4 -> redstoneMode = RedstoneMode.values()[`in`.readInt()]
         }
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 out.writeLong(wantedAmount)
-                AbstractPacket.Companion.writePart(part, out)
+                AbstractPacket.writePart(part, out)
             }
             1 -> {
                 out.writeLong(wantedAmount)
-                AbstractPacket.Companion.writePart(part, out)
+                AbstractPacket.writePart(part, out)
             }
             2 -> out.writeLong(wantedAmount)
             3 -> {
                 out.writeBoolean(toggle)
-                AbstractPacket.Companion.writePart(part, out)
+                AbstractPacket.writePart(part, out)
             }
             4 -> out.writeInt(redstoneMode!!.ordinal)
         }

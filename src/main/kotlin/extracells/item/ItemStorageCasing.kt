@@ -8,16 +8,15 @@ import net.minecraft.item.Item
 import net.minecraft.item.ItemStack
 import net.minecraft.util.IIcon
 import net.minecraft.util.MathHelper
-
-class ItemStorageCasing : ItemECBase() {
-    private var icons: Array<IIcon>
+open class ItemStorageCasing : ItemECBase() {
+    private lateinit var icons: Array<IIcon?>
     val suffixes = arrayOf("physical", "fluid", "gas")
-    override fun getIconFromDamage(dmg: Int): IIcon {
+    override fun getIconFromDamage(dmg: Int): IIcon? {
         val j = MathHelper.clamp_int(dmg, 0, icons.size - 1)
         return icons[j]
     }
 
-    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<Any?>) {
         for (j in suffixes.indices) {
             if (!(suffixes[j].contains("gas") && !Integration.Mods.MEKANISMGAS.isEnabled)) itemList.add(
                     ItemStack(item, 1, j))

@@ -12,8 +12,8 @@ object ItemWirelessTerminalFluid : WirelessTermBase(), IWirelessFluidTermHandler
     internal var icon: IIcon? = null
     override fun getIconFromDamage(dmg: Int): IIcon? = this.icon
     override fun getUnlocalizedName(itemStack: ItemStack): String =super.getUnlocalizedName(itemStack).replace("item.extracells", "extracells.item")
-    override fun isItemNormalWirelessTermToo(its: ItemStack): Boolean = false
-    override fun onItemRightClick(itemStack: ItemStack, world: World, entityPlayer: EntityPlayer): ItemStack = ECApi.instance().openWirelessFluidTerminal(entityPlayer, itemStack, world)
+    override fun isItemNormalWirelessTermToo(its: ItemStack?): Boolean = false
+    override fun onItemRightClick(itemStack: ItemStack, world: World, entityPlayer: EntityPlayer): ItemStack? = ECApi.instance()?.openWirelessFluidTerminal(entityPlayer, itemStack, world)
     override fun registerIcons(iconRegister: IIconRegister) {
         this.icon = iconRegister.registerIcon("extracells:" + "terminal.fluid.wireless")
     }

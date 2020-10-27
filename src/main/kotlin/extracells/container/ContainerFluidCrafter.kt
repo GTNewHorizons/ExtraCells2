@@ -7,8 +7,7 @@ import net.minecraft.inventory.Container
 import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
-
-class ContainerFluidCrafter(player: InventoryPlayer?, var tileentity: IInventory) : Container() {
+open class ContainerFluidCrafter(player: InventoryPlayer?, var tileentity: IInventory) : Container() {
     protected fun bindPlayerInventory(inventoryPlayer: InventoryPlayer?) {
         for (i in 0..2) {
             for (j in 0..8) {
@@ -34,7 +33,7 @@ class ContainerFluidCrafter(player: InventoryPlayer?, var tileentity: IInventory
         // DON'T DO ANYTHING, YOU SHITTY METHOD!
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         var itemstack: ItemStack? = null
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {
@@ -43,7 +42,7 @@ class ContainerFluidCrafter(player: InventoryPlayer?, var tileentity: IInventory
             if (tileentity.isItemValidForSlot(0, itemstack1)) {
                 if (slotnumber < 10) {
                     if (!mergeItemStack(itemstack1, 10, 36, false)) return null
-                } else if (slotnumber >= 10 && slotnumber <= 36) {
+                } else if (slotnumber in 10..36) {
                     if (!mergeItemStack(itemstack1, 0, 1, false)) return null
                 }
                 if (itemstack1.stackSize == 0) {

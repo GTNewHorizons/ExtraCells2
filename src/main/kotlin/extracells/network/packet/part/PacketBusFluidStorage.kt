@@ -10,12 +10,11 @@ import extracells.part.PartFluidStorage
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.entity.player.EntityPlayer
-
-class PacketBusFluidStorage : AbstractPacket {
+open class PacketBusFluidStorage : AbstractPacket {
     var part: PartFluidStorage? = null
     var access: AccessRestriction? = null
 
-    constructor() {}
+    constructor()
     constructor(_player: EntityPlayer?,
                 _access: AccessRestriction?, toClient: Boolean) : super(_player) {
         if (toClient) mode = 1 else mode = 2
@@ -29,7 +28,7 @@ class PacketBusFluidStorage : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> part!!.sendInformation(player)
             1 -> try {
                 handleClient()
@@ -55,16 +54,16 @@ class PacketBusFluidStorage : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
-            0 -> part = AbstractPacket.Companion.readPart(`in`) as PartFluidStorage
-            1, 2 -> access = AccessRestriction.valueOf(AbstractPacket.Companion.readString(`in`))
+        when (mode.toInt()) {
+            0 -> part = readPart(`in`) as PartFluidStorage
+            1, 2 -> access = readString(`in`)?.let { AccessRestriction.valueOf(it) }
         }
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
-            0 -> AbstractPacket.Companion.writePart(part, out)
-            1, 2 -> AbstractPacket.Companion.writeString(access!!.name, out)
+        when (mode.toInt()) {
+            0 -> writePart(part, out)
+            1, 2 -> writeString(access!!.name, out)
         }
     }
 }

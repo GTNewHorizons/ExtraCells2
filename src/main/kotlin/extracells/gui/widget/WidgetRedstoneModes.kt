@@ -12,8 +12,7 @@ import net.minecraft.util.StatCollector
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
 import java.util.*
-
-class WidgetRedstoneModes : GuiButton {
+open class WidgetRedstoneModes : GuiButton {
     private var redstoneMode: RedstoneMode?
     private var emitter = false
 

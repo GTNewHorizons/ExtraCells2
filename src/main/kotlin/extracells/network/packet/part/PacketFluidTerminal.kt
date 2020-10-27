@@ -15,13 +15,12 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
-
-class PacketFluidTerminal : AbstractPacket {
+open class PacketFluidTerminal : AbstractPacket {
     var fluidStackList: IItemList<IAEFluidStack?>? = null
     var currentFluid: Fluid? = null
     var terminalFluid: PartFluidTerminal? = null
 
-    constructor() {}
+    constructor()
     constructor(_player: EntityPlayer?, _currentFluid: Fluid?) : super(_player) {
         mode = 2
         currentFluid = _currentFluid
@@ -47,9 +46,9 @@ class PacketFluidTerminal : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> case0()
-            1 -> terminalFluid!!.setCurrentFluid(currentFluid)
+            1 -> terminalFluid!!.currentFluid = currentFluid
             2 -> case2()
             3 -> if (player != null && player!!.openContainer is ContainerFluidTerminal) {
                 val fluidContainer = player!!.openContainer as ContainerFluidTerminal
@@ -89,11 +88,11 @@ class PacketFluidTerminal : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 fluidStackList = AEApi.instance().storage().createFluidList()
                 while (`in`.readableBytes() > 0) {
-                    val fluid: Fluid = AbstractPacket.Companion.readFluid(`in`)
+                    val fluid: Fluid? = readFluid(`in`)
                     val fluidAmount = `in`.readLong()
                     if (fluid == null || fluidAmount <= 0) {
                         continue
@@ -101,31 +100,31 @@ class PacketFluidTerminal : AbstractPacket {
                     val stack = AEApi.instance().storage()
                             .createFluidStack(FluidStack(fluid, 1))
                     stack.stackSize = fluidAmount
-                    fluidStackList.add(stack)
+                    (fluidStackList as IItemList<IAEFluidStack>?)?.add(stack)
                 }
             }
             1 -> {
-                terminalFluid = AbstractPacket.Companion.readPart(`in`) as PartFluidTerminal
-                currentFluid = AbstractPacket.Companion.readFluid(`in`)
+                terminalFluid = readPart(`in`) as PartFluidTerminal
+                currentFluid = readFluid(`in`)
             }
-            2 -> currentFluid = AbstractPacket.Companion.readFluid(`in`)
-            3 -> terminalFluid = AbstractPacket.Companion.readPart(`in`) as PartFluidTerminal
+            2 -> currentFluid = readFluid(`in`)
+            3 -> terminalFluid = readPart(`in`) as PartFluidTerminal
         }
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> for (stack in fluidStackList!!) {
                 val fluidStack = stack!!.fluidStack
-                AbstractPacket.Companion.writeFluid(fluidStack.getFluid(), out)
+                writeFluid(fluidStack.getFluid(), out)
                 out.writeLong(fluidStack.amount.toLong())
             }
             1 -> {
-                AbstractPacket.Companion.writePart(terminalFluid, out)
-                AbstractPacket.Companion.writeFluid(currentFluid, out)
+                writePart(terminalFluid, out)
+                writeFluid(currentFluid, out)
             }
-            2 -> AbstractPacket.Companion.writeFluid(currentFluid, out)
-            3 -> AbstractPacket.Companion.writePart(terminalFluid, out)
+            2 -> writeFluid(currentFluid, out)
+            3 -> writePart(terminalFluid, out)
         }
     }
 }

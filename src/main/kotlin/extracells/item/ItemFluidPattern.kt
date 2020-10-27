@@ -13,20 +13,19 @@ import net.minecraft.world.World
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.FluidStack
-
-class ItemFluidPattern : ItemECBase() {
+open class ItemFluidPattern : ItemECBase() {
     var icon: IIcon? = null
-    override fun getIcon(itemStack: ItemStack, pass: Int): IIcon {
+    override fun getIcon(itemStack: ItemStack?, pass: Int): IIcon? {
         if (pass == 0) {
-            val fluid = getFluid(itemStack)
-            if (fluid != null) return fluid.icon
+            val fluid = itemStack?.let { getFluid(it) }
+            if (fluid != null)
+                return fluid.icon
         }
-        return icon!!
+        return icon
     }
 
-    override fun getItemStackDisplayName(itemStack: ItemStack): String {
-        val fluid = getFluid(itemStack)
-                ?: return StatCollector.translateToLocal(getUnlocalizedName(itemStack))
+    override fun getItemStackDisplayName(itemStack: ItemStack?): String {
+        val fluid = itemStack?.let { getFluid(it) } ?: return StatCollector.translateToLocal(itemStack?.let { getUnlocalizedName(it) })
         return (StatCollector.translateToLocal(getUnlocalizedName(itemStack))
                 + ": " + fluid.getLocalizedName(FluidStack(fluid, 1)))
     }
@@ -35,7 +34,7 @@ class ItemFluidPattern : ItemECBase() {
         return 1
     }
 
-    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<Any?>) {
         super.getSubItems(item, creativeTab, itemList)
         for (fluid in FluidRegistry.getRegisteredFluidIDsByFluid().keys) {
             val itemStack = ItemStack(this, 1)

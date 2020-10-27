@@ -16,8 +16,7 @@ import net.minecraft.network.Packet
 import net.minecraft.network.play.server.S35PacketUpdateTileEntity
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.*
-
-class TileEntityVibrationChamberFluid : TPowerStorage(), IECTileEntity , IFluidHandler , IActionHost {
+open class TileEntityVibrationChamberFluid : TPowerStorage(), IECTileEntity , IFluidHandler , IActionHost {
   private var isFirstGridNode: Boolean = true
   private val gridBlock = ECGridBlockVibrantChamber(this)
   private var node: IGridNode? = null
@@ -69,13 +68,15 @@ class TileEntityVibrationChamberFluid : TPowerStorage(), IECTileEntity , IFluidH
     else {
       burnTime += 1
       if (timerEnergy == 4) {
-        energyLeft = if (energyLeft.toInt() == 0) {
-          val energy: IEnergyGrid = getGridNode(ForgeDirection.UNKNOWN).grid.getCache(IEnergyGrid::class.java)
-          energy.injectPower(24.0, Actionable.MODULATE)
-        }
-        else {
-          val energy: IEnergyGrid = getGridNode(ForgeDirection.UNKNOWN).grid.getCache(IEnergyGrid::class.java)
-          energy.injectPower(energyLeft, Actionable.MODULATE)
+        getGridNode(ForgeDirection.UNKNOWN)?.let {
+          energyLeft = if (energyLeft.toInt() == 0) {
+            val energy: IEnergyGrid = it.grid.getCache(IEnergyGrid::class.java)
+            energy.injectPower(24.0, Actionable.MODULATE)
+          }
+          else {
+            val energy: IEnergyGrid = it.grid.getCache(IEnergyGrid::class.java)
+            energy.injectPower(energyLeft, Actionable.MODULATE)
+          }
         }
         timerEnergy = 0
       }
@@ -98,12 +99,12 @@ class TileEntityVibrationChamberFluid : TPowerStorage(), IECTileEntity , IFluidH
     }
   }
 
-  override fun getLocation() = DimensionalCoord(this)
+  override val location
+    get() = DimensionalCoord(this)
 
-  override fun getPowerUsage() = 0.0
+  override val powerUsage = 0.0
 
-
-  override fun getGridNode(forgeDirection: ForgeDirection): IGridNode {
+  override fun getGridNode(forgeDirection: ForgeDirection): IGridNode? {
     if (isFirstGridNode && hasWorldObj() && !getWorldObj().isRemote) {
       isFirstGridNode = false
       try {

@@ -48,8 +48,7 @@ abstract class TPowerStorage : TileBase(), IAEPowerStorage {
   }
 
   fun writePowerToNBT(tag: NBTTagCompound) = tag.setDouble("currenPowerBattery", powerInformation.currentPower)
-
-  class PowerInformation{
+open class PowerInformation{
     var currentPower = 0.0
     var maxPower = 500.0
   }

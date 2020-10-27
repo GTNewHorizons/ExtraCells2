@@ -6,7 +6,7 @@ object ECApi {
             try {
                 instance = Class
                         .forName("extracells.ExtraCellsApiInstance")
-                        .getField("instance")[null] as ExtraCellsApi
+                        .getField("INSTANCE")[null] as ExtraCellsApi
             } catch (e: Exception) {
             }
         }

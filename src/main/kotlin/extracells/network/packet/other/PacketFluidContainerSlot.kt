@@ -6,12 +6,11 @@ import extracells.tileentity.TileEntityFluidFiller
 import io.netty.buffer.ByteBuf
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-
-class PacketFluidContainerSlot : AbstractPacket {
+open class PacketFluidContainerSlot : AbstractPacket {
     private var container: ItemStack? = null
     private var fluidFiller: TileEntityFluidFiller? = null
 
-    constructor() {}
+    constructor()
     constructor(_fluidFiller: TileEntityFluidFiller?,
                 _container: ItemStack?, _player: EntityPlayer?) : super(_player) {
         mode = 0
@@ -20,7 +19,7 @@ class PacketFluidContainerSlot : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 container!!.stackSize = 1
                 fluidFiller!!.containerItem = container
@@ -33,18 +32,18 @@ class PacketFluidContainerSlot : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
-                fluidFiller = AbstractPacket.Companion.readTileEntity(`in`) as TileEntityFluidFiller
+                fluidFiller = AbstractPacket.readTileEntity(`in`) as TileEntityFluidFiller
                 container = ByteBufUtils.readItemStack(`in`)
             }
         }
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
-                AbstractPacket.Companion.writeTileEntity(fluidFiller, out)
+                AbstractPacket.writeTileEntity(fluidFiller, out)
                 ByteBufUtils.writeItemStack(out, container)
             }
         }

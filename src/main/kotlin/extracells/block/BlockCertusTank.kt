@@ -19,8 +19,7 @@ import net.minecraft.util.StatCollector
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidContainerRegistry
-
-class BlockCertusTank : BlockEC(Material.glass, 2.0f, 10.0f) {
+open class BlockCertusTank : BlockEC(Material.glass, 2.0f, 10.0f) {
     var breakIcon: IIcon? = null
     var topIcon: IIcon? = null
     var bottomIcon: IIcon? = null
@@ -29,7 +28,7 @@ class BlockCertusTank : BlockEC(Material.glass, 2.0f, 10.0f) {
     var sideTopIcon: IIcon? = null
     var sideBottomIcon: IIcon? = null
     override fun canRenderInPass(pass: Int): Boolean {
-        RenderHandler.Companion.renderPass = pass
+        RenderHandler.renderPass = pass
         return true
     }
 
@@ -54,7 +53,7 @@ class BlockCertusTank : BlockEC(Material.glass, 2.0f, 10.0f) {
         return null
     }
 
-    override fun getIcon(side: Int, b: Int): IIcon {
+    override fun getIcon(side: Int, b: Int): IIcon? {
         return when (b) {
             1 -> sideTopIcon!!
             2 -> sideBottomIcon!!
@@ -76,7 +75,7 @@ class BlockCertusTank : BlockEC(Material.glass, 2.0f, 10.0f) {
     }
 
     override fun getRenderType(): Int {
-        return RenderHandler.Companion.getId()
+        return RenderHandler.id
     }
 
     override fun getUnlocalizedName(): String {

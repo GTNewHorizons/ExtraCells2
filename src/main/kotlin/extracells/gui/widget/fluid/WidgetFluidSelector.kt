@@ -7,8 +7,7 @@ import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraftforge.fluids.FluidStack
 import org.lwjgl.opengl.GL11
 import java.util.*
-
-class WidgetFluidSelector(guiFluidTerminal: IFluidSelectorGui,
+open class WidgetFluidSelector(guiFluidTerminal: IFluidSelectorGui,
                           stack: IAEFluidStack?) : AbstractFluidWidget(guiFluidTerminal, 18, 18,
         stack!!.fluidStack.getFluid()) {
     var amount: Long = 0
@@ -35,9 +34,9 @@ class WidgetFluidSelector(guiFluidTerminal: IFluidSelectorGui,
                         mouseX, mouseY)) return false
         var amountToText = amount.toString() + "mB"
         if (shortenedBuckets) {
-            if (amount > 1000000000L) amountToText = amount / 1000000000L
-                    .toString() + "MegaB" else if (amount > 1000000L) amountToText = amount / 1000000L.toString() + "KiloB" else if (amount > 9999L) {
-                amountToText = amount / 1000L.toString() + "B"
+            if (amount > 1000000000L) amountToText = (amount / 1000000000L)
+                    .toString() + "MegaB" else if (amount > 1000000L) amountToText = (amount / 1000000L).toString() + "KiloB" else if (amount > 9999L) {
+                amountToText = (amount / 1000L).toString() + "B"
             }
         }
         val description: MutableList<String?> = ArrayList()

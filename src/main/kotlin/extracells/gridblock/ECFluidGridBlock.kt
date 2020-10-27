@@ -10,8 +10,7 @@ import extracells.tileentity.TileEntityFluidFiller
 import net.minecraft.item.ItemStack
 import net.minecraftforge.common.util.ForgeDirection
 import java.util.*
-
-class ECFluidGridBlock(protected var host: IECTileEntity) : IGridBlock {
+open class ECFluidGridBlock(protected var host: IECTileEntity) : IGridBlock {
     protected var grid: IGrid? = null
     protected var usedChannels = 0
     override fun getConnectableSides(): EnumSet<ForgeDirection> {
@@ -32,15 +31,15 @@ class ECFluidGridBlock(protected var host: IECTileEntity) : IGridBlock {
         return host.powerUsage
     }
 
-    override fun getLocation(): DimensionalCoord {
+    override fun getLocation(): DimensionalCoord? {
         return host.location
     }
 
-    override fun getMachine(): IGridHost {
+    override fun getMachine(): IGridHost? {
         return host
     }
 
-    override fun getMachineRepresentation(): ItemStack {
+    override fun getMachineRepresentation(): ItemStack? {
         val loc = location ?: return null
         return ItemStack(loc.world.getBlock(loc.x, loc.y, loc.z), 1,
                 loc.world.getBlockMetadata(loc.x, loc.y, loc.z))

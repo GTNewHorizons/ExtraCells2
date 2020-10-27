@@ -11,6 +11,7 @@ import appeng.api.networking.security.MachineSource
 import appeng.api.networking.storage.IBaseMonitor
 import appeng.api.storage.*
 import appeng.api.storage.data.IAEFluidStack
+import appeng.api.storage.data.IAEStack
 import appeng.api.storage.data.IItemList
 import extracells.part.PartFluidStorage
 import extracells.util.FluidUtil
@@ -19,32 +20,36 @@ import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import net.minecraftforge.fluids.IFluidHandler
 import java.util.*
-
-class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInventoryHandler<IAEFluidStack?>, IMEMonitorHandlerReceiver<IAEFluidStack?> {
+open class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInventoryHandler<IAEFluidStack?>, IMEMonitorHandlerReceiver<IAEFluidStack?> {
     protected var tank: IFluidHandler? = null
-    protected var access = AccessRestriction.READ_WRITE
+    private var access = AccessRestriction.READ_WRITE
+
+    override fun getAccess(): AccessRestriction {
+        return access
+    }
+
     protected var prioritizedFluids: MutableList<Fluid> = ArrayList()
-    protected var inverted = false
+    internal var inverted = false
     private var externalHandler: IExternalStorageHandler? = null
     protected var tile: TileEntity? = null
     var externalSystem: ITileStorageMonitorable? = null
     override fun canAccept(input: IAEFluidStack?): Boolean {
         if (!node.isActive) return false else if (tank == null && externalSystem == null && externalHandler == null || !(access == AccessRestriction.WRITE || access == AccessRestriction.READ_WRITE) || input == null) return false else if (externalSystem != null) {
             val monitor = externalSystem!!.getMonitorable(
-                    node.side.opposite, MachineSource(
+                    node.side?.opposite, MachineSource(
                     node))
                     ?: return false
             val fluidInventory = monitor
                     .fluidInventory
             return fluidInventory != null && fluidInventory.canAccept(input)
         } else if (externalHandler != null) {
-            val inventory: IMEInventory<IAEFluidStack>? = externalHandler!!.getInventory(tile, node.side.opposite,
+            val inventory: IMEInventory<IAEFluidStack>? = externalHandler!!.getInventory(tile, node.side?.opposite,
                     StorageChannel.FLUIDS, MachineSource(
-                    node))
+                    node)) as IMEInventory<IAEFluidStack>?
             return inventory != null
         }
-        val infoArray = tank!!.getTankInfo(node.side.opposite)
-        if (infoArray != null && infoArray.size > 0) {
+        val infoArray = tank!!.getTankInfo(node.side?.opposite)
+        if (infoArray != null && infoArray.isNotEmpty()) {
             for (tank in infoArray) {
                 if (tank.fluid == null) return isPrioritized(
                         input) else if (tank.fluid.fluidID == input.fluidStack.fluidID) {
@@ -56,66 +61,67 @@ class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInvento
         return false
     }
 
-    override fun extractItems(request: IAEFluidStack, mode: Actionable, src: BaseActionSource): IAEFluidStack? {
+    override fun extractItems(request: IAEFluidStack?, mode: Actionable?, src: BaseActionSource?): IAEFluidStack? {
         if (!node.isActive
                 || !(access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE)) return null
         if (externalSystem != null && request != null) {
             val monitor = externalSystem!!.getMonitorable(
-                    node.side.opposite, src) ?: return null
+                    node.side?.opposite, src) ?: return null
             val fluidInventory = monitor
                     .fluidInventory ?: return null
             return fluidInventory.extractItems(request, mode, src)
         } else if (externalHandler != null && request != null) {
-            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+            val inventory = externalHandler!!.getInventory(tile, node.side?.opposite, StorageChannel.FLUIDS,
                     MachineSource(node))
                     ?: return null
-            return inventory.extractItems(request, mode, MachineSource(node))
+            return inventory.extractItems(request, mode, MachineSource(node)) as IAEFluidStack
         }
         if (tank == null || request == null || access == AccessRestriction.WRITE || access == AccessRestriction.NO_ACCESS) return null
         val toDrain = request.fluidStack
-        if (!tank!!.canDrain(node.side.opposite, toDrain.getFluid())) return null
+        if (!tank!!.canDrain(node.side?.opposite, toDrain.getFluid())) return null
         val drain = tank!!.drain(
-                node.side.opposite, FluidStack(toDrain.getFluid(), toDrain.amount), mode == Actionable.MODULATE)
-        return if (drain == null) {
-            null
-        } else if (drain.amount == 0) {
-            null
-        } else if (drain.amount == toDrain.amount) {
-            request
-        } else {
-            FluidUtil.createAEFluidStack(toDrain.fluidID, drain.amount.toLong())
+                node.side?.opposite, FluidStack(toDrain.getFluid(), toDrain.amount), mode == Actionable.MODULATE)
+        return when {
+            drain == null -> {
+                null
+            }
+            drain.amount == 0 -> {
+                null
+            }
+            drain.amount == toDrain.amount -> {
+                request
+            }
+            else -> {
+                FluidUtil.createAEFluidStack(toDrain.fluidID, drain.amount.toLong())
+            }
         }
     }
 
-    override fun getAccess(): AccessRestriction {
-        return access
-    }
-
     override fun getAvailableItems(
-            out: IItemList<IAEFluidStack>): IItemList<IAEFluidStack> {
+            out: IItemList<IAEFluidStack?>): IItemList<IAEFluidStack?> {
         if (!node.isActive || !(access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE)) return out
         if (externalSystem != null) {
             val monitor = externalSystem!!.getMonitorable(
-                    node.side.opposite, MachineSource(node))
+                    node.side?.opposite, MachineSource(node))
                     ?: return out
             val fluidInventory = monitor.fluidInventory ?: return out
             val list = externalSystem!!.getMonitorable(
-                    node.side.opposite, MachineSource(node)).fluidInventory.storageList
+                    node.side?.opposite, MachineSource(node)).fluidInventory.storageList
             for (stack in list) {
                 out.add(stack)
             }
         } else if (externalHandler != null) {
-            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+            val inventory = externalHandler!!.getInventory(tile, node.side?.opposite, StorageChannel.FLUIDS,
                     MachineSource(
                             node))
                     ?: return out
-            val list = inventory.getAvailableItems(AEApi.instance().storage().createFluidList())
+            val list = inventory.getAvailableItems(AEApi.instance().storage().createFluidList() as IItemList<IAEStack<*>>)
             for (stack in list) {
-                out.add(stack)
+                out.add(stack as IAEFluidStack?)
             }
         } else if (tank != null) {
-            val infoArray = tank!!.getTankInfo(node.side.opposite)
-            if (infoArray != null && infoArray.size > 0) {
+            val infoArray = tank!!.getTankInfo(node.side?.opposite)
+            if (infoArray != null && infoArray.isNotEmpty()) {
                 for (info in infoArray) {
                     if (info.fluid != null) out.add(AEApi.instance().storage().createFluidStack(info.fluid))
                 }
@@ -136,27 +142,27 @@ class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInvento
         return 0
     }
 
-    override fun injectItems(input: IAEFluidStack, mode: Actionable,
-                             src: BaseActionSource): IAEFluidStack? {
+    override fun injectItems(input: IAEFluidStack?, mode: Actionable?,
+                             src: BaseActionSource?): IAEFluidStack? {
         if (!(access == AccessRestriction.WRITE || access == AccessRestriction.READ_WRITE)) return null
         if (externalSystem != null && input != null) {
-            val monitor = externalSystem!!.getMonitorable(node.side.opposite, src) ?: return input
+            val monitor = externalSystem!!.getMonitorable(node.side?.opposite, src) ?: return input
             val fluidInventory = monitor.fluidInventory ?: return input
             return fluidInventory.injectItems(input, mode, src)
         } else if (externalHandler != null && input != null) {
-            val inventory = externalHandler!!.getInventory(tile, node.side.opposite, StorageChannel.FLUIDS,
+            val inventory = externalHandler!!.getInventory(tile, node.side?.opposite, StorageChannel.FLUIDS,
                     MachineSource(node))
                     ?: return input
-            return inventory.injectItems(input, mode, MachineSource(node))
+            return inventory.injectItems(input, mode, MachineSource(node)) as IAEFluidStack?
         }
         if (tank == null || input == null || !canAccept(input)) return input
         val toFill = input.fluidStack
         var filled = 0
         var filled2 = 0
         do {
-            filled2 = tank!!.fill(node.side.opposite, FluidStack(toFill.getFluid(), toFill.amount - filled),
+            filled2 = tank!!.fill(node.side?.opposite, FluidStack(toFill.getFluid(), toFill.amount - filled),
                     mode == Actionable.MODULATE)
-            filled = filled + filled2
+            filled += filled2
         } while (filled2 != 0 && filled != toFill.amount)
         return if (filled == toFill.amount) null else FluidUtil.createAEFluidStack(toFill.fluidID,
                 toFill.amount - filled.toLong())
@@ -176,7 +182,7 @@ class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInvento
     fun onNeighborChange() {
         if (externalSystem != null) {
             val monitor = externalSystem!!.getMonitorable(
-                    node.side.opposite, MachineSource(node))
+                    node.side?.opposite, MachineSource(node))
             if (monitor != null) {
                 val fluidInventory = monitor.fluidInventory
                 fluidInventory?.removeListener(this)
@@ -197,13 +203,13 @@ class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInvento
             externalHandler = null
             return
         }
-        externalHandler = AEApi.instance().registries().externalStorage().getHandler(tileEntity, node.side.opposite,
+        externalHandler = AEApi.instance().registries().externalStorage().getHandler(tileEntity, node.side?.opposite,
                 StorageChannel.FLUIDS, MachineSource(
                 node))
         if (tileEntity is ITileStorageMonitorable) {
             externalSystem = tileEntity
             val monitor = externalSystem!!.getMonitorable(
-                    node.side.opposite, MachineSource(
+                    node.side?.opposite, MachineSource(
                     node))
                     ?: return
             val fluidInventory = monitor
@@ -219,18 +225,14 @@ class HandlerPartStorageFluid(protected var node: PartFluidStorage) : IMEInvento
             val grid = gridNode.grid
             if (grid != null) {
                 grid.postEvent(MENetworkCellArrayUpdate())
-                gridNode.grid.postEvent(MENetworkStorageEvent(node.gridBlock.fluidMonitor, StorageChannel.FLUIDS))
+                gridNode.grid.postEvent(MENetworkStorageEvent(node.gridBlock?.fluidMonitor, StorageChannel.FLUIDS))
             }
-            node.host.markForUpdate()
+            node.host?.markForUpdate()
         }
     }
 
     fun setAccessRestriction(access: AccessRestriction) {
         this.access = access
-    }
-
-    fun setInverted(_inverted: Boolean) {
-        inverted = _inverted
     }
 
     fun setPrioritizedFluids(_fluids: Array<Fluid?>) {

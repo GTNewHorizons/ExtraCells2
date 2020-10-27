@@ -8,8 +8,7 @@ import net.minecraftforge.client.IItemRenderer.ItemRenderType
 import net.minecraftforge.client.IItemRenderer.ItemRendererHelper
 import net.minecraftforge.client.model.AdvancedModelLoader
 import org.lwjgl.opengl.GL11
-
-class ItemRendererWalrus : IItemRenderer {
+open class ItemRendererWalrus : IItemRenderer {
     var modelWalrus = AdvancedModelLoader
             .loadModel(ResourceLocation("extracells", "models/walrus.obj"))
     var textureWalrus = ResourceLocation("extracells",

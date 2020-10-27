@@ -24,8 +24,7 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.FluidContainerRegistry
 import net.minecraftforge.fluids.FluidStack
 import net.minecraftforge.fluids.IFluidTank
-
-class UpgradeAE(private val host: EnvironmentHost) : UpgradeAEBase(host) {
+open class UpgradeAE(private val host: EnvironmentHost) : UpgradeAEBase(host) {
     val robot: Robot? = if (host is Robot) host else null
     val drone: Drone? = if (host is Drone) host else null
     var isActive: Boolean = false

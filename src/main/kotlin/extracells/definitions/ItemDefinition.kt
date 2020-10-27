@@ -3,7 +3,7 @@ package extracells.definitions
 import extracells.api.definitions.IItemDefinition
 import extracells.registries.ItemEnum
 
-class ItemDefinition : IItemDefinition {
+object ItemDefinition : IItemDefinition {
     override fun cell1024kPart(): appeng.api.definitions.IItemDefinition {
         return ItemItemDefinitions(ItemEnum.STORAGECOMPONENT.item, 1)
     }
@@ -120,9 +120,5 @@ class ItemDefinition : IItemDefinition {
 
     override fun itemFluidPattern(): appeng.api.definitions.IItemDefinition {
         return ItemItemDefinitions(ItemEnum.FLUIDPATTERN.item)
-    }
-
-    companion object {
-        val instance = ItemDefinition()
     }
 }

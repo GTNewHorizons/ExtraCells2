@@ -17,19 +17,17 @@ import net.minecraft.item.ItemStack
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
-
-class DriverOreDictExportBus : SidedBlock {
+open class DriverOreDictExportBus : SidedBlock {
     override fun worksWith(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): Boolean {
         return getExportBus(world, x, y, z, side) != null
     }
 
-    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment {
+    override fun createEnvironment(world: World, x: Int, y: Int, z: Int, side: ForgeDirection): ManagedEnvironment? {
         val tile = world.getTileEntity(x, y, z)
         return if (tile !is IPartHost) null else Environment(
                 tile as IPartHost)
     }
-
-    class Environment internal constructor(host: IPartHost) : ManagedEnvironment(), NamedBlock {
+open class Environment internal constructor(host: IPartHost) : ManagedEnvironment(), NamedBlock {
         protected val tile: TileEntity
         protected val host: IPartHost
         @Callback(
@@ -70,7 +68,7 @@ class DriverOreDictExportBus : SidedBlock {
     }
 
     internal class Provider : EnvironmentProvider {
-        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment> {
+        override fun getEnvironment(stack: ItemStack): Class<out li.cil.oc.api.network.Environment>? {
             return if (stack.item === ItemEnum.PARTITEM.item && stack.itemDamage == PartEnum.OREDICTEXPORTBUS.ordinal) Environment::class.java else null
         }
     }

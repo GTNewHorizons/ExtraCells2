@@ -17,13 +17,11 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.fluids.Fluid
 import org.lwjgl.opengl.GL11
-
-class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContainer(
+open class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContainer(
         ContainerBusFluidIO(_terminal, _player)), WidgetFluidSlot.IConfigurable, IFluidSlotGui {
     private val part: PartFluidIO
     private val player: EntityPlayer
     override var configState: Byte = 0
-        private set
     private var redstoneControlled = false
     private val hasNetworkTool: Boolean
     public override fun actionPerformed(button: GuiButton) {
@@ -53,8 +51,8 @@ class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContai
         super.drawGuiContainerForegroundLayer(mouseX, mouseY)
         var overlayRendered = false
         for (i in 0..8) {
-            fluidSlotList[i].drawWidget()
-            if (!overlayRendered && fluidSlotList[i].canRender()) overlayRendered = renderOverlay(
+            fluidSlotList[i]?.drawWidget()
+            if (!overlayRendered && fluidSlotList[i]?.canRender() == true) overlayRendered = renderOverlay(
                     fluidSlotList[i], mouseX, mouseY)
         }
         for (button in buttonList) {
@@ -95,11 +93,13 @@ class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContai
                         AEApi.instance().definitions().items().networkTool().maybeStack(1).get())) return
         super.mouseClicked(mouseX, mouseY, mouseBtn)
         for (fluidSlot in fluidSlotList) {
+            if (fluidSlot == null)
+                continue
             if (isPointInRegion(fluidSlot.posX, fluidSlot.posY, 18, 18, mouseX, mouseY)) {
 //				if((part instanceof PartGasImport || part instanceof PartGasExport) && Integration.Mods.MEKANISMGAS.isEnabled())
 //					fluidSlot.mouseClickedGas(this.player.inventory.getItemStack());
 //				else
-                fluidSlot!!.mouseClicked(player.inventory.itemStack)
+                fluidSlot.mouseClicked(player.inventory.itemStack)
                 break
             }
         }
@@ -117,8 +117,10 @@ class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContai
         }
     }
 
-    fun renderOverlay(fluidSlot: WidgetFluidSlot, mouseX: Int,
-                      mouseY: Int): Boolean {
+    private fun renderOverlay(fluidSlot: WidgetFluidSlot?, mouseX: Int,
+                              mouseY: Int): Boolean {
+        if (fluidSlot == null)
+            return false
         if (isPointInRegion(fluidSlot.posX, fluidSlot.posY, 18, 18, mouseX, mouseY)) {
             GL11.glDisable(GL11.GL_LIGHTING)
             GL11.glDisable(GL11.GL_DEPTH_TEST)
@@ -155,7 +157,7 @@ class GuiBusFluidIO(_terminal: PartFluidIO, _player: EntityPlayer) : ECGuiContai
     override fun updateFluids(fluidList: List<Fluid?>?) {
         var i = 0
         while (i < fluidSlotList.size && i < fluidList!!.size) {
-            fluidSlotList[i].fluid = fluidList[i]
+            fluidSlotList[i]?.fluid = fluidList[i]
             i++
         }
     }

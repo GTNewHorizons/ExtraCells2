@@ -1,15 +1,13 @@
 package extracells.item
 
+//import extracells.api.IWirelessGasTermHandler
 import appeng.api.AEApi
 import appeng.api.features.IWirelessTermHandler
-import appeng.api.util.IConfigManager
 import extracells.api.ECApi
 import extracells.api.IWirelessFluidTermHandler
-import extracells.api.IWirelessGasTermHandler
 import extracells.integration.Integration
 import extracells.integration.WirelessCrafting.WirelessCrafting
 import extracells.integration.thaumaticenergistics.ThaumaticEnergistics
-import extracells.wireless.ConfigManager
 import net.minecraft.client.renderer.texture.IIconRegister
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.entity.player.EntityPlayer
@@ -21,25 +19,13 @@ import net.minecraft.util.StatCollector
 import net.minecraft.world.World
 import java.util.*
 
-object ItemWirelessTerminalUniversal : WirelessTermBase(), EssentiaTerminal, IWirelessFluidTermHandler, IWirelessGasTermHandler, IWirelessTermHandler, CraftingTerminal {
+object ItemWirelessTerminalUniversal : WirelessTermBase(), EssentiaTerminal, IWirelessFluidTermHandler,/* IWirelessGasTermHandler,*/ IWirelessTermHandler, CraftingTerminal {
     val isTeEnabled: Boolean = Integration.Mods.THAUMATICENERGISTICS.isEnabled
     val isMekEnabled: Boolean = Integration.Mods.MEKANISMGAS.isEnabled
     val isWcEnabled: Boolean = Integration.Mods.WIRELESSCRAFTING.isEnabled
     var icon: IIcon? = null
 
-    override fun isItemNormalWirelessTermToo(its: ItemStack): Boolean = true
-    override fun getConfigManager(itemStack: ItemStack): IConfigManager {
-        val nbt: NBTTagCompound = ensureTagCompound(itemStack)
-        if (!nbt.hasKey("settings")) nbt.setTag("settings", NBTTagCompound())
-        val tag: NBTTagCompound = nbt.getCompoundTag("settings")
-        return ConfigManager(tag)
-    }
-
-    private fun ensureTagCompound(itemStack: ItemStack): NBTTagCompound {
-        if (!itemStack.hasTagCompound())
-            itemStack.tagCompound = NBTTagCompound()
-        return itemStack.tagCompound
-    }
+    override fun isItemNormalWirelessTermToo(its: ItemStack?): Boolean = true
 
     override fun getUnlocalizedName(itemStack: ItemStack): String = super.getUnlocalizedName(itemStack).replace("item.extracells", "extracells.item")
     override fun onItemRightClick(itemStack: ItemStack, world: World, entityPlayer: EntityPlayer): ItemStack {
@@ -62,9 +48,9 @@ object ItemWirelessTerminalUniversal : WirelessTermBase(), EssentiaTerminal, IWi
         if (tag.getByte("type").toInt() == 0)
             AEApi.instance().registries().wireless().openWirelessTerminalGui(itemStack, world, entityPlayer)
         else if (tag.getByte("type").toInt() == 1)
-            ECApi.instance().openWirelessFluidTerminal(entityPlayer, itemStack, world)
+            ECApi.instance()?.openWirelessFluidTerminal(entityPlayer, itemStack, world)
         else if (tag.getByte("type").toInt() == 2)
-            ECApi.instance().openWirelessGasTerminal(entityPlayer, itemStack, world)
+            ECApi.instance()?.openWirelessGasTerminal(entityPlayer, itemStack, world)
         else if (tag.getByte("type").toInt() == 3) {
             if (isTeEnabled)
                 ThaumaticEnergistics.openEssentiaTerminal(entityPlayer, this)

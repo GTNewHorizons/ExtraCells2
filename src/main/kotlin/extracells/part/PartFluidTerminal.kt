@@ -33,12 +33,19 @@ import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
 
-class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver {
-    protected var currentFluid: Fluid? = null
+open class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver {
+    private var _currentFluid: Fluid? = null
+    internal var currentFluid: Fluid?
+        set(_fluid){
+            _currentFluid = _fluid
+        sendCurrentFluid()
+    }
+        get() = _currentFluid
+
     private val containers: MutableList<Any> = ArrayList()
-    protected var inventory: ECPrivateInventory = object : ECPrivateInventory(
+    internal var inventory: ECPrivateInventory = object : ECPrivateInventory(
             "extracells.part.fluid.terminal", 2, 64, this) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             return isItemValidForInputSlot(i, itemStack)
         }
     }
@@ -97,7 +104,7 @@ class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver 
             val filledContainer = FluidUtil.fillStack(container, FluidStack(currentFluid, proposedAmount))
             if (filledContainer!!.getLeft()!! > proposedAmount) return
             if (fillSecondSlot(filledContainer.getRight())) {
-                monitor.extractItems(FluidUtil.createAEFluidStack(currentFluid, filledContainer.getLeft()),
+                monitor.extractItems(FluidUtil.createAEFluidStack(currentFluid, filledContainer.getLeft().toLong()),
                         Actionable.MODULATE, machineSource)
                 decreaseFirstSlot()
             }
@@ -146,15 +153,15 @@ class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver 
     override val powerUsage: Double
         get() = 0.5
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
-        return ContainerFluidTerminal(this, player)
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
+        return player?.let { ContainerFluidTerminal(this, it) }
     }
 
     override fun getTickingRequest(node: IGridNode): TickingRequest {
         return TickingRequest(1, 20, false, false)
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (isActive && (PermissionUtil.hasPermission(player, SecurityPermissions.INJECT,
                         this as IPart) || PermissionUtil.hasPermission(player, SecurityPermissions.EXTRACT,
                         this as IPart))) super.onActivate(player, pos) else false
@@ -246,11 +253,6 @@ class PartFluidTerminal : PartECBase(), IGridTickable, IInventoryUpdateReceiver 
 //			ContainerGasTerminal containerGasTerminal = (ContainerGasTerminal) container;
 //			new PacketFluidTerminal(containerGasTerminal.getPlayer(), this.currentFluid).sendPacketToPlayer(containerGasTerminal.getPlayer());
 //		}
-    }
-
-    fun setCurrentFluid(_currentFluid: Fluid?) {
-        currentFluid = _currentFluid
-        sendCurrentFluid()
     }
 
     override fun tickingRequest(node: IGridNode,

@@ -13,7 +13,7 @@ import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
 
-class ContainerBusFluidIO(private val part: PartFluidIO, player: EntityPlayer) : Container() {
+open class ContainerBusFluidIO(private val part: PartFluidIO, player: EntityPlayer?) : Container() {
     private var guiBusFluidIO: GuiBusFluidIO? = null
     protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {
         for (i in 0..2) {
@@ -38,7 +38,7 @@ class ContainerBusFluidIO(private val part: PartFluidIO, player: EntityPlayer) :
         guiBusFluidIO = _guiBusFluidIO
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         if (guiBusFluidIO != null && guiBusFluidIO!!.shiftClick(
                         getSlot(slotnumber).stack)) return (inventorySlots[slotnumber] as Slot).stack
         var itemstack: ItemStack? = null
@@ -60,24 +60,27 @@ class ContainerBusFluidIO(private val part: PartFluidIO, player: EntityPlayer) :
                 slot.onSlotChanged()
             }
         }
-        return itemstack!!
+        return itemstack
     }
 
     init {
-        for (i in 0..3) addSlotToContainer(SlotRespective(part.upgradeInventory, i, 187, i * 18 + 8))
-        bindPlayerInventory(player.inventory)
-        for (i in 0 until player.inventory.sizeInventory) {
-            val stack = player.inventory.getStackInSlot(i)
-            if (stack != null && AEApi.instance().definitions().items().networkTool().isSameAs(stack)) {
-                val coord = part.host.location
-                val guiItem = stack.item as IGuiItem
-                val networkTool = guiItem.getGuiObject(stack, coord.world, coord.x, coord.y, coord.z) as INetworkTool
-                for (j in 0..2) {
-                    for (k in 0..2) {
-                        addSlotToContainer(SlotNetworkTool(networkTool, j + k * 3, 187 + k * 18, j * 18 + 102))
+        for (i in 0..3)
+            addSlotToContainer(SlotRespective(part.upgradeInventory, i, 187, i * 18 + 8))
+        if (player != null) {
+            bindPlayerInventory(player.inventory)
+            for (i in 0 until player.inventory.sizeInventory) {
+                val stack = player.inventory.getStackInSlot(i)
+                if (stack != null && AEApi.instance().definitions().items().networkTool().isSameAs(stack)) {
+                    val coord = part.host?.location?: continue
+                    val guiItem = stack.item as IGuiItem
+                    val networkTool = guiItem.getGuiObject(stack, coord.world, coord.x, coord.y, coord.z) as INetworkTool
+                    for (j in 0..2) {
+                        for (k in 0..2) {
+                            addSlotToContainer(SlotNetworkTool(networkTool, j + k * 3, 187 + k * 18, j * 18 + 102))
+                        }
                     }
+                    break
                 }
-                return
             }
         }
     }

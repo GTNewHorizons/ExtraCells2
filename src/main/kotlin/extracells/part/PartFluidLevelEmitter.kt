@@ -38,8 +38,7 @@ import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.FluidStack
 import java.io.IOException
 import java.util.*
-
-class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrBlock {
+open class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrBlock {
     private var fluid: Fluid? = null
     private var mode = RedstoneMode.HIGH_SIGNAL
     private var watcher: IStackWatcher? = null
@@ -65,12 +64,12 @@ class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrB
     override val powerUsage: Double
         get() = 1.0
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
         return ContainerFluidEmitter(this, player)
     }
 
     private val isPowering: Boolean
-        private get() = when (mode) {
+        get() = when (mode) {
             RedstoneMode.LOW_SIGNAL -> wantedAmount >= currentAmount
             RedstoneMode.HIGH_SIGNAL -> wantedAmount < currentAmount
             else -> false
@@ -93,7 +92,7 @@ class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrB
                 _tile.zCoord + _side.offsetZ, Blocks.air)
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)
@@ -107,7 +106,7 @@ class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrB
             val node = gridNode
             if (node != null) {
                 isActive = node.isActive
-                host.markForUpdate()
+                host?.markForUpdate()
                 notifyTargetBlock(hostTile, side)
             }
         }
@@ -136,7 +135,7 @@ class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrB
     override fun readFromStream(data: ByteBuf): Boolean {
         super.readFromStream(data)
         clientRedstoneOutput = data.readBoolean()
-        if (host != null) host.markForUpdate()
+        host?.markForUpdate()
         return true
     }
 
@@ -207,9 +206,9 @@ class PartFluidLevelEmitter : PartECBase(), IStackWatcherHost, IFluidSlotPartOrB
     }
 
     fun toggleMode(player: EntityPlayer?) {
-        when (mode) {
-            RedstoneMode.LOW_SIGNAL -> mode = RedstoneMode.HIGH_SIGNAL
-            else -> mode = RedstoneMode.LOW_SIGNAL
+        mode = when (mode) {
+            RedstoneMode.LOW_SIGNAL -> RedstoneMode.HIGH_SIGNAL
+            else -> RedstoneMode.LOW_SIGNAL
         }
         val h = host
         h?.markForUpdate()

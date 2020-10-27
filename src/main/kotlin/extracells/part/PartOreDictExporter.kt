@@ -36,9 +36,15 @@ import java.util.*
 import java.util.function.Predicate
 import java.util.regex.Pattern
 import java.util.stream.IntStream
-
-class PartOreDictExporter : PartECBase(), IGridTickable {
-    private var filter: String? = ""
+open class PartOreDictExporter : PartECBase(), IGridTickable {
+    private var _filter : String = ""
+    internal var filter : String
+    get() = _filter
+    set(value) {
+        _filter = value
+        updateFilter()
+        saveData()
+    }
     // disabled
     // private Predicate<ItemStack> filterPredicate = null;
     /**
@@ -49,38 +55,29 @@ class PartOreDictExporter : PartECBase(), IGridTickable {
         return 5
     }
 
-    fun getFilter(): String? {
-        return filter
-    }
-
-    fun setFilter(filter: String?) {
-        this.filter = filter
-        updateFilter()
-        saveData()
-    }
-
     /**
      * Call when the filter string has changed to parse and recompile the filter.
      */
     private fun updateFilter() {
-        if (!filter!!.trim { it <= ' ' }.isEmpty()) {
+        if (filter.trim { it <= ' ' }.isNotEmpty()) {
             //ArrayList<String> matchingNames = new ArrayList<>();
             var matcher: Predicate<ItemStack?>? = null
-            val filters = filter!!.split("[&|]".toRegex()).toTypedArray()
+            val filters = filter.split("[&|]".toRegex()).toTypedArray()
             var lastFilter: String? = null
-            for (filter in filters) {
-                filter = filter.trim { it <= ' ' }
+            for (filter1 in filters) {
+                var filter = filter1.trim { it <= ' ' }
                 val negated = filter.startsWith("!")
-                if (negated) filter = filter.substring(1)
+                if (negated)
+                    filter = filter.substring(1)
                 var test = filterToItemStackPredicate(filter)
                 if (negated) test = test.negate()
                 if (matcher == null) {
                     matcher = test
                     lastFilter = filter
                 } else {
-                    val endLast = this.filter!!.indexOf(lastFilter!!) + lastFilter.length
-                    val startThis = this.filter!!.indexOf(filter)
-                    val or = this.filter!!.substring(endLast, startThis).contains("|")
+                    val endLast = this.filter.indexOf(lastFilter!!) + lastFilter.length
+                    val startThis = this.filter.indexOf(filter)
+                    val or = this.filter.substring(endLast, startThis).contains("|")
                     matcher = if (or) {
                         matcher.or(test)
                     } else {
@@ -95,7 +92,7 @@ class PartOreDictExporter : PartECBase(), IGridTickable {
             }
 
             //Mod name and path evaluation can only be done during tick, can't precompile whitelist for this.
-            if (!filter!!.contains("@") && !filter!!.contains("~")) {
+            if (!filter.contains("@") && !filter.contains("~")) {
                 //Precompiled whitelist of oredict itemstacks.
                 val filtered = ArrayList<ItemStack>()
                 for (name in OreDictionary.getOreNames()) for (s in OreDictionary.getOres(name)) if (matcher.test(s)) {
@@ -306,8 +303,8 @@ class PartOreDictExporter : PartECBase(), IGridTickable {
     override val powerUsage: Double
         get() = 10.0
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
-        return ContainerOreDictExport(player, this)
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
+        return player?.let { ContainerOreDictExport(it, this) }
     }
 
     private val storageGrid: IStorageGrid?
@@ -345,7 +342,7 @@ class PartOreDictExporter : PartECBase(), IGridTickable {
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
         }
     }
@@ -417,7 +414,7 @@ class PartOreDictExporter : PartECBase(), IGridTickable {
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
         }
     }

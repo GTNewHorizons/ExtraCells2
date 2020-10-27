@@ -29,22 +29,21 @@ import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 
 object GuiHandler : IGuiHandler {
-    fun getContainer(ID: Int, player: EntityPlayer?, args: Array<Any>): Any? {
+    fun getContainer(ID: Int, player: EntityPlayer?, args: Array<Any?>): Any? {
         if (ID > 6 || ID < 0)
             return null
-        val fluidInventory: IMEMonitor<IAEFluidStack> = args[0] as IMEMonitor<IAEFluidStack>
+        val fluidInventory: IMEMonitor<IAEFluidStack?>? = args[0] as? IMEMonitor<IAEFluidStack?>
         return when (ID) {
             0 -> {
-
-                ContainerFluidStorage(fluidInventory, player)
+                player?.let {ContainerFluidStorage(fluidInventory, it)}
             }
             1 -> {
                 val handler: IWirelessFluidTermHandler = args[1] as IWirelessFluidTermHandler
-                ContainerFluidStorage(fluidInventory, player, handler)
+                player?.let {ContainerFluidStorage(fluidInventory, it,handler)}
             }
             3 -> {
                 val storageCell: IPortableFluidStorageCell = args[1] as IPortableFluidStorageCell
-                ContainerFluidStorage(fluidInventory, player, storageCell)
+                player?.let {ContainerFluidStorage(fluidInventory, it,storageCell)}
             }
            // 4 -> {
            //   //  ContainerGasStorage(fluidInventory, player)
@@ -89,33 +88,30 @@ object GuiHandler : IGuiHandler {
         }
     }
 
-    @JvmStatic
     fun getGuiId(guiId: Int): Int = guiId + 6
-    @JvmStatic
-    fun getGuiId(part: PartECBase): Int = part.side.ordinal
-    private fun getPartContainer(side: ForgeDirection, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any = ((world?.getTileEntity(x, y, z) as IPartHost).getPart(side) as PartECBase).getServerGuiElement(player)
-    private fun getPartGui(side: ForgeDirection, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any = ((world?.getTileEntity(x, y, z) as IPartHost).getPart(side) as PartECBase).getClientGuiElement(player)
-    @JvmStatic
-    fun launchGui(ID: Int, player: EntityPlayer?, args: Array<Any>) {
+    fun getGuiId(part: PartECBase): Int? = part.side?.ordinal
+    private fun getPartContainer(side: ForgeDirection, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any? = player?.let { ((world?.getTileEntity(x, y, z) as IPartHost).getPart(side) as PartECBase).getServerGuiElement(it) }
+    private fun getPartGui(side: ForgeDirection, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any? = player?.let { ((world?.getTileEntity(x, y, z) as IPartHost).getPart(side) as PartECBase).getClientGuiElement(it) }
+    fun launchGui(ID: Int, player: EntityPlayer?, args: Array<Any?>) {
         temp = args
         player?.openGui(Extracells, ID, null, 0, 0, 0)
     }
-    @JvmStatic
     fun launchGui(ID: Int, player: EntityPlayer, world: World, x: Int, y: Int, z: Int): Any = player.openGui(Extracells, ID, world, x, y, z)
-    var temp: Array<Any> = emptyArray()
+    var temp: Array<Any?> = emptyArray()
     override fun getClientGuiElement(ID: Int, player: EntityPlayer?, world: World?, x: Int, y: Int, z: Int): Any? {
         val gui: Any? = getGuiBlockElement(player, world, x, y, z)
         if (gui != null)
             return gui
         val side: ForgeDirection = ForgeDirection.getOrientation(ID)
         if (world?.getBlock(x, y, z) == BlockEnum.FLUIDCRAFTER.block) {
-            val tileEntity: TileEntity? = world?.getTileEntity(x, y, z)
+            val tileEntity: TileEntity? = world.getTileEntity(x, y, z)
             if (tileEntity == null || tileEntity !is TileEntityFluidCrafter) return null
             return GuiFluidCrafter(player?.inventory, tileEntity.getInventory())
         }
         if (world != null && world.getBlock(x, y, z) == BlockEnum.ECBASEBLOCK.block) {
             val tileEntity: TileEntity = world.getTileEntity(x, y, z) ?: return null
-            if (tileEntity is TileEntityFluidInterface) return GuiFluidInterface(player, tileEntity as IFluidInterface) else if (tileEntity is TileEntityFluidFiller) return GuiFluidFiller(player, tileEntity)
+            if (tileEntity is TileEntityFluidInterface)
+                return player?.let { GuiFluidInterface(it, tileEntity as IFluidInterface) } else if (tileEntity is TileEntityFluidFiller) return player?.let { GuiFluidFiller(it, tileEntity) }
             return null
         }
         if (world != null && side != ForgeDirection.UNKNOWN) return getPartGui(side, player, world, x, y, z)

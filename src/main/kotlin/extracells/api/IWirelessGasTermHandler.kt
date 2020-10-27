@@ -1,3 +1,0 @@
-package extracells.api
-
-interface IWirelessGasTermHandler : IWirelessGasFluidTermHandler

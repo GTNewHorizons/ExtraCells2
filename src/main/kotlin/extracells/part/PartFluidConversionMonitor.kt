@@ -16,11 +16,15 @@ import net.minecraft.util.Vec3
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.IFluidContainerItem
 
-class PartFluidConversionMonitor : PartFluidStorageMonitor() {
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
-        if (super.onActivate(player, pos)) return true
-        if (player == null || player.worldObj == null) return true
-        if (player.worldObj.isRemote) return true
+open class PartFluidConversionMonitor : PartFluidStorageMonitor() {
+
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
+        if (super.onActivate(player, pos))
+            return true
+        if (player?.worldObj == null)
+            return true
+        if (player.worldObj.isRemote)
+            return true
         val s = player.currentEquippedItem
         val mon = fluidStorage
         if (locked && s != null && mon != null) {
@@ -29,7 +33,7 @@ class PartFluidConversionMonitor : PartFluidStorageMonitor() {
             if (FluidUtil.isFilled(s2)) {
                 val f = FluidUtil.getFluidFromContainer(s2) ?: return true
                 val fl = FluidUtil.createAEFluidStack(f)
-                var not = mon.injectItems(fl!!.copy(),
+                var not = mon.injectItems(fl.copy(),
                         Actionable.SIMULATE, MachineSource(this))
                 if (mon.canAccept(fl)
                         && (not == null || not.stackSize == 0L)) {
@@ -43,10 +47,12 @@ class PartFluidConversionMonitor : PartFluidStorageMonitor() {
                             mon.injectItems(fl, Actionable.MODULATE, MachineSource(this))
                             val empty = empty1.right
                             if (empty != null) {
-                                val tile = host.tile
+                                val tile = host?.tile
                                 val side = side
-                                dropItems(tile.worldObj, tile.xCoord + side!!.offsetX, tile.yCoord + side.offsetY,
-                                        tile.zCoord + side.offsetZ, empty)
+                                tile?.also {
+                                    dropItems(tile.worldObj, tile.xCoord + side!!.offsetX, tile.yCoord + side.offsetY,
+                                            tile.zCoord + side.offsetZ, empty)
+                                }
                             }
                             val s3 = s.copy()
                             s3.stackSize--
@@ -79,11 +85,11 @@ class PartFluidConversionMonitor : PartFluidStorageMonitor() {
                     }
                     val empty = empty1.right
                     if (empty != null) {
-                        dropItems(host.tile.worldObj, host
+                        side?.also { side -> host?.also { dropItems(it.tile.worldObj, it
                                 .tile.xCoord + side.offsetX,
-                                host.tile.yCoord + side.offsetY,
-                                host.tile.zCoord + side.offsetZ,
-                                empty)
+                                it.tile.yCoord + side.offsetY,
+                                it.tile.zCoord + side.offsetZ,
+                                empty) } }
                     }
                     val s3 = s.copy()
                     s3.stackSize = s3.stackSize - 1

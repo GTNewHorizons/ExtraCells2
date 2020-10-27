@@ -8,8 +8,7 @@ import net.minecraft.client.gui.inventory.GuiContainer
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
-
-class GuiVibrationChamberFluid(private val player: EntityPlayer?, private val tileEntity: TileEntityVibrationChamberFluid) : GuiContainer(
+open class GuiVibrationChamberFluid(private val player: EntityPlayer?, private val tileEntity: TileEntityVibrationChamberFluid) : GuiContainer(
         ContainerVibrationChamberFluid(
                 player!!.inventory, tileEntity)) {
     private val guiTexture = ResourceLocation("extracells",

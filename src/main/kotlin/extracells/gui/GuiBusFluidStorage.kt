@@ -18,13 +18,11 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.fluids.Fluid
 import org.lwjgl.opengl.GL11
-
-class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlayer) : ECGuiContainer(
+open class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlayer) : ECGuiContainer(
         ContainerBusFluidStorage(
                 part, _player)), WidgetFluidSlot.IConfigurable, IFluidSlotGui {
     private val player: EntityPlayer
     override var configState: Byte = 0
-        private set
     private val hasNetworkTool: Boolean
     public override fun actionPerformed(button: GuiButton) {
         super.actionPerformed(button)
@@ -63,8 +61,10 @@ class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlay
         super.drawGuiContainerForegroundLayer(mouseX, mouseY)
         var overlayRendered = false
         for (i in 0..53) {
-            fluidSlotList[i].drawWidget()
-            if (!overlayRendered && fluidSlotList[i].canRender()) overlayRendered = GuiUtil.renderOverlay(
+            if (fluidSlotList[i] == null)
+                continue
+            fluidSlotList[i]!!.drawWidget()
+            if (!overlayRendered && fluidSlotList[i]!!.canRender()) overlayRendered = GuiUtil.renderOverlay(
                     zLevel, guiLeft, guiTop, fluidSlotList[i], mouseX, mouseY)
         }
         for (button in buttonList) {
@@ -100,12 +100,14 @@ class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlay
                         slot.stack)) return
         super.mouseClicked(mouseX, mouseY, mouseBtn)
         for (fluidSlot in fluidSlotList) {
+            if (fluidSlot == null)
+                continue
             if (GuiUtil.isPointInRegion(guiLeft.toFloat(), guiTop, fluidSlot.posX, fluidSlot.posY, 18, 18, mouseX,
                             mouseY)) {
 //				if(part instanceof PartGasStorage && Integration.Mods.MEKANISMGAS.isEnabled())
 //					fluidSlot.mouseClickedGas(this.player.inventory.getItemStack());
 //				else
-                fluidSlot!!.mouseClicked(player.inventory.itemStack)
+                fluidSlot.mouseClicked(player.inventory.itemStack)
                 break
             }
         }
@@ -127,11 +129,13 @@ class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlay
         val containerFluid = FluidUtil.getFluidFromContainer(itemStack)
         val fluid = containerFluid?.getFluid()
         for (fluidSlot in fluidSlotList) {
+            if (fluidSlot == null)
+                continue
             if (fluidSlot.fluid == null || fluid != null && fluidSlot.fluid === fluid) {
 //				if(part instanceof PartGasStorage && Integration.Mods.MEKANISMGAS.isEnabled())
 //					fluidSlot.mouseClickedGas(itemStack);
 //				else
-                fluidSlot!!.mouseClicked(itemStack)
+                fluidSlot.mouseClicked(itemStack)
                 return
             }
         }
@@ -144,7 +148,7 @@ class GuiBusFluidStorage(private val part: PartFluidStorage, _player: EntityPlay
     override fun updateFluids(fluidList: List<Fluid?>?) {
         var i = 0
         while (i < fluidSlotList.size && i < fluidList!!.size) {
-            fluidSlotList[i].fluid = fluidList[i]
+            fluidSlotList[i]?.fluid = fluidList[i]
             i++
         }
     }

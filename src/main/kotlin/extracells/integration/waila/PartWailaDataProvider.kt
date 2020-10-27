@@ -13,8 +13,7 @@ import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.MovingObjectPosition
 import net.minecraft.util.Vec3
 import net.minecraft.world.World
-
-class PartWailaDataProvider : IWailaDataProvider {
+open class PartWailaDataProvider : IWailaDataProvider {
     override fun getNBTData(player: EntityPlayerMP, te: TileEntity,
                             tag: NBTTagCompound, world: World, x: Int, y: Int, z: Int): NBTTagCompound {
         val mop = retraceBlock(world, player, x, y, z)
@@ -46,8 +45,7 @@ class PartWailaDataProvider : IWailaDataProvider {
         val tile = accessor.tileEntity
         val part = getPart(tile, accessor.position)
         if (part != null && part is PartECBase) {
-            val tag: NBTTagCompound
-            tag = if (accessor.nbtData != null
+            val tag: NBTTagCompound = if (accessor.nbtData != null
                     && accessor.nbtData.hasKey("partEC")) accessor.nbtData.getCompoundTag(
                     "partEC") else NBTTagCompound()
             return part.getWailaBodey(tag, currenttip)
@@ -73,7 +71,7 @@ class PartWailaDataProvider : IWailaDataProvider {
     }
 
     private fun retraceBlock(world: World,
-                             player: EntityPlayerMP, x: Int, y: Int, z: Int): MovingObjectPosition {
+                             player: EntityPlayerMP, x: Int, y: Int, z: Int): MovingObjectPosition? {
         val block = world.getBlock(x, y, z)
         val head = Vec3.createVectorHelper(player.posX, player.posY,
                 player.posZ)

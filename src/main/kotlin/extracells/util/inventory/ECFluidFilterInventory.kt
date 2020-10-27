@@ -6,10 +6,9 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidRegistry
-
-class ECFluidFilterInventory(_customName: String, _size: Int,
-                             private val cellItem: ItemStack) : ECPrivateInventory(_customName, _size, 1) {
-    override fun isItemValidForSlot(i: Int, itemstack: ItemStack): Boolean {
+open class ECFluidFilterInventory(_customName: String, _size: Int,
+                             private val cellItem: ItemStack?) : ECPrivateInventory(_customName, _size, 1) {
+    override fun isItemValidForSlot(i: Int, itemstack: ItemStack?): Boolean {
         if (itemstack == null) return false
         if (itemstack.item === ItemEnum.FLUIDITEM.item) {
             val fluidID = itemstack.itemDamage
@@ -30,12 +29,11 @@ class ECFluidFilterInventory(_customName: String, _size: Int,
     }
 
     override fun markDirty() {
-        val tag: NBTTagCompound
-        tag = if (cellItem.hasTagCompound()) cellItem.tagCompound else NBTTagCompound()
+        val tag: NBTTagCompound = if (cellItem?.hasTagCompound() == true) cellItem.tagCompound else NBTTagCompound()
         tag.setTag("filter", writeToNBT())
     }
 
-    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack) {
+    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack?) {
         if (itemstack == null) {
             super.setInventorySlotContents(slotId, null)
             return
@@ -62,7 +60,7 @@ class ECFluidFilterInventory(_customName: String, _size: Int,
     }
 
     init {
-        if (cellItem.hasTagCompound()) if (cellItem.tagCompound.hasKey("filter")) readFromNBT(
+        if (cellItem?.hasTagCompound() == true) if (cellItem.tagCompound?.hasKey("filter") == true) readFromNBT(
                 cellItem.tagCompound.getTagList("filter",
                         10))
     }

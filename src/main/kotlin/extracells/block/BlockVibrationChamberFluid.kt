@@ -18,8 +18,7 @@ import net.minecraft.util.MathHelper
 import net.minecraft.world.IBlockAccess
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
-
-class BlockVibrationChamberFluid : BlockEC(Material.iron, 2.0f, 10.0f), TGuiBlock {
+open class BlockVibrationChamberFluid : BlockEC(Material.iron, 2.0f, 10.0f), TGuiBlock {
     private val icons = arrayOfNulls<IIcon>(3)
     override fun onBlockActivated(world: World, x: Int, y: Int, z: Int, player: EntityPlayer, side: Int, p_149727_7_: Float, p_149727_8_: Float, p_149727_9_: Float): Boolean {
         if (world.isRemote) return false
@@ -39,7 +38,7 @@ class BlockVibrationChamberFluid : BlockEC(Material.iron, 2.0f, 10.0f), TGuiBloc
     }
 
     @SideOnly(Side.CLIENT)
-    override fun getIcon(world: IBlockAccess, x: Int, y: Int, z: Int, side: Int): IIcon {
+    override fun getIcon(world: IBlockAccess, x: Int, y: Int, z: Int, side: Int): IIcon? {
         return if (side == world.getBlockMetadata(x, y, z)) {
             val tile = world.getTileEntity(x, y, z) as? TileEntityVibrationChamberFluid ?: return icons[0]!!
             val chamberFluid = tile
@@ -48,7 +47,7 @@ class BlockVibrationChamberFluid : BlockEC(Material.iron, 2.0f, 10.0f), TGuiBloc
     }
 
     @SideOnly(Side.CLIENT)
-    override fun getIcon(side: Int, meta: Int): IIcon {
+    override fun getIcon(side: Int, meta: Int): IIcon? {
         return when (side) {
             4 -> icons[1]!!
             else -> icons[0]!!
@@ -68,7 +67,7 @@ class BlockVibrationChamberFluid : BlockEC(Material.iron, 2.0f, 10.0f), TGuiBloc
                 player!!.inventory, tileEntity) else null
     }
 
-    override fun onBlockPlacedBy(world: World, x: Int, y: Int, z: Int, entity: EntityLivingBase, stack: ItemStack) {
+    override fun onBlockPlacedBy(world: World?, x: Int, y: Int, z: Int, entity: EntityLivingBase?, stack: ItemStack?) {
         super.onBlockPlacedBy(world, x, y, z, entity, stack)
         if (world == null) return
         if (entity != null) {

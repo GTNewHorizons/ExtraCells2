@@ -8,24 +8,25 @@ import net.minecraft.nbt.NBTTagList
 
 open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _size: Int, _stackLimit: Int,
                                                         _receiver: IInventoryUpdateReceiver? = null) : IInventory {
-    var slots: Array<ItemStack>
-    var customName: String
+    var slots: Array<ItemStack?> = arrayOfNulls(_size)
+    var customName: String = _customName
     private val stackLimit: Int
     private val receiver: IInventoryUpdateReceiver?
     override fun closeInventory() {
         // NOBODY needs this!
     }
 
-    override fun decrStackSize(slotId: Int, amount: Int): ItemStack {
-        if (slots[slotId] == null) return null
+    override fun decrStackSize(slotId: Int, amount: Int): ItemStack? {
+        if (slots[slotId] == null)
+            return null
         val itemstack: ItemStack
-        return if (slots[slotId].stackSize <= amount) {
-            itemstack = slots[slotId]
+        return if (slots[slotId]!!.stackSize <= amount) {
+            itemstack = slots[slotId]!!
             slots[slotId] = null
             markDirty()
             itemstack
         } else {
-            val temp = slots[slotId]
+            val temp = slots[slotId]!!
             itemstack = temp.splitStack(amount)
             slots[slotId] = temp
             if (temp.stackSize == 0) {
@@ -50,11 +51,11 @@ open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _si
         return slots.size
     }
 
-    override fun getStackInSlot(i: Int): ItemStack {
+    override fun getStackInSlot(i: Int): ItemStack? {
         return slots[i]
     }
 
-    override fun getStackInSlotOnClosing(slotId: Int): ItemStack {
+    override fun getStackInSlotOnClosing(slotId: Int): ItemStack? {
         return slots[slotId]
     }
 
@@ -82,16 +83,16 @@ open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _si
         return added
     }
 
-    override fun isItemValidForSlot(i: Int, itemstack: ItemStack): Boolean {
+    override fun isItemValidForSlot(i: Int, itemstack: ItemStack?): Boolean {
         return true
     }
 
-    override fun isUseableByPlayer(entityplayer: EntityPlayer): Boolean {
+    override fun isUseableByPlayer(entityplayer: EntityPlayer?): Boolean {
         return true
     }
 
     override fun markDirty() {
-        if (receiver != null) receiver.onInventoryChanged()
+        receiver?.onInventoryChanged()
     }
 
     override fun openInventory() {
@@ -107,14 +108,14 @@ open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _si
         }
         for (i in 0 until nbtList.tagCount()) {
             val nbttagcompound = nbtList.getCompoundTagAt(i)
-            val j: Int = nbttagcompound.getByte("Slot") and 255
+            val j: Int = nbttagcompound.getByte("Slot").toInt() and 255
             if (j >= 0 && j < slots.size) {
                 slots[j] = ItemStack.loadItemStackFromNBT(nbttagcompound)
             }
         }
     }
 
-    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack) {
+    override fun setInventorySlotContents(slotId: Int, itemstack: ItemStack?) {
         if (itemstack != null && itemstack.stackSize > inventoryStackLimit) {
             itemstack.stackSize = inventoryStackLimit
         }
@@ -128,7 +129,7 @@ open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _si
             if (slots[i] != null) {
                 val nbttagcompound = NBTTagCompound()
                 nbttagcompound.setByte("Slot", i.toByte())
-                slots[i].writeToNBT(nbttagcompound)
+                slots[i]!!.writeToNBT(nbttagcompound)
                 nbtList.appendTag(nbttagcompound)
             }
         }
@@ -136,8 +137,6 @@ open class ECPrivateInventory @JvmOverloads constructor(_customName: String, _si
     }
 
     init {
-        slots = arrayOfNulls(_size)
-        customName = _customName
         stackLimit = _stackLimit
         receiver = _receiver
     }

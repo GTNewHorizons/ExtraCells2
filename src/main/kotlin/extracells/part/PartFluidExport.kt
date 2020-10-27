@@ -19,8 +19,7 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
-
-class PartFluidExport : PartFluidIO() {
+open class PartFluidExport : PartFluidIO() {
     override fun cableConnectionRenderTo(): Int {
         return 5
     }
@@ -36,7 +35,7 @@ class PartFluidExport : PartFluidIO() {
                 if (i.toInt() != 4) {
                     filter.add(filterFluids[i.toInt()]!!)
                 }
-                (i += 2).toByte()
+                i = i.plus(2).toByte()
             }
         }
         if (filterSize >= 2) {
@@ -45,23 +44,21 @@ class PartFluidExport : PartFluidIO() {
                 if (i.toInt() != 4) {
                     filter.add(filterFluids[i.toInt()]!!)
                 }
-                (i += 2).toByte()
+                i = i.plus(2).toByte()
             }
         }
         for (fluid in filter) {
-            if (fluid != null) {
-                var stack = extractFluid(
-                        AEApi.instance().storage().createFluidStack(FluidStack(fluid, rate * TicksSinceLastCall)),
-                        Actionable.SIMULATE)
-                if (stack == null || stack.stackSize <= 0) continue
-                val filled = facingTank.fill(side.opposite, stack.fluidStack, false)
-                if (filled > 0) {
-                    stack.stackSize = filled.toLong()
-                    stack = extractFluid(stack, Actionable.MODULATE)
-                    if (stack != null && stack.stackSize > 0) {
-                        facingTank.fill(side.opposite, stack.fluidStack, true)
-                        return true
-                    }
+            var stack = extractFluid(
+                    AEApi.instance().storage().createFluidStack(FluidStack(fluid, rate * TicksSinceLastCall)),
+                    Actionable.SIMULATE)
+            if (stack == null || stack.stackSize <= 0) continue
+            val filled = facingTank.fill(side?.opposite, stack.fluidStack, false)
+            if (filled > 0) {
+                stack.stackSize = filled.toLong()
+                stack = extractFluid(stack, Actionable.MODULATE)
+                if (stack != null && stack.stackSize > 0) {
+                    facingTank.fill(side?.opposite, stack.fluidStack, true)
+                    return true
                 }
             }
         }
@@ -79,7 +76,7 @@ class PartFluidExport : PartFluidIO() {
     override val powerUsage: Double
         get() = 1.0
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)
@@ -125,7 +122,7 @@ class PartFluidExport : PartFluidIO() {
                 TextureManager.EXPORT_FRONT.textures[0], side, side)
         rh.setBounds(6f, 6f, 15f, 10f, 10f, 16f)
         rh.renderBlock(x, y, z, renderer)
-        ts.setColorOpaque_I(host.color.blackVariant)
+        host?.color?.let { ts.setColorOpaque_I(it.blackVariant) }
         if (isActive) ts.setBrightness(15 shl 20 or 15 shl 4)
         rh.renderFace(x, y, z, TextureManager.EXPORT_FRONT.textures[1],
                 ForgeDirection.SOUTH, renderer)

@@ -12,10 +12,9 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.IIcon
 import net.minecraft.util.StatCollector
 import net.minecraft.world.World
-
-class ItemBlockECBase(block: Block?) : ItemBlock(block) {
+open class ItemBlockECBase(block: Block?) : ItemBlock(block) {
     @SideOnly(Side.CLIENT)
-    override fun getIconFromDamage(damage: Int): IIcon {
+    override fun getIconFromDamage(damage: Int): IIcon? {
         return Block.getBlockFromItem(this).getIcon(0, damage)
     }
 
@@ -33,12 +32,12 @@ class ItemBlockECBase(block: Block?) : ItemBlock(block) {
     }
 
     @SideOnly(Side.CLIENT)
-    override fun getSubItems(item: Item, tab: CreativeTabs, list: MutableList<*>) {
+    override fun getSubItems(item: Item, tab: CreativeTabs, list: MutableList<Any?>) {
         list.add(ItemStack(item))
         list.add(ItemStack(item, 1, 1))
     }
 
-    override fun getUnlocalizedName(stack: ItemStack): String {
+    override fun getUnlocalizedName(stack: ItemStack?): String {
         return if (stack == null) "null" else when (stack.itemDamage) {
             0 -> "extracells.block.fluidinterface"
             1 -> "extracells.block.fluidfiller"

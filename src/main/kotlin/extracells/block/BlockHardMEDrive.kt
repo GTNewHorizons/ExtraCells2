@@ -74,7 +74,7 @@ object BlockHardMEDrive : BlockEC(Material.rock, 2.0F, 1000000.0F), TGuiBlock {
         if (!(tileEntity is TileEntityHardMeDrive)) {
             return
         }
-        val inventory: IInventory = tileEntity.inventory
+        val inventory: IInventory = tileEntity.getInventory()
 
         for (i in 0 until inventory.sizeInventory){
             val item: ItemStack? = inventory.getStackInSlot(i)
@@ -156,11 +156,11 @@ object BlockHardMEDrive : BlockEC(Material.rock, 2.0F, 1000000.0F), TGuiBlock {
         val tile: TileEntity? = world.getTileEntity(x, y, z)
         if (tile != null) {
             if (tile is TileEntityHardMeDrive) {
-                val node: IGridNode = tile.getGridNode(ForgeDirection.UNKNOWN)
+                val node: IGridNode? = tile.getGridNode(ForgeDirection.UNKNOWN)
                 if (entity is EntityPlayer) {
-                    node.playerID = AEApi.instance().registries().players().getID(entity)
+                    node?.playerID = AEApi.instance().registries().players().getID(entity)
                 }
-                node.updateState()
+                node?.updateState()
             }
         }
     }

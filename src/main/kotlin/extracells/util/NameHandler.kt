@@ -5,9 +5,8 @@ import appeng.api.recipes.ResolverResult
 import extracells.registries.BlockEnum
 import extracells.registries.ItemEnum
 import extracells.registries.PartEnum
-
-class NameHandler : ISubItemResolver {
-    override fun resolveItemByName(namespace: String, fullName: String): Any {
+open class NameHandler : ISubItemResolver {
+    override fun resolveItemByName(namespace: String, fullName: String): Any? {
         if (namespace != "extracells") return null
 
         // Fluid Cells
@@ -20,14 +19,14 @@ class NameHandler : ISubItemResolver {
         if (fullName == "fluidCell4096k") return ResolverResult(ItemEnum.FLUIDSTORAGE.internalName, 6)
         if (fullName == "fluidCellPortable") return ResolverResult(ItemEnum.FLUIDSTORAGEPORTABLE.internalName, 0)
 
-        // Gas Cells
-        if (fullName == "gasCell1k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 0)
-        if (fullName == "gasCell4k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 1)
-        if (fullName == "gasCell16k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 2)
-        if (fullName == "gasCell64k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 3)
-        if (fullName == "gasCell256k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 4)
-        if (fullName == "gasCell1024k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 5)
-        if (fullName == "gasCell4096k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 6)
+//        // Gas Cells
+//        if (fullName == "gasCell1k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 0)
+//        if (fullName == "gasCell4k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 1)
+//        if (fullName == "gasCell16k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 2)
+//        if (fullName == "gasCell64k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 3)
+//        if (fullName == "gasCell256k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 4)
+//        if (fullName == "gasCell1024k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 5)
+//        if (fullName == "gasCell4096k") return ResolverResult(ItemEnum.GASSTORAGE.internalName, 6)
         //		if (fullName.equals("gasCellPortable"))
 //			return new ResolverResult(ItemEnum.GASSTORAGEPORTABLE.getInternalName(), 0);
 
@@ -120,7 +119,7 @@ class NameHandler : ISubItemResolver {
         if (fullName == "fluidPattern") return ResolverResult(ItemEnum.FLUIDPATTERN.internalName, 0)
         if (fullName == "fluidCrafter") return ResolverResult(BlockEnum.FLUIDCRAFTER.internalName, 0)
         if (fullName == "wirelessFluidTerminal") return ResolverResult(ItemEnum.FLUIDWIRELESSTERMINAL.internalName, 0)
-        if (fullName == "wirelessGasTerminal") return ResolverResult(ItemEnum.GASWIRELESSTERMINAL.internalName, 0)
+//        if (fullName == "wirelessGasTerminal") return ResolverResult(ItemEnum.GASWIRELESSTERMINAL.internalName, 0)
         if (fullName == "walrus") return ResolverResult(BlockEnum.WALRUS.internalName, 0)
         if (fullName == "interface") return ResolverResult(BlockEnum.ECBASEBLOCK.internalName, 0)
         if (fullName == "fluidFiller") return ResolverResult(BlockEnum.ECBASEBLOCK.internalName, 1)
@@ -130,7 +129,6 @@ class NameHandler : ISubItemResolver {
         if (fullName == "craftingStorage256k") return ResolverResult(BlockEnum.CRAFTINGSTORAGE.internalName, 0)
         if (fullName == "craftingStorage1024k") return ResolverResult(BlockEnum.CRAFTINGSTORAGE.internalName, 1)
         if (fullName == "craftingStorage4096k") return ResolverResult(BlockEnum.CRAFTINGSTORAGE.internalName, 2)
-        return if (fullName == "craftingStorage16384k") ResolverResult(BlockEnum.CRAFTINGSTORAGE.internalName,
-                3) else null
+        return if (fullName == "craftingStorage16384k") ResolverResult(BlockEnum.CRAFTINGSTORAGE.internalName, 3) else null
     }
 }

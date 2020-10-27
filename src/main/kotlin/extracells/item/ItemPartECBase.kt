@@ -17,8 +17,7 @@ import net.minecraft.item.ItemStack
 import net.minecraft.util.MathHelper
 import net.minecraft.world.World
 import org.apache.logging.log4j.Level
-
-class ItemPartECBase : Item(), IPartItem, IItemGroup {
+open class ItemPartECBase : Item(), IPartItem, IItemGroup {
     override fun createPartFromItemStack(itemStack: ItemStack): IPart? {
         return try {
             PartEnum.values()[MathHelper.clamp_int(
@@ -50,18 +49,21 @@ class ItemPartECBase : Item(), IPartItem, IItemGroup {
         return 0
     }
 
-    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<*>) {
+    override fun getSubItems(item: Item, creativeTab: CreativeTabs, itemList: MutableList<Any?>) {
         for (i in PartEnum.values().indices) {
             val part = PartEnum.values()[i]
             if (part.mod == null || part.mod.isEnabled) itemList.add(ItemStack(item, 1, i))
         }
     }
 
-    override fun getUnlocalizedGroupName(otherItems: Set<ItemStack>,
-                                         itemStack: ItemStack): String {
-        return PartEnum.values()[MathHelper.clamp_int(
-                itemStack.itemDamage, 0, PartEnum.values().size - 1)]
-                .groupName
+    override fun getUnlocalizedGroupName(otherItems: Set<ItemStack?>?,
+                                         itemStack: ItemStack?): String? {
+        if (itemStack != null) {
+            return PartEnum.values()[MathHelper.clamp_int(
+                    itemStack.itemDamage, 0, PartEnum.values().size - 1)]
+                    .groupName
+        }
+        return null
     }
 
     override fun getUnlocalizedName(itemStack: ItemStack): String {
@@ -84,8 +86,8 @@ class ItemPartECBase : Item(), IPartItem, IItemGroup {
         AEApi.instance().partHelper().setItemBusRenderer(this)
         for (part in PartEnum.values()) {
             val possibleUpgradesList = part.upgrades
-            for (upgrade in possibleUpgradesList!!.keys) {
-                upgrade!!.registerItem(ItemStack(this, 1, part.ordinal),
+            for (upgrade in possibleUpgradesList.keys) {
+                upgrade.registerItem(ItemStack(this, 1, part.ordinal),
                         possibleUpgradesList[upgrade]!!)
             }
         }

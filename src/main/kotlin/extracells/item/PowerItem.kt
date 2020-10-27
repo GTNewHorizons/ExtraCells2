@@ -75,7 +75,7 @@ abstract class PowerItem : ItemECBase(), IAEItemPowerStorage , IEnergyContainerI
     return this.MAX_POWER
   }
 
-  private fun ensureTagCompound(itemStack: ItemStack): NBTTagCompound {
+  fun ensureTagCompound(itemStack: ItemStack): NBTTagCompound {
     if (!itemStack.hasTagCompound()) itemStack.tagCompound = NBTTagCompound()
     return itemStack.tagCompound
   }

@@ -4,21 +4,21 @@ import appeng.api.AEApi
 import appeng.api.implementations.tiles.IWirelessAccessPoint
 import appeng.api.networking.IGridHost
 import appeng.api.networking.storage.IStorageGrid
-import appeng.api.storage.IMEInventoryHandler
 import appeng.api.storage.IMEMonitor
 import appeng.api.storage.MEMonitorHandler
 import appeng.api.storage.StorageChannel
 import appeng.api.storage.data.IAEFluidStack
-import appeng.api.storage.data.IAEStack
 import extracells.Extracells.VERSION
-import extracells.api.*
+import extracells.api.ExtraCellsApi
+import extracells.api.IExternalGasStorageHandler
+import extracells.api.IPortableFluidStorageCell
+import extracells.api.IWirelessFluidTermHandler
 import extracells.api.definitions.IBlockDefinition
 import extracells.api.definitions.IItemDefinition
 import extracells.api.definitions.IPartDefinition
 import extracells.definitions.BlockDefinition
 import extracells.definitions.ItemDefinition
 import extracells.definitions.PartDefinition
-import extracells.integration.Integration
 import extracells.inventory.HandlerItemStorageFluid
 import extracells.network.GuiHandler.getGuiId
 import extracells.network.GuiHandler.launchGui
@@ -32,7 +32,7 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import java.util.*
 
-class ExtraCellsApiInstance : ExtraCellsApi {
+object ExtraCellsApiInstance : ExtraCellsApi {
     private val blacklistShowClass: MutableList<Class<out Fluid>> = ArrayList()
     private val blacklistShowFluid: MutableList<Fluid> = ArrayList()
     private val blacklistStorageClass: MutableList<Class<out Fluid>> = ArrayList()
@@ -58,7 +58,7 @@ class ExtraCellsApiInstance : ExtraCellsApi {
     }
 
     override fun blocks(): IBlockDefinition {
-        return BlockDefinition.Companion.instance
+        return BlockDefinition.instance
     }
 
     override fun canFluidSeeInTerminal(fluid: Fluid?): Boolean {
@@ -79,17 +79,17 @@ class ExtraCellsApiInstance : ExtraCellsApi {
         return true
     }
 
-    @get:Deprecated("Incorrect spelling")
-    override val verion: String?
+    @get:Deprecated("Incorrect spelling", ReplaceWith("version"))
+    override val verion: String
         get() = VERSION
-    override val version: String?
+    override val version: String
         get() = VERSION
 
     override fun getWirelessFluidTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler? {
-        return getWirelessTermHandler(`is`) as IWirelessFluidTermHandler?
+        return getWirelessTermHandler(`is`)
     }
 
-    override fun getWirelessTermHandler(`is`: ItemStack?): IWirelessGasFluidTermHandler? {
+    override fun getWirelessTermHandler(`is`: ItemStack?): IWirelessFluidTermHandler? {
         return WirelessTermRegistry.getWirelessTermHandler(`is`)
     }
 
@@ -98,20 +98,20 @@ class ExtraCellsApiInstance : ExtraCellsApi {
     }
 
     override fun items(): IItemDefinition {
-        return ItemDefinition.Companion.instance
+        return ItemDefinition
     }
 
-    override fun openPortableCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
+    override fun openPortableCellGui(player: EntityPlayer?, stack: ItemStack?, world: World?): ItemStack? {
         return openPortableFluidCellGui(player, stack, world)
     }
 
-    override fun openPortableFluidCellGui(player: EntityPlayer, stack: ItemStack?, world: World): ItemStack? {
-        if (world.isRemote || stack == null || stack.item == null) return stack
+    override fun openPortableFluidCellGui(player: EntityPlayer?, stack: ItemStack?, world: World?): ItemStack? {
+        if (world== null || world.isRemote || stack == null || stack.item == null) return stack
         val item = stack.item
         if (item !is IPortableFluidStorageCell) return stack
         val cellHandler = AEApi.instance().registries().cell().getHandler(stack) as? FluidCellHandler ?: return stack
-        val handler: IMEInventoryHandler<out IAEStack<*>> = cellHandler.getCellInventoryPlayer(stack,
-                player) as? HandlerItemStorageFluid
+        val handler = player?.let { cellHandler.getCellInventoryPlayer(stack, it) }
+                as? HandlerItemStorageFluid
                 ?: return stack
         val fluidInventory: IMEMonitor<IAEFluidStack> = MEMonitorHandler<IAEFluidStack>(handler, StorageChannel.FLUIDS)
         launchGui(getGuiId(3), player, arrayOf(fluidInventory, item))
@@ -169,8 +169,7 @@ class ExtraCellsApiInstance : ExtraCellsApi {
         val x = player.posX.toInt()
         val y = player.posY.toInt()
         val z = player.posZ.toInt()
-        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key) as IGridHost
-                ?: return itemStack
+        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key) as IGridHost? ?: return itemStack
         val gridNode = securityTerminal.getGridNode(ForgeDirection.UNKNOWN) ?: return itemStack
         val grid = gridNode.grid ?: return itemStack
         for (node in grid.getMachines(
@@ -195,8 +194,7 @@ class ExtraCellsApiInstance : ExtraCellsApi {
     @Deprecated("")
     override fun openWirelessTerminal(player: EntityPlayer?, itemStack: ItemStack?, world: World, x: Int, y: Int, z: Int, key: Long?): ItemStack? {
         if (world.isRemote) return itemStack
-        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key!!) as IGridHost
-                ?: return itemStack
+        val securityTerminal = AEApi.instance().registries().locatable().getLocatableBy(key!!) as IGridHost? ?: return itemStack
         val gridNode = securityTerminal
                 .getGridNode(ForgeDirection.UNKNOWN) ?: return itemStack
         val grid = gridNode.grid ?: return itemStack
@@ -212,7 +210,7 @@ class ExtraCellsApiInstance : ExtraCellsApi {
                     val fluidInventory = gridCache.fluidInventory
                     if (fluidInventory != null) {
                         launchGui(getGuiId(1), player, arrayOf<Any?>(
-                                fluidInventory, getWirelessFluidTermHandler(itemStack)))
+                                fluidInventory, getWirelessTermHandler(itemStack)))
                     }
                 }
             }
@@ -221,10 +219,10 @@ class ExtraCellsApiInstance : ExtraCellsApi {
     }
 
     override fun parts(): IPartDefinition {
-        return PartDefinition.Companion.instance
+        return PartDefinition.instance
     }
 
-    override fun registerWirelessTermHandler(handler: IWirelessGasFluidTermHandler) {
+    override fun registerWirelessTermHandler(handler: IWirelessFluidTermHandler) {
         WirelessTermRegistry.registerWirelessTermHandler(handler)
     }
 
@@ -298,10 +296,6 @@ class ExtraCellsApiInstance : ExtraCellsApi {
     //	private boolean checkGas(Fluid fluid) {
     //		return false;//fluid instanceof MekanismGas.GasFluid;
     //	}
-    val isMekEnabled: Boolean
-        private get() = Integration.Mods.MEKANISMGAS.isEnabled
-
-    companion object {
-        val instance: ExtraCellsApi = ExtraCellsApiInstance()
-    }
+    //val isMekEnabled: Boolean
+    //    private get() = Integration.Mods.MEKANISMGAS.isEnabled
 }

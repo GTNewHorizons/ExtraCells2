@@ -38,8 +38,7 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
-
-class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTileEntity, IMEMonitorHandlerReceiver<IAEFluidStack>, IListenerTile {
+open class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTileEntity, IMEMonitorHandlerReceiver<IAEFluidStack>, IListenerTile {
     private val gridBlock: ECFluidGridBlock
     private var node: IGridNode? = null
     var fluids: MutableList<Fluid> = ArrayList()
@@ -54,7 +53,7 @@ class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTil
         if (storage != null) postChange(storage.fluidInventory, null, null)
     }
 
-    override fun getActionableNode(): IGridNode {
+    override fun getActionableNode(): IGridNode? {
         if (FMLCommonHandler.instance().effectiveSide.isClient) return null
         if (node == null) {
             node = AEApi.instance().createGridNode(gridBlock)
@@ -73,12 +72,12 @@ class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTil
                 zCoord, 1, nbtTag)
     }
 
-    override fun getGridNode(dir: ForgeDirection): IGridNode {
+    override fun getGridNode(dir: ForgeDirection): IGridNode? {
         if (FMLCommonHandler.instance().side.isClient
                 && (getWorldObj() == null || getWorldObj().isRemote)) return null
         if (isFirstGetGridNode) {
             isFirstGetGridNode = false
-            actionableNode.updateState()
+            actionableNode?.updateState()
             val storage = storageGrid
             storage!!.fluidInventory.addListener(this, null)
         }
@@ -127,7 +126,7 @@ class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTil
 
     override fun onListUpdate() {}
     override fun postChange(monitor: IBaseMonitor<IAEFluidStack>,
-                            change: Iterable<IAEFluidStack>, actionSource: BaseActionSource) {
+                            change: Iterable<IAEFluidStack?>?, actionSource: BaseActionSource?) {
         val oldFluids: MutableList<Fluid> = ArrayList(fluids)
         var mustUpdate = false
         fluids.clear()
@@ -137,22 +136,16 @@ class TileEntityFluidFiller : TileBase(), IActionHost, ICraftingProvider, IECTil
             fluids.add(fluid.fluid)
         }
         if (!(oldFluids.isEmpty() && !mustUpdate)) {
-            if (getGridNode(ForgeDirection.UNKNOWN) != null
-                    && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
-                getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+                getGridNode(ForgeDirection.UNKNOWN)?.grid?.postEvent(
                         MENetworkCraftingPatternChange(this,
                                 getGridNode(ForgeDirection.UNKNOWN)))
-            }
         }
     }
 
     fun postUpdateEvent() {
-        if (getGridNode(ForgeDirection.UNKNOWN) != null
-                && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
-            getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+            getGridNode(ForgeDirection.UNKNOWN)?.grid?.postEvent(
                     MENetworkCraftingPatternChange(this,
                             getGridNode(ForgeDirection.UNKNOWN)))
-        }
     }
 
     @MENetworkEventSubscribe

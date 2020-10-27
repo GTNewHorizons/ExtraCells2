@@ -21,8 +21,7 @@ import net.minecraft.util.IIcon
 import net.minecraft.util.StatCollector
 import net.minecraft.world.World
 import java.util.*
-
-class BlockFluidCrafter : BlockEC(Material.iron, 2.0f, 10.0f) {
+open class BlockFluidCrafter : BlockEC(Material.iron, 2.0f, 10.0f) {
     var icon: IIcon? = null
     override fun breakBlock(world: World, x: Int, y: Int, z: Int, par5: Block,
                             par6: Int) {
@@ -59,7 +58,7 @@ class BlockFluidCrafter : BlockEC(Material.iron, 2.0f, 10.0f) {
         }
     }
 
-    override fun getIcon(side: Int, b: Int): IIcon {
+    override fun getIcon(side: Int, b: Int): IIcon? {
         return icon!!
     }
 
@@ -107,7 +106,7 @@ class BlockFluidCrafter : BlockEC(Material.iron, 2.0f, 10.0f) {
     }
 
     override fun onBlockPlacedBy(world: World, x: Int, y: Int, z: Int,
-                                 entity: EntityLivingBase, stack: ItemStack) {
+                                 entity: EntityLivingBase?, stack: ItemStack) {
         if (world.isRemote) return
         val tile = world.getTileEntity(x, y, z)
         if (tile != null) {

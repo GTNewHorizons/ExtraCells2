@@ -9,8 +9,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.Container
 import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
-
-class ContainerOreDictExport(var player: EntityPlayer, var part: PartOreDictExporter) : Container() {
+open class ContainerOreDictExport(var player: EntityPlayer, var part: PartOreDictExporter) : Container() {
     @SideOnly(Side.CLIENT)
     var gui: GuiFluidInterface? = null
     protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {

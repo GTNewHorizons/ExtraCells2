@@ -36,15 +36,14 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidContainerRegistry
 import net.minecraftforge.fluids.FluidRegistry
-
-class PartFluidPlaneFormation : PartECBase(), IFluidSlotPartOrBlock, IGridTickable {
+open class PartFluidPlaneFormation : PartECBase(), IFluidSlotPartOrBlock, IGridTickable {
     private var fluid: Fluid? = null
 
     // TODO redstone control
     private val redstoneMode: RedstoneMode? = null
     val upgradeInventory: ECPrivateInventory = object : ECPrivateInventory("", 1,
             1) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             return AEApi.instance().definitions().materials().cardRedstone().isSameAs(itemStack)
         }
     }
@@ -97,7 +96,7 @@ class PartFluidPlaneFormation : PartECBase(), IFluidSlotPartOrBlock, IGridTickab
     override val powerUsage: Double
         get() = 1.0
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
         return ContainerPlaneFormation(this, player)
     }
 
@@ -105,7 +104,7 @@ class PartFluidPlaneFormation : PartECBase(), IFluidSlotPartOrBlock, IGridTickab
         return TickingRequest(1, 20, false, false)
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)

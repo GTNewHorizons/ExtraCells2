@@ -10,8 +10,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.util.ResourceLocation
 import net.minecraft.util.StatCollector
 import org.lwjgl.opengl.GL11
-
-class GuiFluidFiller(private val player: EntityPlayer, tileentity: TileEntityFluidFiller) : GuiContainer(
+open class GuiFluidFiller(private val player: EntityPlayer, tileentity: TileEntityFluidFiller) : GuiContainer(
         ContainerFluidFiller(
                 player.inventory, tileentity)) {
     private val guiTexture = ResourceLocation("extracells",
@@ -32,11 +31,13 @@ class GuiFluidFiller(private val player: EntityPlayer, tileentity: TileEntityFlu
                         StatCollector.translateToLocal(
                                 "extracells.block.fluidfiller.name").replace(
                                 "ME ", ""), 5, 5, 0x000000)
-        val i = fluidContainerSlot.getPosX()
-        val j = fluidContainerSlot.getPosY()
+        if (fluidContainerSlot == null)
+            return
+        val i = fluidContainerSlot.posX
+        val j = fluidContainerSlot.posY
         if (GuiUtil.isPointInRegion(guiLeft.toFloat(), guiTop, i, j, 16, 16,
                         mouseX, mouseY)) {
-            fluidContainerSlot!!.drawWidgetWithRect(i, j)
+            fluidContainerSlot.drawWidgetWithRect(i, j)
             GL11.glDisable(GL11.GL_LIGHTING)
             GL11.glDisable(GL11.GL_DEPTH_TEST)
             GL11.glColorMask(true, true, true, false)
@@ -45,7 +46,7 @@ class GuiFluidFiller(private val player: EntityPlayer, tileentity: TileEntityFlu
             GL11.glColorMask(true, true, true, true)
             GL11.glEnable(GL11.GL_LIGHTING)
             GL11.glEnable(GL11.GL_DEPTH_TEST)
-        } else fluidContainerSlot!!.drawWidget()
+        } else fluidContainerSlot.drawWidget()
     }
 
     override fun mouseClicked(mouseX: Int, mouseY: Int, mouseBtn: Int) {

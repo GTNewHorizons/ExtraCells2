@@ -27,12 +27,11 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
-
-class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraftingWatcherHost, IECTileEntity {
+open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraftingWatcherHost, IECTileEntity {
     inner class FluidCrafterInventory : IInventory {
         val inv = arrayOfNulls<ItemStack>(9)
         override fun closeInventory() {}
-        override fun decrStackSize(slot: Int, amt: Int): ItemStack {
+        override fun decrStackSize(slot: Int, amt: Int): ItemStack? {
             var stack = getStackInSlot(slot)
             if (stack != null) {
                 if (stack.stackSize <= amt) {
@@ -60,11 +59,11 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
             return inv.size
         }
 
-        override fun getStackInSlot(slot: Int): ItemStack {
+        override fun getStackInSlot(slot: Int): ItemStack? {
             return inv[slot]!!
         }
 
-        override fun getStackInSlotOnClosing(slot: Int): ItemStack {
+        override fun getStackInSlotOnClosing(slot: Int): ItemStack? {
             return null
         }
 
@@ -98,7 +97,7 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
             }
         }
 
-        override fun setInventorySlotContents(slot: Int, stack: ItemStack) {
+        override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
             inv[slot] = stack
             if (stack != null && stack.stackSize > inventoryStackLimit) {
                 stack.stackSize = inventoryStackLimit
@@ -137,7 +136,7 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
     private var optionalReturnStack = arrayOfNulls<ItemStack>(0)
     private var update = false
     private val instance: TileEntityFluidCrafter
-    override fun getActionableNode(): IGridNode {
+    override fun getActionableNode(): IGridNode? {
         if (FMLCommonHandler.instance().effectiveSide.isClient) return null
         if (node == null) {
             node = AEApi.instance().createGridNode(gridBlock)
@@ -152,12 +151,12 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
     val gridNode: IGridNode?
         get() = getGridNode(ForgeDirection.UNKNOWN)
 
-    override fun getGridNode(dir: ForgeDirection): IGridNode {
+    override fun getGridNode(dir: ForgeDirection): IGridNode? {
         if (FMLCommonHandler.instance().side.isClient
                 && (getWorldObj() == null || getWorldObj().isRemote)) return null
         if (isFirstGetGridNode) {
             isFirstGetGridNode = false
-            actionableNode.updateState()
+            actionableNode?.updateState()
         }
         return node!!
     }
@@ -169,7 +168,7 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
     override val location: DimensionalCoord
         get() = DimensionalCoord(this)
     override val powerUsage: Double
-        get() = 0
+        get() = 0.0
 
     override fun isBusy(): Boolean {
         return isBusy
@@ -238,13 +237,13 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
         if (patternDetails is CraftingPattern) {
             val patter = patternDetails
             val fluids = HashMap<Fluid, Long>()
-            for (stack in patter.condensedFluidInputs) {
+            for (stack in patter.condensedFluidInputs!!) {
                 if (fluids.containsKey(stack!!.fluid)) {
-                    val amount = fluids[stack!!.fluid]!! + stack!!.stackSize
-                    fluids.remove(stack!!.fluid)
-                    fluids[stack!!.fluid] = amount
+                    val amount = fluids[stack.fluid]!! + stack.stackSize
+                    fluids.remove(stack.fluid)
+                    fluids[stack.fluid] = amount
                 } else {
-                    fluids[stack!!.fluid] = stack!!.stackSize
+                    fluids[stack.fluid] = stack.stackSize
                 }
             }
             val grid = node!!.grid ?: return false
@@ -331,13 +330,13 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
                         if (details.condensedOutputs[0] == s) {
                             val patter = details as CraftingPattern
                             val fluids = HashMap<Fluid, Long>()
-                            for (stack in patter.condensedFluidInputs) {
+                            for (stack in patter.condensedFluidInputs!!) {
                                 if (fluids.containsKey(stack!!.fluid)) {
-                                    val amount = fluids[stack!!.fluid]!! + stack!!.stackSize
-                                    fluids.remove(stack!!.fluid)
-                                    fluids[stack!!.fluid] = amount
+                                    val amount = fluids[stack.fluid]!! + stack.stackSize
+                                    fluids.remove(stack.fluid)
+                                    fluids[stack.fluid] = amount
                                 } else {
-                                    fluids[stack!!.fluid] = stack!!.stackSize
+                                    fluids[stack.fluid] = stack.stackSize
                                 }
                             }
                             val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: break
@@ -362,7 +361,7 @@ class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraf
                                         MachineSource(this))
                             }
                             finishCraftingTime = System.currentTimeMillis() + 1000
-                            returnStack = patter.condensedOutputs[0].itemStack
+                            returnStack = patter.condensedOutputs?.get(0)?.itemStack
                             isBusy = true
                             return
                         }

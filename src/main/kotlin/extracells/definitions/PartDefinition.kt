@@ -4,8 +4,7 @@ import appeng.api.definitions.IItemDefinition
 import extracells.api.definitions.IPartDefinition
 import extracells.registries.ItemEnum
 import extracells.registries.PartEnum
-
-class PartDefinition : IPartDefinition {
+open class PartDefinition : IPartDefinition {
     override fun partBattery(): IItemDefinition {
         return ItemItemDefinitions(ItemEnum.PARTITEM.item,
                 PartEnum.BATTERY.ordinal)

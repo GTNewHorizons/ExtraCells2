@@ -43,12 +43,16 @@ abstract class PartFluidIO : PartECBase(), IGridTickable, IInventoryUpdateReceiv
     private var lastRedstone = false
     val upgradeInventory: ECPrivateInventory = object : ECPrivateInventory("", 4,
             1, this) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             if (itemStack == null) return false
-            return if (AEApi.instance().definitions().materials().cardCapacity().isSameAs(
-                            itemStack)) true else if (AEApi.instance().definitions().materials().cardSpeed().isSameAs(
-                            itemStack)) true else AEApi.instance().definitions().materials().cardRedstone().isSameAs(
-                    itemStack)
+            return when {
+                AEApi.instance().definitions().materials().cardCapacity().isSameAs(
+                        itemStack) -> true
+                AEApi.instance().definitions().materials().cardSpeed().isSameAs(
+                        itemStack) -> true
+                else -> AEApi.instance().definitions().materials().cardRedstone().isSameAs(
+                        itemStack)
+            }
         }
     }
 
@@ -76,7 +80,6 @@ abstract class PartFluidIO : PartECBase(), IGridTickable, IInventoryUpdateReceiv
             RedstoneMode.HIGH_SIGNAL -> redstonePowered
             RedstoneMode.SIGNAL_PULSE -> false
         }
-        return false
     }
 
     abstract fun doWork(rate: Int, TicksSinceLastCall: Int): Boolean
@@ -85,7 +88,7 @@ abstract class PartFluidIO : PartECBase(), IGridTickable, IInventoryUpdateReceiv
         return GuiBusFluidIO(this, player)
     }
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
         return ContainerBusFluidIO(this, player)
     }
 
@@ -109,7 +112,7 @@ abstract class PartFluidIO : PartECBase(), IGridTickable, IInventoryUpdateReceiv
         saveData()
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         val activate = super.onActivate(player, pos)
         onInventoryChanged()
         return activate
@@ -129,7 +132,7 @@ abstract class PartFluidIO : PartECBase(), IGridTickable, IInventoryUpdateReceiv
             }
         }
         try {
-            if (host.location.world.isRemote) return
+            if (host?.location?.world?.isRemote != false) return
         } catch (ignored: Throwable) {
         }
         PacketBusFluidIO(filterSize).sendPacketToAllPlayers()

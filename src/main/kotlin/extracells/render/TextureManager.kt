@@ -29,8 +29,8 @@ enum class TextureManager(private val textureType: TextureType, vararg _textureN
     }
 
     private val textureNames: Array<String>
-    val textures: Array<IIcon>
-    val texture: IIcon
+    val textures: Array<IIcon?>
+    val texture: IIcon?
         get() = textures[0]
 
     fun registerTexture(textureMap: TextureMap) {
@@ -46,7 +46,7 @@ enum class TextureManager(private val textureType: TextureType, vararg _textureN
     }
 
     init {
-        textureNames = _textureName
+        textureNames = _textureName as Array<String>
         textures = arrayOfNulls(textureNames.size)
     }
 }

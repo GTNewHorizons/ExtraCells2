@@ -7,8 +7,7 @@ import net.minecraft.inventory.Container
 import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
-
-class ContainerDrive(var part: PartDrive, player: EntityPlayer) : Container() {
+open class ContainerDrive(var part: PartDrive, player: EntityPlayer) : Container() {
     protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {
         for (i in 0..2) {
             for (j in 0..8) {
@@ -25,7 +24,7 @@ class ContainerDrive(var part: PartDrive, player: EntityPlayer) : Container() {
         return part.isValid
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         var itemstack: ItemStack? = null
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {

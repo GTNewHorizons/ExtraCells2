@@ -26,8 +26,7 @@ import net.minecraft.util.IIcon
 import net.minecraft.world.World
 import net.minecraftforge.common.util.ForgeDirection
 import java.util.*
-
-class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
+open class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
     private val icons = arrayOfNulls<IIcon>(2)
     override fun breakBlock(world: World, x: Int, y: Int, z: Int, par5: Block,
                             par6: Int) {
@@ -35,7 +34,7 @@ class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
         super.breakBlock(world, x, y, z, par5, par6)
     }
 
-    override fun createNewTileEntity(world: World, meta: Int): TileEntity {
+    override fun createNewTileEntity(world: World, meta: Int): TileEntity? {
         return when (meta) {
             0 -> TileEntityFluidInterface()
             1 -> TileEntityFluidFiller()
@@ -73,7 +72,7 @@ class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
     }
 
     @SideOnly(Side.CLIENT)
-    override fun getIcon(side: Int, meta: Int): IIcon {
+    override fun getIcon(side: Int, meta: Int): IIcon? {
         return if (meta >= 0 && meta + 1 <= icons.size) {
             icons[meta]!!
         } else null
@@ -83,7 +82,6 @@ class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
                                   player: EntityPlayer, side: Int, p_149727_7_: Float,
                                   p_149727_8_: Float, p_149727_9_: Float): Boolean {
         if (world.isRemote) return false
-        val rand = Random()
         return when (world.getBlockMetadata(x, y, z)) {
             0, 1 -> {
                 val tile = world.getTileEntity(x, y, z)
@@ -135,7 +133,7 @@ class ECBaseBlock : BlockEC(Material.iron, 2.0f, 10.0f) {
     }
 
     override fun onBlockPlacedBy(world: World, x: Int, y: Int, z: Int,
-                                 entity: EntityLivingBase, stack: ItemStack) {
+                                 entity: EntityLivingBase?, stack: ItemStack?) {
         if (world.isRemote) return
         when (world.getBlockMetadata(x, y, z)) {
             0, 1 -> {

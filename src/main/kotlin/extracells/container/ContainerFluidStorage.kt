@@ -29,11 +29,17 @@ import net.minecraft.item.ItemStack
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 
-class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack?>, IFluidSelectorContainer, IInventoryUpdateReceiver, IStorageContainer {
+open class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack?>, IFluidSelectorContainer, IInventoryUpdateReceiver, IStorageContainer {
     private var guiFluidStorage: GuiFluidStorage? = null
     var fluidStackList: IItemList<IAEFluidStack?>? = null
         private set
-    private var selectedFluid: Fluid? = null
+    var selectedFluid: Fluid? = null
+    @JvmName("setSelectedFluidProp") set(value) {
+        PacketFluidStorage(player, field)
+                .sendPacketToServer()
+        receiveSelectedFluid(field)
+        field = value
+    }
     var selectedFluidStack: IAEFluidStack? = null
         private set
     val player: EntityPlayer
@@ -44,20 +50,20 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
     var hasWirelessTermHandler = false
     private val inventory: ECPrivateInventory = object : ECPrivateInventory("extracells.item.fluid.storage", 2, 64,
             this) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
-            return FluidUtil.isFluidContainer(itemStack)
+        override fun isItemValidForSlot(i: Int, itemstack: ItemStack?): Boolean {
+            return FluidUtil.isFluidContainer(itemstack)
         }
     }
 
-    constructor(_player: EntityPlayer) : this(null, _player) {}
+    constructor(_player: EntityPlayer) : this(null, _player)
     constructor(_monitor: IMEMonitor<IAEFluidStack?>?, _player: EntityPlayer) {
         monitor = _monitor
         player = _player
-        if (!player.worldObj.isRemote && monitor != null) {
+        fluidStackList = if (!player.worldObj.isRemote && monitor != null) {
             monitor.addListener(this, null)
-            fluidStackList = monitor.storageList
+            monitor.storageList
         } else {
-            fluidStackList = AEApi.instance().storage().createFluidList()
+            AEApi.instance().storage().createFluidList()
         }
 
         // Input Slot accepts all FluidContainers
@@ -149,7 +155,7 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
                     player, null))
 
             //Calculates the amount of fluid to fill container with.
-            val proposedAmount = if (result == null) 0 else Math.min(capacity.toLong(), result.stackSize).toInt()
+            val proposedAmount = if (result == null) 0 else capacity.coerceAtMost(result.stackSize.toInt())
             if (proposedAmount == 0) return
 
             //Tries to fill the container with fluid.
@@ -158,7 +164,7 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
             //Moves it to second slot and commits extraction to grid.
             if (fillSecondSlot(filledContainer!!.getRight())) {
                 monitor.extractItems(FluidUtil.createAEFluidStack(
-                        selectedFluid, filledContainer.getLeft()),
+                        selectedFluid, filledContainer.getLeft().toLong()),
                         Actionable.MODULATE,
                         PlayerSource(player, null))
                 decreaseFirstSlot()
@@ -248,10 +254,6 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
                 .sendPacketToPlayer(player)
     }
 
-    fun getSelectedFluid(): Fluid? {
-        return selectedFluid
-    }
-
     override fun hasWirelessTermHandler(): Boolean {
         return hasWirelessTermHandler
     }
@@ -312,13 +314,7 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
         guiFluidStorage = _guiFluidStorage
     }
 
-    override fun setSelectedFluid(_selectedFluid: Fluid?) {
-        PacketFluidStorage(player, _selectedFluid)
-                .sendPacketToServer()
-        receiveSelectedFluid(_selectedFluid)
-    }
-
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         var itemstack: ItemStack? = null
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {
@@ -345,5 +341,9 @@ class ContainerFluidStorage : Container, IMEMonitorHandlerReceiver<IAEFluidStack
     fun updateFluidList(_fluidStackList: IItemList<IAEFluidStack?>?) {
         fluidStackList = _fluidStackList
         if (guiFluidStorage != null) guiFluidStorage!!.updateFluids()
+    }
+
+    override fun setSelectedFluid(_fluid: Fluid?) {
+        selectedFluid = _fluid
     }
 }

@@ -14,8 +14,7 @@ import net.minecraft.util.ResourceLocation
 import net.minecraft.util.StatCollector
 import org.lwjgl.input.Keyboard
 import org.lwjgl.opengl.GL11
-
-class GuiOreDictExport(private val player: EntityPlayer, _part: PartOreDictExporter) : GuiContainer(
+open class GuiOreDictExport(private val player: EntityPlayer, _part: PartOreDictExporter) : GuiContainer(
         ContainerOreDictExport(
                 player, _part)) {
     private val guiTexture = ResourceLocation("extracells",
@@ -58,17 +57,17 @@ class GuiOreDictExport(private val player: EntityPlayer, _part: PartOreDictExpor
                 + xSize / 2 - 75, guiTop + 20, 150, 10) {
             private val xPos = 0
             private val yPos = 0
-            private val width = 0
-            private val height = 0
+            private val width1 = 0
+            private val height1 = 0
             override fun mouseClicked(x: Int, y: Int, mouseBtn: Int) {
-                val flag = x >= xPos && x < xPos + this.width && y >= yPos && y < yPos + this.height
+                val flag = x >= xPos && x < xPos + this.width1 && y >= yPos && y < yPos + this.height1
                 if (flag && mouseBtn == 3) text = ""
             }
         }
-        searchbar.setEnableBackgroundDrawing(true)
-        searchbar.setFocused(true)
-        searchbar.setMaxStringLength(128)
-        searchbar.setText(filter)
+        (searchbar as GuiTextField).enableBackgroundDrawing = true
+        (searchbar as GuiTextField).isFocused = true
+        (searchbar as GuiTextField).maxStringLength = 128
+        (searchbar as GuiTextField).text = filter
     }
 
     override fun keyTyped(key: Char, keyID: Int) {
@@ -84,16 +83,16 @@ class GuiOreDictExport(private val player: EntityPlayer, _part: PartOreDictExpor
 
     companion object {
         fun updateFilter(_filter: String?) {
-            if (filter != null) {
+            if (_filter != null) {
                 filter = _filter
-                val gui: Gui? = Minecraft.getMinecraft().currentScreen
-                if (gui != null && gui is GuiOreDictExport) {
-                    val g = gui
-                    if (g.searchbar != null) g.searchbar!!.text = filter
-                }
+            }
+            val gui: Gui? = Minecraft.getMinecraft().currentScreen
+            if (gui != null && gui is GuiOreDictExport) {
+                val g = gui
+                if (g.searchbar != null) g.searchbar!!.text = filter
             }
         }
 
-        private var filter: String? = ""
+        private var filter: String = ""
     }
 }

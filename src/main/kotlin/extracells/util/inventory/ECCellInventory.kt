@@ -4,11 +4,10 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.IInventory
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-
-class ECCellInventory(private val storage: ItemStack, private val tagId: String, private val size: Int,
+open class ECCellInventory(private val storage: ItemStack?, private val tagId: String, private val size: Int,
                       private val stackLimit: Int) : IInventory {
-    private val tagCompound: NBTTagCompound
-    private var slots: Array<ItemStack>
+    private lateinit var tagCompound: NBTTagCompound
+    private lateinit var slots: Array<ItemStack?>
     private var dirty = false
     override fun closeInventory() {
         if (dirty) {
@@ -25,17 +24,14 @@ class ECCellInventory(private val storage: ItemStack, private val tagId: String,
         }
     }
 
-    override fun decrStackSize(slotId: Int, amount: Int): ItemStack {
+    override fun decrStackSize(slotId: Int, amount: Int): ItemStack? {
         val slotContent = slots[slotId] ?: return null
         val stackSize = slotContent.stackSize
         if (stackSize <= 0) return null
-        val newAmount: Int
         if (amount >= stackSize) {
-            newAmount = stackSize
             slots[slotId] = null
         } else {
-            slots[slotId].stackSize -= amount
-            newAmount = amount
+            slots[slotId]!!.stackSize -= amount
         }
         val toReturn = slotContent.copy()
         toReturn.stackSize = amount
@@ -55,11 +51,11 @@ class ECCellInventory(private val storage: ItemStack, private val tagId: String,
         return size
     }
 
-    override fun getStackInSlot(slotId: Int): ItemStack {
+    override fun getStackInSlot(slotId: Int): ItemStack? {
         return slots[slotId]
     }
 
-    override fun getStackInSlotOnClosing(slotId: Int): ItemStack {
+    override fun getStackInSlotOnClosing(slotId: Int): ItemStack? {
         return getStackInSlot(slotId)
     }
 
@@ -98,11 +94,16 @@ class ECCellInventory(private val storage: ItemStack, private val tagId: String,
     }
 
     init {
-        if (!storage.hasTagCompound()) storage.tagCompound = NBTTagCompound()
-        storage.tagCompound.setTag(tagId,
+        if (storage != null) {
+            if (!storage.hasTagCompound())
+                storage.tagCompound = NBTTagCompound()
+        }
+        storage?.tagCompound?.setTag(tagId,
                 storage.tagCompound.getCompoundTag(tagId))
-        tagCompound = storage.tagCompound.getCompoundTag(
-                tagId)
+        if (storage != null) {
+            tagCompound = storage.tagCompound.getCompoundTag(
+                    tagId)
+        }
         openInventory()
     }
 }

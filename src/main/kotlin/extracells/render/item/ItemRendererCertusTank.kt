@@ -13,8 +13,7 @@ import net.minecraftforge.client.IItemRenderer.ItemRendererHelper
 import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.FluidStack
 import org.lwjgl.opengl.GL11
-
-class ItemRendererCertusTank : IItemRenderer {
+open class ItemRendererCertusTank : IItemRenderer {
     private val model = ModelCertusTank()
     override fun handleRenderType(item: ItemStack, type: ItemRenderType): Boolean {
         return true

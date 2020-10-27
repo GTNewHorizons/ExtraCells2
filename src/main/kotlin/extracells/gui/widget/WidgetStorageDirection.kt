@@ -12,8 +12,7 @@ import net.minecraft.util.StatCollector
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
 import java.util.*
-
-class WidgetStorageDirection(ID: Int, xPos: Int, yPos: Int, width: Int,
+open class WidgetStorageDirection(ID: Int, xPos: Int, yPos: Int, width: Int,
                              height: Int, var accessRestriction: AccessRestriction?) : GuiButton(ID, xPos, yPos, width,
         height, "") {
     override fun drawButton(minecraftInstance: Minecraft, x: Int, y: Int) {

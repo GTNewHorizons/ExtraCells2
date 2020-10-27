@@ -4,8 +4,7 @@ import appeng.api.definitions.ITileDefinition
 import extracells.api.definitions.IBlockDefinition
 import extracells.registries.BlockEnum
 import extracells.tileentity.*
-
-class BlockDefinition : IBlockDefinition {
+open class BlockDefinition : IBlockDefinition {
     override fun blockInterface(): ITileDefinition {
         return BlockItemDefinitions(BlockEnum.ECBASEBLOCK.block,
                 TileEntityFluidInterface::class.java)

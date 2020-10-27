@@ -6,7 +6,7 @@ import net.minecraft.entity.player.InventoryPlayer
 import net.minecraft.inventory.Container
 import net.minecraft.inventory.Slot
 
-class ContainerVibrationChamberFluid(player: InventoryPlayer?,
+open class ContainerVibrationChamberFluid(player: InventoryPlayer?,
                                      var tileentity: TileEntityVibrationChamberFluid) : Container() {
     protected fun bindPlayerInventory(inventoryPlayer: InventoryPlayer?) {
         for (i in 0..2) {

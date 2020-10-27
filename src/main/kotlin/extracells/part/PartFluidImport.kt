@@ -22,8 +22,7 @@ import net.minecraftforge.fluids.FluidStack
 import net.minecraftforge.fluids.FluidTankInfo
 import net.minecraftforge.fluids.IFluidHandler
 import java.util.*
-
-class PartFluidImport : PartFluidIO(), IFluidHandler {
+open class PartFluidImport : PartFluidIO(), IFluidHandler {
     override fun cableConnectionRenderTo(): Int {
         return 5
     }
@@ -47,7 +46,7 @@ class PartFluidImport : PartFluidIO(), IFluidHandler {
                 if (i.toInt() != 4) {
                     filter.add(filterFluids[i.toInt()]!!)
                 }
-                (i += 2).toByte()
+                i = i.plus(2).toByte()
             }
         }
         if (filterSize >= 2) {
@@ -56,26 +55,24 @@ class PartFluidImport : PartFluidIO(), IFluidHandler {
                 if (i.toInt() != 4) {
                     filter.add(filterFluids[i.toInt()]!!)
                 }
-                (i += 2).toByte()
+                i = i.plus(2).toByte()
             }
         }
         for (fluid in filter) {
-            if (fluid != null) {
-                empty = false
-                if (fillToNetwork(fluid, rate * TicksSinceLastCall)) {
-                    return true
-                }
+            empty = false
+            if (fillToNetwork(fluid, rate * TicksSinceLastCall)) {
+                return true
             }
         }
         return empty && fillToNetwork(null, rate * TicksSinceLastCall)
     }
 
     override fun drain(from: ForgeDirection, resource: FluidStack,
-                       doDrain: Boolean): FluidStack {
+                       doDrain: Boolean): FluidStack? {
         return null
     }
 
-    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack? {
         return null
     }
 
@@ -132,11 +129,11 @@ class PartFluidImport : PartFluidIO(), IFluidHandler {
     override val powerUsage: Double
         get() = 1.0
 
-    override fun getTankInfo(from: ForgeDirection): Array<FluidTankInfo> {
+    override fun getTankInfo(from: ForgeDirection): Array<FluidTankInfo?>? {
         return arrayOfNulls(0)
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return PermissionUtil.hasPermission(player, SecurityPermissions.BUILD, this as IPart) && super.onActivate(
                 player, pos)
     }
@@ -172,7 +169,7 @@ class PartFluidImport : PartFluidIO(), IFluidHandler {
                 TextureManager.IMPORT_FRONT.textures[0], side, side)
         rh.setBounds(4f, 4f, 14f, 12f, 12f, 16f)
         rh.renderBlock(x, y, z, renderer)
-        ts.setColorOpaque_I(host.color.blackVariant)
+        host?.color?.blackVariant?.let { ts.setColorOpaque_I(it) }
         if (isActive) ts.setBrightness(15 shl 20 or 15 shl 4)
         rh.renderFace(x, y, z, TextureManager.IMPORT_FRONT.textures[1],
                 ForgeDirection.SOUTH, renderer)

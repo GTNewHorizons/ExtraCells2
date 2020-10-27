@@ -35,7 +35,6 @@ import extracells.crafting.CraftingPattern
 import extracells.crafting.CraftingPattern2
 import extracells.gui.GuiFluidInterface
 import extracells.network.packet.other.IFluidSlotPartOrBlock
-import extracells.part.PartFluidInterface
 import extracells.registries.ItemEnum
 import extracells.render.TextureManager
 import extracells.util.EmptyMeItemMonitor
@@ -59,12 +58,11 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.*
 import java.io.IOException
 import java.util.*
-
-class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, IGridTickable, ICraftingProvider {
+open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, IGridTickable, ICraftingProvider {
     inner class FluidInterfaceInventory : IInventory {
-        val inv = arrayOfNulls<ItemStack>(9)
+        val inv = arrayOfNulls<ItemStack?>(9)
         override fun closeInventory() {}
-        override fun decrStackSize(slot: Int, amt: Int): ItemStack {
+        override fun decrStackSize(slot: Int, amt: Int): ItemStack? {
             var stack = getStackInSlot(slot)
             if (stack != null) {
                 if (stack.stackSize <= amt) {
@@ -92,11 +90,11 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
             return inv.size
         }
 
-        override fun getStackInSlot(slot: Int): ItemStack {
-            return inv[slot]!!
+        override fun getStackInSlot(slot: Int): ItemStack? {
+            return inv[slot]
         }
 
-        override fun getStackInSlotOnClosing(slot: Int): ItemStack {
+        override fun getStackInSlotOnClosing(slot: Int): ItemStack? {
             return null
         }
 
@@ -138,7 +136,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
             }
         }
 
-        override fun setInventorySlotContents(slot: Int, stack: ItemStack) {
+        override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
             inv[slot] = stack
             if (stack != null && stack.stackSize > inventoryStackLimit) {
                 stack.stackSize = inventoryStackLimit
@@ -161,7 +159,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         }
     }
 
-    var listeners: MutableList<IContainerListener> = ArrayList()
+    var listeners: MutableList<IContainerListener?> = ArrayList()
     private var patternHandlers: MutableList<ICraftingPatternDetails> = ArrayList()
     private val patternConvert = HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails>()
     private val requestedItems: List<IAEItemStack> = ArrayList()
@@ -192,30 +190,30 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         return 3
     }
 
-    override fun canDrain(from: ForgeDirection, fluid: Fluid): Boolean {
+    override fun canDrain(from: ForgeDirection?, fluid: Fluid?): Boolean {
         val tankFluid = tank.fluid
         return tankFluid != null && tankFluid.getFluid() === fluid
     }
 
-    override fun canFill(from: ForgeDirection, fluid: Fluid): Boolean {
+    override fun canFill(from: ForgeDirection?, fluid: Fluid?): Boolean {
         return tank.fill(FluidStack(fluid, 1), false) > 0
     }
 
-    override fun drain(from: ForgeDirection, resource: FluidStack,
-                       doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection?, resource: FluidStack?,
+                       doDrain: Boolean): FluidStack? {
         val tankFluid = tank.fluid
         return if (resource == null || tankFluid == null || tankFluid.getFluid() !== resource.getFluid()) null else drain(
                 from, resource.amount, doDrain)
     }
 
-    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection?, maxDrain: Int, doDrain: Boolean): FluidStack {
         val drained = tank.drain(maxDrain, doDrain)
-        if (drained != null) host.markForUpdate()
+        if (drained != null) host?.markForUpdate()
         doNextUpdate = true
         return drained
     }
 
-    override fun fill(from: ForgeDirection, resource: FluidStack, doFill: Boolean): Int {
+    override fun fill(from: ForgeDirection, resource: FluidStack?, doFill: Boolean): Int {
         if (resource == null) return 0
         if ((tank.fluid == null || tank.fluid.getFluid() === resource
                         .getFluid())
@@ -235,7 +233,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         filled += fillToNetwork(resource, doFill)
         if (filled < resource.amount) filled += tank.fill(FluidStack(resource.getFluid(),
                 resource.amount - filled), doFill)
-        if (filled > 0) host.markForUpdate()
+        if (filled > 0) host?.markForUpdate()
         doNextUpdate = true
         return filled
     }
@@ -260,7 +258,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
     }
 
     private fun forceUpdate() {
-        host.markForUpdate()
+        host?.markForUpdate()
         for (listener in listeners) {
             listener?.updateContainer()
         }
@@ -278,7 +276,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
 
     @get:SideOnly(Side.CLIENT)
     private val clientWorld: World
-        private get() = Minecraft.getMinecraft().theWorld
+        get() = Minecraft.getMinecraft().theWorld
 
     override fun getDrops(drops: MutableList<ItemStack>, wrenched: Boolean) {
         for (i in 0 until inventory.sizeInventory) {
@@ -291,9 +289,9 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         return FluidRegistry.getFluid(fluidFilter)
     }
 
-    override fun getFluidInventory(): IMEMonitor<IAEFluidStack> {
+    override fun getFluidInventory(): IMEMonitor<IAEFluidStack?>? {
         if (getGridNode(ForgeDirection.UNKNOWN) == null) return null
-        val grid = getGridNode(ForgeDirection.UNKNOWN).grid ?: return null
+        val grid = getGridNode(ForgeDirection.UNKNOWN)?.grid ?: return null
         val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return null
         return storage.fluidInventory
     }
@@ -316,7 +314,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
     override val powerUsage: Double
         get() = 1.0
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
         return ContainerFluidInterface(player, this)
     }
 
@@ -394,7 +392,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         return pattern
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return if (PermissionUtil.hasPermission(player, SecurityPermissions.BUILD,
                         this as IPart)) {
             super.onActivate(player, pos)
@@ -411,17 +409,15 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
             if (currentPatternStack != null && currentPatternStack.item != null && currentPatternStack.item is ICraftingPatternItem) {
                 val currentPattern = currentPatternStack
                         .item as ICraftingPatternItem
-                if (currentPattern != null
-                        && currentPattern.getPatternForItem(
-                                currentPatternStack, gridNode.world) != null) {
+                if (currentPattern.getPatternForItem(currentPatternStack, gridNode?.world) != null) {
                     val pattern: IFluidCraftingPatternDetails = CraftingPattern2(
                             currentPattern.getPatternForItem(
-                                    currentPatternStack, gridNode
+                                    currentPatternStack, gridNode!!
                                     .world))
                     patternHandlers.add(pattern)
                     val `is` = makeCraftingPatternItem(pattern) ?: continue
                     val p = (`is`
-                            .item as ICraftingPatternItem).getPatternForItem(`is`, gridNode
+                            .item as ICraftingPatternItem).getPatternForItem(`is`, gridNode!!
                             .world)
                             ?: continue
                     patternConvert[p] = pattern
@@ -440,12 +436,12 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
             export.add(s)
         }
         addToExport.clear()
-        if (gridNode.world == null || export.isEmpty()) return
+        if (gridNode?.world == null || export.isEmpty()) return
         val dir = side
-        val tile = gridNode.world.getTileEntity(
-                gridNode.gridBlock.location.x + dir!!.offsetX,
-                gridNode.gridBlock.location.y + dir.offsetY,
-                gridNode.gridBlock.location.z + dir.offsetZ)
+        val tile = gridNode!!.world.getTileEntity(
+                gridNode!!.gridBlock.location.x + dir!!.offsetX,
+                gridNode!!.gridBlock.location.y + dir.offsetY,
+                gridNode!!.gridBlock.location.z + dir.offsetZ)
         if (tile != null) {
             val stack0 = export.iterator().next()
             val stack = stack0.copy()
@@ -554,19 +550,18 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         if (isBusy || !patternConvert.containsKey(patDetails)) return false
         val patternDetails: ICraftingPatternDetails? = patternConvert[patDetails]
         if (patternDetails is CraftingPattern) {
-            val patter = patternDetails
             val fluids = HashMap<Fluid, Long>()
-            for (stack in patter.condensedFluidInputs) {
+            for (stack in patternDetails.condensedFluidInputs!!) {
                 if (fluids.containsKey(stack!!.fluid)) {
-                    val amount = (fluids[stack!!.fluid]!!
-                            + stack!!.stackSize)
-                    fluids.remove(stack!!.fluid)
-                    fluids[stack!!.fluid] = amount
+                    val amount = (fluids[stack.fluid]!!
+                            + stack.stackSize)
+                    fluids.remove(stack.fluid)
+                    fluids[stack.fluid] = amount
                 } else {
-                    fluids[stack!!.fluid] = stack!!.stackSize
+                    fluids[stack.fluid] = stack.stackSize
                 }
             }
-            val grid = gridNode.grid ?: return false
+            val grid = gridNode?.grid ?: return false
             val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return false
             for (fluid in fluids.keys) {
                 val amount = fluids[fluid]
@@ -595,7 +590,7 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
                                 Actionable.MODULATE, MachineSource(this))
                 export.add(extractFluid)
             }
-            for (s in patter.condensedInputs) {
+            for (s in patternDetails.condensedInputs!!) {
                 if (s == null) continue
                 if (s.item === ItemEnum.FLUIDPATTERN.item) {
                     toExport = s.copy()
@@ -773,8 +768,8 @@ class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidS
         }
         if (update) {
             update = false
-            if (gridNode != null && gridNode.grid != null) {
-                gridNode.grid
+            if (gridNode != null && gridNode!!.grid != null) {
+                gridNode!!.grid
                         .postEvent(
                                 MENetworkCraftingPatternChange(this,
                                         gridNode))

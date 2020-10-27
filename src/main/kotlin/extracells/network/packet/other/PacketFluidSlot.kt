@@ -8,15 +8,14 @@ import net.minecraft.client.gui.Gui
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.tileentity.TileEntity
 import net.minecraftforge.fluids.Fluid
-import java.util.*
 
-class PacketFluidSlot : AbstractPacket {
+open class PacketFluidSlot : AbstractPacket {
     private var index = 0
     private var fluid: Fluid? = null
     private var partOrBlock: IFluidSlotPartOrBlock? = null
     private var filterFluids: MutableList<Fluid?>? = null
 
-    constructor() {}
+    constructor()
     constructor(_partOrBlock: IFluidSlotPartOrBlock?, _index: Int,
                 _fluid: Fluid?, _player: EntityPlayer?) : super(_player) {
         mode = 0
@@ -31,7 +30,7 @@ class PacketFluidSlot : AbstractPacket {
     }
 
     override fun execute() {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> partOrBlock!!.setFluid(index, fluid, player)
             1 -> {
                 val gui: Gui = Minecraft.getMinecraft().currentScreen
@@ -44,20 +43,20 @@ class PacketFluidSlot : AbstractPacket {
     }
 
     override fun readData(`in`: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
-                if (`in`.readBoolean()) partOrBlock = AbstractPacket.Companion.readPart(
-                        `in`) as IFluidSlotPartOrBlock else partOrBlock = AbstractPacket.Companion.readTileEntity(
+                partOrBlock = if (`in`.readBoolean()) readPart(
+                        `in`) as IFluidSlotPartOrBlock else readTileEntity(
                         `in`) as IFluidSlotPartOrBlock
                 index = `in`.readInt()
-                fluid = AbstractPacket.Companion.readFluid(`in`)
+                fluid = readFluid(`in`)
             }
             1 -> {
-                filterFluids = ArrayList()
+                filterFluids = mutableListOf()
                 val size = `in`.readInt()
                 var i = 0
                 while (i < size) {
-                    filterFluids.add(AbstractPacket.Companion.readFluid(`in`))
+                    filterFluids!!.add(readFluid(`in`))
                     i++
                 }
             }
@@ -65,23 +64,23 @@ class PacketFluidSlot : AbstractPacket {
     }
 
     override fun writeData(out: ByteBuf) {
-        when (mode) {
+        when (mode.toInt()) {
             0 -> {
                 if (partOrBlock is PartECBase) {
                     out.writeBoolean(true)
-                    AbstractPacket.Companion.writePart(partOrBlock as PartECBase?, out)
+                    writePart(partOrBlock as PartECBase?, out)
                 } else {
                     out.writeBoolean(false)
-                    AbstractPacket.Companion.writeTileEntity(partOrBlock as TileEntity?, out)
+                    writeTileEntity(partOrBlock as TileEntity?, out)
                 }
                 out.writeInt(index)
-                AbstractPacket.Companion.writeFluid(fluid, out)
+                writeFluid(fluid, out)
             }
             1 -> {
                 out.writeInt(filterFluids!!.size)
                 var i = 0
                 while (i < filterFluids!!.size) {
-                    AbstractPacket.Companion.writeFluid(filterFluids!![i], out)
+                    writeFluid(filterFluids!![i], out)
                     i++
                 }
             }

@@ -9,8 +9,7 @@ import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.Slot
 import net.minecraft.util.ResourceLocation
 import org.lwjgl.opengl.GL11
-
-class GuiDrive(_part: PartDrive, private val player: EntityPlayer) : GuiContainer(ContainerDrive(_part, player)) {
+open class GuiDrive(_part: PartDrive, private val player: EntityPlayer) : GuiContainer(ContainerDrive(_part, player)) {
     private val guiTexture = ResourceLocation("extracells",
             "textures/gui/drive.png")
 

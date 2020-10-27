@@ -35,15 +35,14 @@ import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidRegistry
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
-
-class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver, IFluidSlotPartOrBlock {
+open class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver, IFluidSlotPartOrBlock {
     private val fluidList = HashMap<FluidStack, Int>()
     private var priority = 0
     protected var handler = HandlerPartStorageFluid(this)
     private val filterFluids = arrayOfNulls<Fluid>(54)
     private var access = AccessRestriction.READ_WRITE
     val upgradeInventory: ECPrivateInventory = object : ECPrivateInventory("", 1, 1, this) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
+        override fun isItemValidForSlot(i: Int, itemStack: ItemStack?): Boolean {
             return itemStack != null && AEApi.instance().definitions().materials().cardInverter().isSameAs(itemStack)
         }
     }
@@ -90,18 +89,17 @@ class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver,
         return if (this.isPowered) 9 else 0
     }
 
-    override fun getServerGuiElement(player: EntityPlayer): Any? {
+    override fun getServerGuiElement(player: EntityPlayer?): Any? {
         return ContainerBusFluidStorage(this, player)
     }
 
-    override fun onActivate(player: EntityPlayer, pos: Vec3): Boolean {
+    override fun onActivate(player: EntityPlayer?, pos: Vec3?): Boolean {
         return PermissionUtil.hasPermission(player, SecurityPermissions.BUILD, this as IPart) && super.onActivate(
                 player, pos)
     }
 
     override fun onInventoryChanged() {
-        handler.setInverted(
-                AEApi.instance().definitions().materials().cardInverter().isSameAs(upgradeInventory.getStackInSlot(0)))
+        handler.inverted = AEApi.instance().definitions().materials().cardInverter().isSameAs(upgradeInventory.getStackInSlot(0))
         saveData()
     }
 
@@ -112,10 +110,10 @@ class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver,
             val grid = node.grid
             if (grid != null && wasChanged()) {
                 grid.postEvent(MENetworkCellArrayUpdate())
-                node.grid.postEvent(MENetworkStorageEvent(gridBlock.fluidMonitor, StorageChannel.FLUIDS))
+                node.grid.postEvent(MENetworkStorageEvent(gridBlock?.fluidMonitor, StorageChannel.FLUIDS))
                 node.grid.postEvent(MENetworkCellArrayUpdate())
             }
-            host.markForUpdate()
+            host?.markForUpdate()
         }
     }
 
@@ -127,11 +125,11 @@ class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver,
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
+            node.grid.postEvent(MENetworkStorageEvent(gridBlock?.fluidMonitor, StorageChannel.FLUIDS))
+            node.grid.postEvent(MENetworkCellArrayUpdate())
         }
-        node!!.grid.postEvent(MENetworkStorageEvent(gridBlock.fluidMonitor, StorageChannel.FLUIDS))
-        node.grid.postEvent(MENetworkCellArrayUpdate())
     }
 
     override fun readFromNBT(data: NBTTagCompound) {
@@ -181,7 +179,7 @@ class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver,
                 TextureManager.STORAGE_FRONT.texture, side, side)
         rh.setBounds(2f, 2f, 15f, 14f, 14f, 16f)
         rh.renderBlock(x, y, z, renderer)
-        ts.setColorOpaque_I(host.color.blackVariant)
+        host?.color?.blackVariant?.let { ts.setColorOpaque_I(it) }
         if (isActive) ts.setBrightness(15 shl 20 or 15 shl 4)
         rh.renderFace(x, y, z, TextureManager.STORAGE_FRONT.textures[1],
                 ForgeDirection.SOUTH, renderer)
@@ -223,11 +221,11 @@ class PartFluidStorage : PartECBase(), ICellContainer, IInventoryUpdateReceiver,
             if (isNowActive != isActive) {
                 isActive = isNowActive
                 onNeighborChanged()
-                host.markForUpdate()
+                host?.markForUpdate()
             }
         }
         node!!.grid.postEvent(
-                MENetworkStorageEvent(gridBlock.fluidMonitor,
+                MENetworkStorageEvent(gridBlock?.fluidMonitor,
                         StorageChannel.FLUIDS))
         node.grid.postEvent(MENetworkCellArrayUpdate())
     }

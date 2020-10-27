@@ -17,8 +17,7 @@ import net.minecraft.util.ResourceLocation
 import net.minecraftforge.fluids.Fluid
 import org.lwjgl.input.Keyboard
 import org.lwjgl.opengl.GL11
-
-class GuiFluidEmitter(private val part: PartFluidLevelEmitter, private val player: EntityPlayer) : ECGuiContainer(
+open class GuiFluidEmitter(private val part: PartFluidLevelEmitter, private val player: EntityPlayer) : ECGuiContainer(
         ContainerFluidEmitter(
                 part, player)), IFluidSlotGui {
     private var amountField: DigitTextField? = null
@@ -102,8 +101,10 @@ class GuiFluidEmitter(private val part: PartFluidLevelEmitter, private val playe
 
     override fun mouseClicked(mouseX: Int, mouseY: Int, mouseBtn: Int) {
         super.mouseClicked(mouseX, mouseY, mouseBtn)
-        if (GuiUtil.isPointInRegion(guiLeft.toFloat(), guiTop, fluidSlot.posX, fluidSlot.posY, 18, 18, mouseX,
-                        mouseY)) {
+        if (fluidSlot?.let {
+                    GuiUtil.isPointInRegion(guiLeft.toFloat(), guiTop, it.posX, it.posY, 18, 18, mouseX,
+                            mouseY)
+                } == true) {
 //			if(part instanceof PartGasLevelEmitter && Integration.Mods.MEKANISMGAS.isEnabled())
 //				this.fluidSlot.mouseClickedGas(this.player.inventory.getItemStack());
 //			else
@@ -121,10 +122,10 @@ class GuiFluidEmitter(private val part: PartFluidLevelEmitter, private val playe
 
     override fun updateFluids(_fluids: List<Fluid?>?) {
         if (_fluids == null || _fluids.isEmpty()) {
-            fluidSlot.fluid = null
+            fluidSlot?.fluid = null
             return
         }
-        fluidSlot.fluid = _fluids[0]
+        fluidSlot?.fluid = _fluids[0]
     }
 
     companion object {

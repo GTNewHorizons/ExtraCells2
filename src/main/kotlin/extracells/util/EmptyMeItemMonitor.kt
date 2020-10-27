@@ -4,15 +4,14 @@ import appeng.api.AEApi
 import appeng.api.config.AccessRestriction
 import appeng.api.config.Actionable
 import appeng.api.networking.security.BaseActionSource
-import appeng.api.storage.IMEMonitor
 import appeng.api.storage.IMEMonitorHandlerReceiver
 import appeng.api.storage.StorageChannel
 import appeng.api.storage.data.IAEItemStack
+import appeng.api.storage.data.IAEStack
 import appeng.api.storage.data.IItemList
 
-class EmptyMeItemMonitor : IMEMonitor<IAEItemStack?> {
-    override fun addListener(l: IMEMonitorHandlerReceiver<IAEItemStack>,
-                             verificationToken: Any) {
+class EmptyMeItemMonitor : IMEMonitorBase() {
+    override fun addListener(imeMonitorHandlerReceiver: IMEMonitorHandlerReceiver<out IAEStack<*>>?, verificationToken: Any?) {
     }
 
     override fun canAccept(input: IAEItemStack): Boolean {
@@ -30,7 +29,7 @@ class EmptyMeItemMonitor : IMEMonitor<IAEItemStack?> {
     }
 
     override fun getAvailableItems(out: IItemList<*>): IItemList<IAEItemStack?> {
-        return out
+        return out as IItemList<IAEItemStack?>
     }
 
     override fun getChannel(): StorageChannel {
@@ -58,7 +57,7 @@ class EmptyMeItemMonitor : IMEMonitor<IAEItemStack?> {
         return false
     }
 
-    override fun removeListener(l: IMEMonitorHandlerReceiver<IAEItemStack>) {}
+    override fun removeListener(imeMonitorHandlerReceiver: IMEMonitorHandlerReceiver<out IAEStack<*>>?) {}
     override fun validForPass(i: Int): Boolean {
         return true
     }

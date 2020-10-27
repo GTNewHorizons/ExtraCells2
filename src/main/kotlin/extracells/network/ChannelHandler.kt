@@ -3,6 +3,7 @@ package extracells.network
 import cpw.mods.fml.common.network.FMLEmbeddedChannel
 import cpw.mods.fml.common.network.NetworkRegistry
 import cpw.mods.fml.common.network.NetworkRegistry.TargetPoint
+import cpw.mods.fml.common.network.simpleimpl.SimpleNetworkWrapper
 import cpw.mods.fml.relauncher.Side
 import extracells.network.handler.other.HandlerFluidContainerSlot
 import extracells.network.handler.other.HandlerFluidSlot
@@ -94,6 +95,6 @@ object ChannelHandler {
     }
 
     private val channels: EnumMap<Side, FMLEmbeddedChannel>? = null
-    var wrapper = NetworkRegistry.INSTANCE
+    var wrapper: SimpleNetworkWrapper = NetworkRegistry.INSTANCE
             .newSimpleChannel("extracells")
 }

@@ -24,14 +24,18 @@ import net.minecraft.inventory.Slot
 import net.minecraft.inventory.SlotFurnace
 import net.minecraft.item.ItemStack
 import net.minecraftforge.fluids.Fluid
-
-class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
+open class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
                              val player: EntityPlayer) : Container(), IMEMonitorHandlerReceiver<IAEFluidStack?>, IFluidSelectorContainer {
     private var monitor: IMEMonitor<IAEFluidStack?>? = null
     var fluidStackList = AEApi.instance()
             .storage().createFluidList()
         private set
-    private var selectedFluid: Fluid? = null
+    var selectedFluid: Fluid? = null
+    @JvmName("internalSetSelectedFluid") set(value) {
+        setSelectedFluid(value)
+        field = value
+    }
+    @JvmName("internalGetSelectedFluid") get
     private var guiFluidTerminal: GuiFluidTerminal? = null
     protected fun bindPlayerInventory(inventoryPlayer: InventoryPlayer?) {
         for (i in 0..2) {
@@ -51,7 +55,7 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
 
     fun forceFluidUpdate() {
         if (monitor != null) {
-            PacketFluidTerminal(player, monitor.storageList)
+            PacketFluidTerminal(player, monitor?.storageList)
                     .sendPacketToPlayer(player)
         }
     }
@@ -67,7 +71,7 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
     override fun onContainerClosed(entityPlayer: EntityPlayer) {
         super.onContainerClosed(entityPlayer)
         if (!entityPlayer.worldObj.isRemote) {
-            if (monitor != null) monitor.removeListener(this)
+            if (monitor != null) monitor?.removeListener(this)
             terminal!!.removeContainer(this)
         }
     }
@@ -90,8 +94,8 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
         if (_guiFluidTerminal != null) guiFluidTerminal = _guiFluidTerminal
     }
 
-    override fun setSelectedFluid(_selectedFluid: Fluid?) {
-        PacketFluidTerminal(player, _selectedFluid, terminal)
+    override fun setSelectedFluid(_fluid: Fluid?) {
+        PacketFluidTerminal(player, _fluid, terminal)
                 .sendPacketToServer()
     }
 
@@ -101,20 +105,23 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
         var hasPermission = true
         if (slotNumber == 0 || slotNumber == 1) {
             val stack = player.inventory.itemStack
-            if (stack == null) {
-            } else {
-                if (FluidUtil.isEmpty(stack)
-                        && PermissionUtil.hasPermission(player,
-                                SecurityPermissions.INJECT,
-                                terminal as IPart?)) {
-                } else if (FluidUtil.isFilled(stack)
-                        && PermissionUtil.hasPermission(player,
-                                SecurityPermissions.EXTRACT,
-                                terminal as IPart?)) {
-                } else {
-                    val slotStack = (inventorySlots[slotNumber] as Slot).stack
-                    returnStack = slotStack?.copy()
-                    hasPermission = false
+            if (stack != null) {
+                when {
+                    FluidUtil.isEmpty(stack)
+                            && PermissionUtil.hasPermission(player,
+                            SecurityPermissions.INJECT,
+                            terminal as IPart?) -> {
+                    }
+                    FluidUtil.isFilled(stack)
+                            && PermissionUtil.hasPermission(player,
+                            SecurityPermissions.EXTRACT,
+                            terminal as IPart?) -> {
+                    }
+                    else -> {
+                        val slotStack = (inventorySlots[slotNumber] as Slot).stack
+                        returnStack = slotStack?.copy()
+                        hasPermission = false
+                    }
                 }
             }
         }
@@ -126,13 +133,13 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
         return returnStack!!
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack? {
         var itemstack: ItemStack? = null
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {
             val itemstack1 = slot.stack
             itemstack = itemstack1.copy()
-            if (terminal!!.inventory.isItemValidForSlot(0, itemstack1)) {
+            if (terminal?.inventory?.isItemValidForSlot(0, itemstack1) == true) {
                 if (slotnumber == 1 || slotnumber == 0) {
                     if (!mergeItemStack(itemstack1, 2, 36, false)) return null
                 } else if (!mergeItemStack(itemstack1, 0, 1, false)) {
@@ -157,10 +164,10 @@ class ContainerFluidTerminal(val terminal: PartFluidTerminal?,
 
     init {
         if (!player.worldObj.isRemote) {
-            monitor = terminal.getGridBlock().fluidMonitor
+            monitor = terminal?.gridBlock?.fluidMonitor
             if (monitor != null) {
-                monitor.addListener(this, null)
-                fluidStackList = monitor.storageList
+                monitor!!.addListener(this, null)
+                fluidStackList = monitor!!.storageList
             }
             terminal!!.addContainer(this)
         }

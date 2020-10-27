@@ -4,8 +4,7 @@ import net.minecraft.client.gui.FontRenderer
 import net.minecraft.client.gui.GuiScreen
 import net.minecraft.client.gui.GuiTextField
 import org.lwjgl.input.Keyboard
-
-class DigitTextField(fontRenderer: FontRenderer?, x: Int, y: Int, length: Int,
+open class DigitTextField(fontRenderer: FontRenderer?, x: Int, y: Int, length: Int,
                      height: Int) : GuiTextField(fontRenderer, x, y, length, height) {
     private fun isWhiteListed(key: Char): Boolean {
         return "0123456789".contains(key.toString())
@@ -13,7 +12,7 @@ class DigitTextField(fontRenderer: FontRenderer?, x: Int, y: Int, length: Int,
 
     override fun textboxKeyTyped(keyChar: Char, keyID: Int): Boolean {
         return if (isFocused) {
-            when (keyChar) {
+            when (keyChar.toInt()) {
                 1 -> {
                     setCursorPositionEnd()
                     setSelectionPos(0)

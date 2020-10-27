@@ -6,8 +6,7 @@ import net.minecraft.tileentity.TileEntity
 import net.minecraft.util.ResourceLocation
 import net.minecraftforge.client.model.AdvancedModelLoader
 import org.lwjgl.opengl.GL11
-
-class TileEntityRendererWalrus : TileEntitySpecialRenderer() {
+open class TileEntityRendererWalrus : TileEntitySpecialRenderer() {
     var modelWalrus = AdvancedModelLoader
             .loadModel(ResourceLocation("extracells", "models/walrus.obj"))
     var textureWalrus = ResourceLocation("extracells",

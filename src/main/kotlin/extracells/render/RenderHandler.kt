@@ -7,8 +7,7 @@ import net.minecraft.block.Block
 import net.minecraft.client.renderer.RenderBlocks
 import net.minecraft.client.renderer.Tessellator
 import net.minecraft.world.IBlockAccess
-
-class RenderHandler(id: Int) : ISimpleBlockRenderingHandler {
+open class RenderHandler(id: Int) : ISimpleBlockRenderingHandler {
     var tank = ModelCertusTank()
     override fun getRenderId(): Int {
         return id

@@ -8,12 +8,11 @@ import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
 import net.minecraft.tileentity.TileEntity
 import net.minecraft.world.World
-
-class BlockWailaDataProvider : IWailaDataProvider {
-    override fun getNBTData(player: EntityPlayerMP, te: TileEntity,
-                            tag: NBTTagCompound, world: World, x: Int, y: Int, z: Int): NBTTagCompound {
+open class BlockWailaDataProvider : IWailaDataProvider {
+    override fun getNBTData(player: EntityPlayerMP?, te: TileEntity?,
+                            tag: NBTTagCompound?, world: World?, x: Int, y: Int, z: Int): NBTTagCompound? {
         if (te != null && te is IWailaTile) {
-            tag.setTag("WailaTile",
+            tag?.setTag("WailaTile",
                     (te as IWailaTile).getWailaTag(NBTTagCompound()))
         }
         return tag

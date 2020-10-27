@@ -24,13 +24,12 @@ import net.minecraft.world.World
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidRegistry
 import java.util.*
-
-class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
-    private var icons: Array<IIcon>
+open class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
+    private lateinit var icons: Array<IIcon?>
     override fun addInformation(itemStack: ItemStack, player: EntityPlayer,
-                                list: MutableList<*>, par4: Boolean) {
+                                list: MutableList<Any?>, par4: Boolean) {
         val handler: IMEInventoryHandler<IAEFluidStack> = AEApi.instance().registries().cell().getCellInventory(
-                itemStack, null, StorageChannel.FLUIDS)
+                itemStack, null, StorageChannel.FLUIDS) as IMEInventoryHandler<IAEFluidStack>
         if (handler !is IHandlerFluidStorage) {
             return
         }
@@ -57,11 +56,11 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
         return ECFluidFilterInventory("configFluidCell", 63, `is`)
     }
 
-    override fun getFilter(stack: ItemStack): ArrayList<Fluid>? {
+    override fun getFilter(stack: ItemStack?): ArrayList<Fluid?>? {
         val inventory = ECFluidFilterInventory("", 63, stack)
         val stacks = inventory.slots
-        val filter = ArrayList<Fluid>()
-        if (stacks!!.size == 0) return null
+        val filter = ArrayList<Fluid?>()
+        if (stacks.isEmpty()) return null
         for (s in stacks) {
             if (s == null) continue
             val f = FluidRegistry.getFluid(s.itemDamage)
@@ -70,7 +69,7 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
         return filter
     }
 
-    override fun getFuzzyMode(`is`: ItemStack): FuzzyMode {
+    override fun getFuzzyMode(`is`: ItemStack): FuzzyMode? {
         if (`is` == null) return null
         if (!`is`.hasTagCompound()) `is`.tagCompound = NBTTagCompound()
         if (`is`.tagCompound.hasKey("fuzzyMode")) return FuzzyMode.valueOf(`is`.tagCompound.getString("fuzzyMode"))
@@ -78,13 +77,16 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
         return FuzzyMode.IGNORE_ALL
     }
 
-    override fun getIconFromDamage(dmg: Int): IIcon {
+    override fun getIconFromDamage(dmg: Int): IIcon? {
         val j = MathHelper.clamp_int(dmg, 0, suffixes.size)
         return icons[j]
     }
 
-    override fun getMaxBytes(`is`: ItemStack): Int {
-        return spaces[Math.max(0, `is`.itemDamage)]
+    override fun getMaxBytes(`is`: ItemStack?): Int {
+        if (`is` != null) {
+            return spaces[0.coerceAtLeast(`is`.itemDamage)]
+        }
+        return -1
     }
 
     override fun getMaxTypes(unused: ItemStack?): Int {
@@ -92,7 +94,7 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
     }
 
     override fun getSubItems(item: Item, creativeTab: CreativeTabs,
-                             listSubItems: MutableList<*>) {
+                             listSubItems: MutableList<Any?>) {
         for (i in suffixes.indices) {
             listSubItems.add(ItemStack(item, 1, i))
         }
@@ -106,7 +108,7 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
         return ECPrivateInventory("configInventory", 0, 64)
     }
 
-    override fun isEditable(`is`: ItemStack): Boolean {
+    override fun isEditable(`is`: ItemStack?): Boolean {
         return if (`is` == null) false else `is`.item === this
     }
 
@@ -116,7 +118,7 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
             return itemStack
         }
         val handler: IMEInventoryHandler<IAEFluidStack> = AEApi.instance().registries().cell().getCellInventory(
-                itemStack, null, StorageChannel.FLUIDS)
+                itemStack, null, StorageChannel.FLUIDS) as IMEInventoryHandler<IAEFluidStack>
         if (handler !is IHandlerFluidStorage) {
             return itemStack
         }
@@ -134,10 +136,9 @@ class ItemStorageFluid : ItemECBase(), IFluidStorageCell {
         }
     }
 
-    override fun setFuzzyMode(`is`: ItemStack, fzMode: FuzzyMode) {
+    override fun setFuzzyMode(`is`: ItemStack?, fzMode: FuzzyMode) {
         if (`is` == null) return
-        val tag: NBTTagCompound
-        tag = if (`is`.hasTagCompound()) `is`.tagCompound else NBTTagCompound()
+        val tag: NBTTagCompound = if (`is`.hasTagCompound()) `is`.tagCompound else NBTTagCompound()
         tag.setString("fuzzyMode", fzMode.name)
         `is`.tagCompound = tag
     }

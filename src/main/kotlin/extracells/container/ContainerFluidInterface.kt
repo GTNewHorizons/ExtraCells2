@@ -15,9 +15,8 @@ import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.Slot
 import net.minecraft.item.ItemStack
 import net.minecraftforge.common.util.ForgeDirection
-
-class ContainerFluidInterface(var player: EntityPlayer,
-                              var fluidInterface: IFluidInterface) : Container(), IContainerListener {
+open class ContainerFluidInterface(var player: EntityPlayer?,
+                              var fluidInterface: IFluidInterface?) : Container(), IContainerListener {
     @SideOnly(Side.CLIENT)
     var gui: GuiFluidInterface? = null
     protected fun bindPlayerInventory(inventoryPlayer: IInventory?) {
@@ -37,7 +36,7 @@ class ContainerFluidInterface(var player: EntityPlayer,
     }
 
     private fun getFluidID(side: ForgeDirection): Int {
-        val fluid = fluidInterface.getFilter(side) ?: return -1
+        val fluid = fluidInterface?.getFilter(side) ?: return -1
         return fluid.id
     }
 
@@ -55,7 +54,7 @@ class ContainerFluidInterface(var player: EntityPlayer,
                                 p_75133_3_: Boolean, p_75133_4_: EntityPlayer) {
     }
 
-    override fun transferStackInSlot(player: EntityPlayer, slotnumber: Int): ItemStack {
+    override fun transferStackInSlot(player: EntityPlayer?, slotnumber: Int): ItemStack? {
         var itemstack: ItemStack? = null
         val slot = inventorySlots[slotnumber] as Slot?
         if (slot != null && slot.hasStack) {
@@ -99,19 +98,19 @@ class ContainerFluidInterface(var player: EntityPlayer,
 
     override fun updateContainer() {
         PacketFluidInterface(arrayOf(
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(0))!!.fluid,
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(1))!!.fluid,
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(2))!!.fluid,
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(3))!!.fluid,
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(4))!!.fluid,
-                fluidInterface.getFluidTank(
+                fluidInterface?.getFluidTank(
                         ForgeDirection.getOrientation(5))!!.fluid),
-                arrayOf<Int?>(getFluidID(ForgeDirection.getOrientation(0)),
+                arrayOf(getFluidID(ForgeDirection.getOrientation(0)),
                         getFluidID(ForgeDirection.getOrientation(1)),
                         getFluidID(ForgeDirection.getOrientation(2)),
                         getFluidID(ForgeDirection.getOrientation(3)),
@@ -123,9 +122,9 @@ class ContainerFluidInterface(var player: EntityPlayer,
     init {
         for (j in 0..8) {
             addSlotToContainer(SlotRespective(
-                    fluidInterface.patternInventory, j, 8 + j * 18, 115))
+                    fluidInterface?.patternInventory, j, 8 + j * 18, 115))
         }
-        bindPlayerInventory(player.inventory)
+        bindPlayerInventory(player?.inventory)
         if (fluidInterface is TileEntityFluidInterface) {
             (fluidInterface as TileEntityFluidInterface).registerListener(this)
         } else if (fluidInterface is PartFluidInterface) {

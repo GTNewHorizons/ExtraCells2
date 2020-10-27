@@ -12,8 +12,7 @@ import net.minecraftforge.fluids.IFluidTank
 import org.lwjgl.opengl.GL11
 import org.lwjgl.opengl.GL12
 import java.util.*
-
-class WidgetFluidTank @JvmOverloads constructor(var tank: IFluidTank?, var posX: Int, var posY: Int,
+open class WidgetFluidTank @JvmOverloads constructor(var tank: IFluidTank?, var posX: Int, var posY: Int,
                                                 var direction: ForgeDirection = ForgeDirection.UNKNOWN) : Gui() {
     fun draw(guiX: Int, guiY: Int, mouseX: Int, mouseY: Int) {
         if (tank == null || 73 < 31) return

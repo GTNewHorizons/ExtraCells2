@@ -7,8 +7,7 @@ import appeng.api.config.ViewItems
 import appeng.api.util.IConfigManager
 import net.minecraft.nbt.NBTTagCompound
 import java.util.*
-
-class ConfigManager @JvmOverloads constructor(private val tagCompound: NBTTagCompound? = null) : IConfigManager {
+open class ConfigManager @JvmOverloads constructor(private val tagCompound: NBTTagCompound? = null) : IConfigManager {
     private val settings: MutableMap<Settings, Enum<*>> = EnumMap(
             Settings::class.java)
 
@@ -47,8 +46,8 @@ class ConfigManager @JvmOverloads constructor(private val tagCompound: NBTTagCom
                 if (tagCompound.hasKey(key.name)) {
                     val value = tagCompound.getString(key.name)
                     val oldValue = settings[key]!!
-                    val newValue = java.lang.Enum.valueOf(oldValue.javaClass, value)
-                    putSetting(key, newValue)
+                    val newValue = oldValue.takeIf { it.name == value }
+                    putSetting(key, newValue as Enum<*>)
                 }
             } catch (e: IllegalArgumentException) {
             }

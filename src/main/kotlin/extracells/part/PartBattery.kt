@@ -20,17 +20,16 @@ import net.minecraft.client.renderer.RenderBlocks
 import net.minecraft.client.renderer.texture.TextureMap
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
+import net.minecraft.util.IIcon
 import java.io.IOException
-
-class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
-    private var batteryIcon = TextureManager.BATTERY_FRONT.texture
+open class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
+    private var batteryIcon : IIcon? = TextureManager.BATTERY_FRONT.texture
     private var battery: ItemStack? = null
     var handler: IAEItemPowerStorage? = null
     private val inventory: ECPrivateInventory = object : ECPrivateInventory(
             "extracells.part.battery", 1, 1) {
-        override fun isItemValidForSlot(i: Int, itemStack: ItemStack): Boolean {
-            return (itemStack != null
-                    && itemStack.item is IAEItemPowerStorage)
+        override fun isItemValidForSlot(i: Int, itemstack: ItemStack?): Boolean {
+            return (itemstack != null && itemstack.item is IAEItemPowerStorage)
         }
     }
 
@@ -47,18 +46,18 @@ class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
 
     override fun extractAEPower(amt: Double, mode: Actionable,
                                 usePowerMultiplier: PowerMultiplier): Double {
-        return if (handler == null || battery == null) 0 else handler!!.extractAEPower(
+        return if (handler == null || battery == null) 0.0 else handler!!.extractAEPower(
                 if (mode == Actionable.MODULATE) battery else battery!!
                         .copy(), usePowerMultiplier.multiply(amt))
     }
 
     override fun getAECurrentPower(): Double {
-        return if (handler == null || battery == null) 0 else handler!!.getAECurrentPower(
+        return if (handler == null || battery == null) 0.0 else handler!!.getAECurrentPower(
                 battery)
     }
 
     override fun getAEMaxPower(): Double {
-        return if (handler == null || battery == null) 0 else handler!!.getAEMaxPower(battery)
+        return if (handler == null || battery == null) 0.0 else handler!!.getAEMaxPower(battery)
     }
 
     override fun getBoxes(bch: IPartCollisionHelper) {
@@ -70,7 +69,7 @@ class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
     }
 
     override fun injectAEPower(amt: Double, mode: Actionable): Double {
-        return if (handler == null || battery == null) 0 else handler!!.injectAEPower(
+        return if (handler == null || battery == null) 0.0 else handler!!.injectAEPower(
                 if (mode == Actionable.MODULATE) battery else battery!!
                         .copy(), amt)
     }
@@ -94,7 +93,7 @@ class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
             val grid = node.grid
             grid?.postEvent(MENetworkPowerStorage(this,
                     MENetworkPowerStorage.PowerEventType.REQUEST_POWER))
-            host.markForUpdate()
+            host?.markForUpdate()
         }
     }
 
@@ -107,14 +106,14 @@ class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
     @Throws(IOException::class)
     override fun readFromStream(data: ByteBuf): Boolean {
         super.readFromStream(data)
-        val iconName: String = AbstractPacket.Companion.readString(data)
-        if (iconName != "none") {
-            batteryIcon = (Minecraft.getMinecraft()
+        val iconName: String? = AbstractPacket.readString(data)
+        batteryIcon = if (iconName != "none") {
+            (Minecraft.getMinecraft()
                     .textureManager
                     .getTexture(TextureMap.locationBlocksTexture) as TextureMap)
                     .getAtlasSprite(iconName)
         } else {
-            batteryIcon = TextureManager.BATTERY_FRONT.texture
+            TextureManager.BATTERY_FRONT.texture
         }
         return true
     }
@@ -149,7 +148,7 @@ class PartBattery : PartECBase(), IAEPowerStorage, IInventoryUpdateReceiver {
     @Throws(IOException::class)
     override fun writeToStream(data: ByteBuf) {
         super.writeToStream(data)
-        AbstractPacket.Companion.writeString(if (battery != null) battery!!
+        AbstractPacket.writeString(if (battery != null) battery!!
                 .item.getIconIndex(battery).iconName else "none",
                 data)
     }

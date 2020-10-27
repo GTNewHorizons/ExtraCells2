@@ -4,8 +4,7 @@ import appeng.api.features.IWirelessTermHandler
 import appeng.api.util.IConfigManager
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.ItemStack
-
-class AEWirelessTermHandler : IWirelessTermHandler {
+open class AEWirelessTermHandler : IWirelessTermHandler {
     override fun canHandle(`is`: ItemStack): Boolean {
         val handler = WirelessTermRegistry.getWirelessTermHandler(`is`) ?: return false
         return !handler.isItemNormalWirelessTermToo(`is`)
@@ -15,7 +14,7 @@ class AEWirelessTermHandler : IWirelessTermHandler {
         return ConfigManager()
     }
 
-    override fun getEncryptionKey(item: ItemStack): String {
+    override fun getEncryptionKey(item: ItemStack): String? {
         val handler = WirelessTermRegistry.getWirelessTermHandler(item) ?: return null
         return handler.getEncryptionKey(item)
     }

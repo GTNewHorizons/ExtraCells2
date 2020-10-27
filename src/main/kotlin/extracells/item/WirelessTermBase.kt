@@ -1,8 +1,11 @@
 package extracells.item
 
 import appeng.api.config.AccessRestriction
+import appeng.api.util.IConfigManager
 import cpw.mods.fml.relauncher.Side
 import cpw.mods.fml.relauncher.SideOnly
+import extracells.api.IHasUsePower
+import extracells.wireless.ConfigManager
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.item.Item
@@ -12,12 +15,23 @@ import net.minecraft.util.StatCollector
 import kotlin.math.floor
 
 
-abstract class WirelessTermBase : PowerItem() {
+abstract class WirelessTermBase : PowerItem(), IHasUsePower {
 
   init {
     setMaxStackSize(1)
   }
-  
+
+  open fun getConfigManager(itemStack: ItemStack?): IConfigManager? {
+    itemStack?.let {
+      val nbt = ensureTagCompound(it)
+      if(!nbt.hasKey("settings"))
+        nbt.setTag("settings", NBTTagCompound())
+      val tag = nbt.getCompoundTag("settings")
+      return ConfigManager(tag)
+    }
+    return null
+  }
+
   override val MAX_POWER: Double = 1600000.0
   override fun MAX_POWER(): Double = MAX_POWER
   
@@ -38,11 +52,12 @@ abstract class WirelessTermBase : PowerItem() {
     tagCompound.setString("key", encKey)
   }
 
-  fun hasPower(player: EntityPlayer, amount: Double, its: ItemStack): Boolean = getAECurrentPower(its) >= amount
+  override fun hasPower(player: EntityPlayer?, amount: Double, `is`: ItemStack?): Boolean = `is`?.let { getAECurrentPower(it) >= amount } == true
 
-
-  fun usePower(player: EntityPlayer, amount: Double, its: ItemStack): Boolean {
-    extractAEPower(its, amount)
+  override fun usePower(player: EntityPlayer?, amount: Double, its: ItemStack?): Boolean {
+    if (its != null) {
+      extractAEPower(its, amount)
+    }
     return true
   }
 

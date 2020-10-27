@@ -47,8 +47,7 @@ import net.minecraft.util.StatCollector
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.*
 import java.util.*
-
-class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTileEntity, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, ICraftingProvider, IWailaTile {
+open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTileEntity, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, ICraftingProvider, IWailaTile {
     inner class FluidInterfaceInventory : IInventory {
         val inv = arrayOfNulls<ItemStack>(9)
         override fun closeInventory() {}
@@ -84,7 +83,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
             return inv[slot]!!
         }
 
-        override fun getStackInSlotOnClosing(slot: Int): ItemStack {
+        override fun getStackInSlotOnClosing(slot: Int): ItemStack? {
             return null
         }
 
@@ -118,7 +117,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
             }
         }
 
-        override fun setInventorySlotContents(slot: Int, stack: ItemStack) {
+        override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
             inv[slot] = stack
             if (stack != null && stack.stackSize > inventoryStackLimit) {
                 stack.stackSize = inventoryStackLimit
@@ -152,15 +151,15 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
     private var update = false
     private var patternHandlers: MutableList<ICraftingPatternDetails> = ArrayList()
     private val patternConvert = HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails>()
-    private val requestedItems: List<IAEItemStack> = ArrayList()
-    private val removeList: List<IAEItemStack> = ArrayList()
+    private val requestedItems: List<IAEItemStack?> = ArrayList()
+    private val removeList: List<IAEItemStack?> = ArrayList()
     val inventory: FluidInterfaceInventory
     private var toExport: IAEItemStack? = null
     private val encodedPattern = AEApi.instance().definitions().items().encodedPattern()
             .maybeItem().orNull()
-    private val export: MutableList<IAEStack<*>> = ArrayList()
-    private val addToExport: MutableList<IAEStack<*>> = ArrayList()
-    private val watcherList: List<IAEItemStack> = ArrayList()
+    private val export: MutableList<IAEStack<*>?> = ArrayList()
+    private val addToExport: MutableList<IAEStack<*>?> = ArrayList()
+    private val watcherList: List<IAEItemStack?> = ArrayList()
     private var isFirstGetGridNode = true
     override fun canDrain(from: ForgeDirection, fluid: Fluid): Boolean {
         if (from == ForgeDirection.UNKNOWN) return false
@@ -173,17 +172,17 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                 && tanks[from.ordinal]!!.fill(FluidStack(fluid, 1), false) > 0)
     }
 
-    override fun drain(from: ForgeDirection, resource: FluidStack,
-                       doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection, resource: FluidStack?,
+                       doDrain: Boolean): FluidStack? {
         val tankFluid = tanks[from.ordinal]!!.fluid
         return if (resource == null || tankFluid == null || tankFluid.getFluid() !== resource.getFluid()) null else drain(
                 from, resource.amount, doDrain)
     }
 
-    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack {
+    override fun drain(from: ForgeDirection, maxDrain: Int, doDrain: Boolean): FluidStack? {
         if (from == ForgeDirection.UNKNOWN) return null
         val drained = tanks[from.ordinal]
-                .drain(maxDrain, doDrain)
+                ?.drain(maxDrain, doDrain)
         if (drained != null) if (getWorldObj() != null) getWorldObj().markBlockForUpdate(xCoord, yCoord,
                 zCoord)
         doNextUpdate = true
@@ -196,8 +195,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                         .ordinal]!!.fluid.getFluid() === resource.getFluid())
                 && resource.getFluid() === FluidRegistry
                         .getFluid(fluidFilter[from.ordinal]!!)) {
-            var added = tanks[from.ordinal]
-                    .fill(resource.copy(), doFill)
+            var added = tanks[from.ordinal]!!.fill(resource.copy(), doFill)
             if (added == resource.amount) {
                 doNextUpdate = true
                 return added
@@ -239,12 +237,12 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
     private fun forceUpdate() {
         getWorldObj().markBlockForUpdate(yCoord, yCoord, zCoord)
         for (listener in listeners) {
-            listener?.updateContainer()
+            listener.updateContainer()
         }
         doNextUpdate = false
     }
 
-    override fun getActionableNode(): IGridNode {
+    override fun getActionableNode(): IGridNode? {
         if (FMLCommonHandler.instance().effectiveSide.isClient) return null
         if (node == null) {
             node = AEApi.instance().createGridNode(gridBlock)
@@ -276,12 +274,12 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
         return if (side == null || side == ForgeDirection.UNKNOWN) null else tanks[side.ordinal]
     }
 
-    override fun getGridNode(dir: ForgeDirection): IGridNode {
+    override fun getGridNode(dir: ForgeDirection): IGridNode? {
         if (FMLCommonHandler.instance().side.isClient
                 && (getWorldObj() == null || getWorldObj().isRemote)) return null
         if (isFirstGetGridNode) {
             isFirstGetGridNode = false
-            actionableNode.updateState()
+            actionableNode?.updateState()
         }
         return node!!
     }
@@ -303,7 +301,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
     override val powerUsage: Double
         get() = 1.0
 
-    override fun getTankInfo(from: ForgeDirection): Array<FluidTankInfo> {
+    override fun getTankInfo(from: ForgeDirection): Array<FluidTankInfo?>? {
         return if (from == ForgeDirection.UNKNOWN) null else arrayOf(tanks[from.ordinal]!!.info)
     }
 
@@ -421,7 +419,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                     zCoord + dir.offsetZ)
             if (tile != null) {
                 val stack0 = export[0]
-                val stack = stack0.copy()
+                val stack = stack0?.copy()
                 if (stack is IAEItemStack && tile is IInventory) {
                     if (tile is ISidedInventory) {
                         val inv = tile as ISidedInventory
@@ -455,7 +453,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                                                 .copy()
                                         s.stackSize = max
                                         inv.setInventorySlotContents(i, s)
-                                        export[0].stackSize = outStack - max + current.toLong()
+                                        export[0]?.stackSize = outStack - max + current.toLong()
                                         return
                                     }
                                 }
@@ -491,7 +489,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                                                 .copy()
                                         s.stackSize = max
                                         inv.setInventorySlotContents(i, s)
-                                        export[0].stackSize = outStack - max + current.toLong()
+                                        export[0]?.stackSize = outStack - max + current.toLong()
                                         return
                                     }
                                 }
@@ -514,7 +512,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                         } else {
                             val fl = fluid.fluidStack.copy()
                             fl.amount = amount
-                            export[0].stackSize = fluid.stackSize - handler.fill(dir.opposite, fl, true)
+                            export[0]?.stackSize = fluid.stackSize - handler.fill(dir.opposite, fl, true)
                             return
                         }
                     }
@@ -530,14 +528,14 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
         if (patternDetails is CraftingPattern) {
             val patter = patternDetails
             val fluids = HashMap<Fluid, Long>()
-            for (stack in patter.condensedFluidInputs) {
+            for (stack in patter.condensedFluidInputs!!) {
                 if (fluids.containsKey(stack!!.fluid)) {
-                    val amount = (fluids[stack!!.fluid]!!
-                            + stack!!.stackSize)
-                    fluids.remove(stack!!.fluid)
-                    fluids[stack!!.fluid] = amount
+                    val amount = (fluids[stack.fluid]!!
+                            + stack.stackSize)
+                    fluids.remove(stack.fluid)
+                    fluids[stack.fluid] = amount
                 } else {
-                    fluids[stack!!.fluid] = stack!!.stackSize
+                    fluids[stack.fluid] = stack.stackSize
                 }
             }
             val grid = node!!.grid ?: return false
@@ -569,7 +567,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                                 Actionable.MODULATE, MachineSource(this))
                 export.add(extractFluid)
             }
-            for (s in patter.condensedInputs) {
+            for (s in patter.condensedInputs!!) {
                 if (s == null) continue
                 if (s.item === ItemEnum.FLUIDPATTERN.item) {
                     toExport = s.copy()
@@ -700,9 +698,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
             toExport = null
         }
         for (i in tanks.indices) {
-            if (tanks[i]!!.fluid != null
-                    && FluidRegistry.getFluid(fluidFilter[i]!!) !== tanks[i]
-                            .getFluid().getFluid()) {
+            if (tanks[i]!!.fluid != null && FluidRegistry.getFluid(fluidFilter[i]!!) !== tanks[i]?.fluid?.getFluid()) {
                 val s = tanks[i]!!.drain(125, false)
                 if (s != null) {
                     val notAdded = storage.fluidInventory
@@ -717,8 +713,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                                 AEApi.instance()
                                         .storage()
                                         .createFluidStack(
-                                                tanks[i]
-                                                        .drain(toAdd, true)),
+                                                tanks[i]!!.drain(toAdd, true)),
                                 Actionable.MODULATE, MachineSource(this))
                         doNextUpdate = true
                         wasIdle = false
@@ -753,10 +748,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                 val accepted = tanks[i]!!.fill(extracted.fluidStack,
                         false)
                 if (accepted == 0) continue
-                tanks[i]
-                        .fill(storage
-                                .fluidInventory
-                                .extractItems(
+                tanks[i]!!.fill(storage.fluidInventory.extractItems(
                                         AEApi.instance()
                                                 .storage()
                                                 .createFluidStack(
@@ -765,8 +757,7 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
                                                                         .getFluid(fluidFilter[i]!!),
                                                                 accepted)),
                                         Actionable.MODULATE,
-                                        MachineSource(this))
-                                .fluidStack, true)
+                                        MachineSource(this)).fluidStack, true)
                 doNextUpdate = true
                 wasIdle = false
             }
@@ -777,15 +768,13 @@ class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IECTile
         if (getWorldObj() == null || getWorldObj().provider == null || getWorldObj().isRemote) return
         if (update) {
             update = false
-            if (getGridNode(ForgeDirection.UNKNOWN) != null
-                    && getGridNode(ForgeDirection.UNKNOWN).grid != null) {
-                getGridNode(ForgeDirection.UNKNOWN).grid.postEvent(
+            getGridNode(ForgeDirection.UNKNOWN)?.grid?.postEvent(
                         MENetworkCraftingPatternChange(this,
                                 getGridNode(ForgeDirection.UNKNOWN)))
-            }
         }
         pushItems()
-        if (doNextUpdate) forceUpdate()
+        if (doNextUpdate)
+            forceUpdate()
         tick()
     }
 

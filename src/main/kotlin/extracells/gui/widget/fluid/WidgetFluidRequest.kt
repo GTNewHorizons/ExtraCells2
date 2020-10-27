@@ -10,8 +10,7 @@ import net.minecraftforge.fluids.FluidStack
 import org.apache.commons.lang3.text.WordUtils
 import org.lwjgl.opengl.GL11
 import java.util.*
-
-class WidgetFluidRequest(guiFluidTerminal: GuiFluidTerminal, fluid: Fluid) : AbstractFluidWidget(guiFluidTerminal, 18,
+open class WidgetFluidRequest(guiFluidTerminal: GuiFluidTerminal, fluid: Fluid) : AbstractFluidWidget(guiFluidTerminal, 18,
         18, fluid) {
     override fun drawTooltip(posX: Int, posY: Int, mouseX: Int, mouseY: Int): Boolean {
         if (fluid == null

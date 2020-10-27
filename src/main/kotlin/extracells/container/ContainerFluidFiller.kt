@@ -6,7 +6,7 @@ import net.minecraft.entity.player.InventoryPlayer
 import net.minecraft.inventory.Container
 import net.minecraft.inventory.Slot
 
-class ContainerFluidFiller(player: InventoryPlayer?,
+open class ContainerFluidFiller(player: InventoryPlayer?,
                            var tileentity: TileEntityFluidFiller) : Container() {
     protected fun bindPlayerInventory(inventoryPlayer: InventoryPlayer?) {
         for (i in 0..2) {
