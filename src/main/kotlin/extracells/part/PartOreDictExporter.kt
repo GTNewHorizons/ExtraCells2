@@ -59,9 +59,24 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
      * Call when the filter string has changed to parse and recompile the filter.
      */
     private fun updateFilter() {
-        if (filter.trim { it <= ' ' }.isNotEmpty()) {
-            //ArrayList<String> matchingNames = new ArrayList<>();
-            var matcher: Predicate<ItemStack?>? = null
+        var matcher: Predicate<ItemStack?>? = null
+        if (filter.contains("\\")
+                || filter.contains("^")
+                || filter.contains("$")
+                || filter.contains("+")
+                || filter.contains("(")
+                || filter.contains(")")
+                || filter.contains("[")
+                || filter.contains("]")) {
+            val test: Predicate<String>? = Pattern.compile(filter).asPredicate()
+            matcher = Predicate<ItemStack?> {
+                it?.let {
+                    Arrays.stream(OreDictionary.getOreIDs(it))
+                            .mapToObj(OreDictionary::getOreName)
+                            .anyMatch(test)
+                } == true
+            }
+        } else if (!this.filter.trim().isEmpty()) {
             val filters = filter.split("[&|]".toRegex()).toTypedArray()
             var lastFilter: String? = null
             for (filter1 in filters) {
@@ -85,28 +100,22 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
                     }
                 }
             }
-            if (matcher == null) {
-                //filterPredicate = null;
-                oreDictFilteredItems = arrayOfNulls(0)
-                return
-            }
+        }
 
-            //Mod name and path evaluation can only be done during tick, can't precompile whitelist for this.
-            if (!filter.contains("@") && !filter.contains("~")) {
-                //Precompiled whitelist of oredict itemstacks.
-                val filtered = ArrayList<ItemStack>()
-                for (name in OreDictionary.getOreNames()) for (s in OreDictionary.getOres(name)) if (matcher.test(s)) {
-                    filtered.add(s)
-                }
-                oreDictFilteredItems = filtered.toArray(oreDictFilteredItems)
-            } else {
-                // mod filtering disabled
-                //filterPredicate = matcher;
-                oreDictFilteredItems = arrayOfNulls(0)
-            }
+        // Mod name and path evaluation are disabled in this version
+        if (matcher != null && !this.filter.contains("@") && !this.filter.contains("~")) {
+            //Precompiled whitelist of oredict itemstacks.
+            val filtered = mutableListOf<ItemStack>()
+            for (name in OreDictionary.getOreNames())
+                for (s in OreDictionary.getOres(name))
+                    if (matcher.test(s)) {
+                        filtered.add(s)
+                    }
+            oreDictFilteredItems = filtered.toTypedArray()
+
         } else {
-            //this.filterPredicate = null;
-            oreDictFilteredItems = arrayOfNulls(0)
+            // mod filtering disabled
+            this.oreDictFilteredItems = arrayOfNulls(0)
         }
     }
 
@@ -308,7 +317,7 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
     }
 
     private val storageGrid: IStorageGrid?
-        private get() {
+        get() {
             val node = gridNode ?: return null
             val grid = node.grid ?: return null
             return grid.getCache(IStorageGrid::class.java)
@@ -318,14 +327,14 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
         return TickingRequest(1, 20, false, false)
     }
 
-    override fun getWailaBodey(data: NBTTagCompound, list: MutableList<String>): List<String> {
-        super.getWailaBodey(data, list)
-        if (data.hasKey("name")) list.add(StatCollector
+    override fun getWailaBodey(tag: NBTTagCompound, oldList: MutableList<String>): List<String> {
+        super.getWailaBodey(tag, oldList)
+        if (tag.hasKey("name")) oldList.add(StatCollector
                 .translateToLocal("extracells.tooltip.oredict")
                 + ": "
-                + data.getString("name")) else list.add(StatCollector
+                + tag.getString("name")) else oldList.add(StatCollector
                 .translateToLocal("extracells.tooltip.oredict") + ":")
-        return list
+        return oldList
     }
 
     override fun getWailaTag(tag: NBTTagCompound): NBTTagCompound {
@@ -335,6 +344,7 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
     }
 
     @MENetworkEventSubscribe
+    @Suppress("UNUSED", "UNUSED_PARAMETER")
     fun powerChange(event: MENetworkPowerStatusChange?) {
         val node = gridNode
         if (node != null) {
@@ -407,6 +417,7 @@ open class PartOreDictExporter : PartECBase(), IGridTickable {
     }
 
     @MENetworkEventSubscribe
+    @Suppress("UNUSED", "UNUSED_PARAMETER")
     fun updateChannels(channel: MENetworkChannelsChanged?) {
         val node = gridNode
         if (node != null) {
