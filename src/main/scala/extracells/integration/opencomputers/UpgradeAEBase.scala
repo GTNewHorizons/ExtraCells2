@@ -23,6 +23,9 @@ import net.minecraftforge.fluids.FluidContainerRegistry
 
 import scala.collection.JavaConversions._
 
+/**
+ * This is a bridge class, bcs. the scala compiler does some weird magic with the NetworkControl traits
+ */
 class UpgradeAEBase(host: EnvironmentHost) extends ManagedEnvironment with appeng.NetworkControl[TileSecurity] with ec.NetworkControl[TileSecurity]{
    val robot: Robot = host match {
       case r : Robot => r
@@ -40,7 +43,7 @@ class UpgradeAEBase(host: EnvironmentHost) extends ManagedEnvironment with appen
    setNode(Network.newNode(this, Visibility.Network).withConnector().withComponent("upgrade_me", Visibility.Neighbors).create())
 
    def getComponent: ItemStack = {
-      return null
+      null
    }
 
    def getSecurity: IGridHost = {

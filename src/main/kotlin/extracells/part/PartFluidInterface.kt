@@ -37,9 +37,7 @@ import extracells.gui.GuiFluidInterface
 import extracells.network.packet.other.IFluidSlotPartOrBlock
 import extracells.registries.ItemEnum
 import extracells.render.TextureManager
-import extracells.util.EmptyMeItemMonitor
-import extracells.util.ItemUtils
-import extracells.util.PermissionUtil
+import extracells.util.*
 import io.netty.buffer.ByteBuf
 import net.minecraft.client.Minecraft
 import net.minecraft.client.renderer.RenderBlocks
@@ -58,24 +56,15 @@ import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.*
 import java.io.IOException
 import java.util.*
+
 open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IFluidSlotPartOrBlock, ITileStorageMonitorable, IStorageMonitorable, IGridTickable, ICraftingProvider {
     inner class FluidInterfaceInventory : IInventory {
         val inv = arrayOfNulls<ItemStack?>(9)
         override fun closeInventory() {}
         override fun decrStackSize(slot: Int, amt: Int): ItemStack? {
-            var stack = getStackInSlot(slot)
-            if (stack != null) {
-                if (stack.stackSize <= amt) {
-                    setInventorySlotContents(slot, null)
-                } else {
-                    stack = stack.splitStack(amt)
-                    if (stack.stackSize == 0) {
-                        setInventorySlotContents(slot, null)
-                    }
-                }
-            }
+            val its = SlotUtil.decreaseStackInSlot(this, slot, amt)
             update = true
-            return stack
+            return its
         }
 
         override fun getInventoryName(): String {
@@ -105,13 +94,13 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         override fun isItemValidForSlot(slot: Int, stack: ItemStack): Boolean {
             if (stack.item is ICraftingPatternItem) {
                 val n = gridNode
-                val w: World?
-                w = if (n == null) {
+                val w: World? = if (n == null) {
                     clientWorld
                 } else {
                     n.world
                 }
-                if (w == null) return false
+                if (w == null)
+                    return false
                 val details = (stack
                         .item as ICraftingPatternItem).getPatternForItem(stack, w)
                 return details != null
@@ -126,14 +115,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         override fun markDirty() {}
         override fun openInventory() {}
         fun readFromNBT(tagCompound: NBTTagCompound) {
-            val tagList = tagCompound.getTagList("Inventory", 10)
-            for (i in 0 until tagList.tagCount()) {
-                val tag = tagList.getCompoundTagAt(i)
-                val slot = tag.getByte("Slot")
-                if (slot >= 0 && slot < inv.size) {
-                    inv[slot.toInt()] = ItemStack.loadItemStackFromNBT(tag)
-                }
-            }
+            SlotUtil.readSlotsFromNbt(inv, tagCompound)
         }
 
         override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
@@ -145,17 +127,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         }
 
         fun writeToNBT(tagCompound: NBTTagCompound) {
-            val itemList = NBTTagList()
-            for (i in inv.indices) {
-                val stack = inv[i]
-                if (stack != null) {
-                    val tag = NBTTagCompound()
-                    tag.setByte("Slot", i.toByte())
-                    stack.writeToNBT(tag)
-                    itemList.appendTag(tag)
-                }
-            }
-            tagCompound.setTag("Inventory", itemList)
+            SlotUtil.writeSlotsToNbt(inv, tagCompound)
         }
     }
 
@@ -166,9 +138,9 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
     private val removeList: List<IAEItemStack> = ArrayList()
     val inventory: FluidInterfaceInventory = FluidInterfaceInventory()
     private var update = false
-    private val export: MutableList<IAEStack<*>> = ArrayList()
+    private val export: MutableList<IAEStack<*>?> = ArrayList()
     private val removeFromExport: MutableList<IAEStack<*>> = ArrayList()
-    private val addToExport: MutableList<IAEStack<*>> = ArrayList()
+    private val addToExport: MutableList<IAEStack<*>?> = ArrayList()
     private var toExport: IAEItemStack? = null
     private val encodedPattern = AEApi.instance().definitions().items().encodedPattern().maybeItem().orNull()
     private val tank: FluidTank = object : FluidTank(10000) {
@@ -224,13 +196,13 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
                 doNextUpdate = true
                 return added
             }
-            added += fillToNetwork(FluidStack(resource.getFluid(),
+            added += PatternUtil.fillToNetwork(this, FluidStack(resource.getFluid(),
                     resource.amount - added), doFill)
             doNextUpdate = true
             return added
         }
         var filled = 0
-        filled += fillToNetwork(resource, doFill)
+        filled += PatternUtil.fillToNetwork(this, resource, doFill)
         if (filled < resource.amount) filled += tank.fill(FluidStack(resource.getFluid(),
                 resource.amount - filled), doFill)
         if (filled > 0) host?.markForUpdate()
@@ -238,24 +210,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         return filled
     }
 
-    fun fillToNetwork(resource: FluidStack?, doFill: Boolean): Int {
-        val node = getGridNode(ForgeDirection.UNKNOWN)
-        if (node == null || resource == null) return 0
-        val grid = node.grid ?: return 0
-        val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return 0
-        val notRemoved: IAEFluidStack?
-        val copy = resource.copy()
-        notRemoved = if (doFill) {
-            storage.fluidInventory.injectItems(
-                    AEApi.instance().storage().createFluidStack(resource),
-                    Actionable.MODULATE, MachineSource(this))
-        } else {
-            storage.fluidInventory.injectItems(
-                    AEApi.instance().storage().createFluidStack(resource),
-                    Actionable.SIMULATE, MachineSource(this))
-        }
-        return if (notRemoved == null) resource.amount else (resource.amount - notRemoved.stackSize).toInt()
-    }
+
 
     private fun forceUpdate() {
         host?.markForUpdate()
@@ -326,7 +281,8 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         return TickingRequest(1, 40, false, false)
     }
 
-    override fun getWailaBodey(tag: NBTTagCompound, list: MutableList<String>): List<String> {
+    //TODO: Use fluidName instead of ID
+    override fun getWailaBodey(tag: NBTTagCompound, oldList: MutableList<String>): List<String> {
         var fluid: FluidStack? = null
         var id = -1
         var amount = 0
@@ -334,24 +290,25 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
             id = tag.getInteger("fluidID")
             amount = tag.getInteger("amount")
         }
-        if (id != -1) fluid = FluidStack(id, amount)
+        if (id != -1)
+            fluid = FluidStack(id, amount)
         if (fluid == null) {
-            list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
+            oldList.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
                     + ": "
                     + StatCollector
                     .translateToLocal("extracells.tooltip.empty1"))
-            list.add(StatCollector
+            oldList.add(StatCollector
                     .translateToLocal("extracells.tooltip.amount")
                     + ": 0mB / 10000mB")
         } else {
-            list.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
+            oldList.add(StatCollector.translateToLocal("extracells.tooltip.fluid")
                     + ": " + fluid.localizedName)
-            list.add(StatCollector
+            oldList.add(StatCollector
                     .translateToLocal("extracells.tooltip.amount")
                     + ": "
                     + fluid.amount + "mB / 10000mB")
         }
-        return list
+        return oldList
     }
 
     override fun getWailaTag(tag: NBTTagCompound): NBTTagCompound {
@@ -444,7 +401,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
                 gridNode!!.gridBlock.location.z + dir.offsetZ)
         if (tile != null) {
             val stack0 = export.iterator().next()
-            val stack = stack0.copy()
+            val stack = stack0?.copy()
             if (stack is IAEItemStack && tile is IInventory) {
                 if (tile is ISidedInventory) {
                     val inv = tile as ISidedInventory
@@ -588,15 +545,16 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
                                                 FluidStack(fluid,
                                                         (amount!! + 0).toInt())),
                                 Actionable.MODULATE, MachineSource(this))
-                export.add(extractFluid)
+                export.add(extractFluid.copy())
             }
             for (s in patternDetails.condensedInputs!!) {
-                if (s == null) continue
+                if (s == null)
+                    continue
                 if (s.item === ItemEnum.FLUIDPATTERN.item) {
                     toExport = s.copy()
                     continue
                 }
-                export.add(s)
+                export.add(s.copy())
             }
         }
         return true
@@ -628,7 +586,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
         addToExport.clear()
         removeFromExport.clear()
         export.clear()
-        var i = tag.getInteger("remove")
+        val i = tag.getInteger("remove")
         for (j in 0 until i) {
             if (tag.getBoolean("remove-$j-isItem")) {
                 val s = AEApi
@@ -650,50 +608,7 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
                 removeFromExport.add(s)
             }
         }
-        i = tag.getInteger("add")
-        for (j in 0 until i) {
-            if (tag.getBoolean("add-$j-isItem")) {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createItemStack(
-                                ItemStack.loadItemStackFromNBT(tag
-                                        .getCompoundTag("add-$j")))
-                s.stackSize = tag.getLong("add-$j-amount")
-                addToExport.add(s)
-            } else {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createFluidStack(
-                                FluidStack.loadFluidStackFromNBT(tag
-                                        .getCompoundTag("add-$j")))
-                s.stackSize = tag.getLong("add-$j-amount")
-                addToExport.add(s)
-            }
-        }
-        i = tag.getInteger("export")
-        for (j in 0 until i) {
-            if (tag.getBoolean("export-$j-isItem")) {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createItemStack(
-                                ItemStack.loadItemStackFromNBT(tag
-                                        .getCompoundTag("export-$j")))
-                s.stackSize = tag.getLong("export-$j-amount")
-                export.add(s)
-            } else {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createFluidStack(
-                                FluidStack.loadFluidStackFromNBT(tag
-                                        .getCompoundTag("export-$j")))
-                s.stackSize = tag.getLong("export-$j-amount")
-                export.add(s)
-            }
-        }
+        NBTUtil.readOutputFromNBT(tag, export, addToExport)
     }
 
     fun registerListener(listener: IContainerListener) {
@@ -706,7 +621,6 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
 
     @SideOnly(Side.CLIENT)
     override fun renderInventory(rh: IPartRenderHelper, renderer: RenderBlocks) {
-        val ts = Tessellator.instance
         val side = TextureManager.BUS_SIDE.texture
         rh.setTexture(side, side, side,
                 TextureManager.INTERFACE.textures[0], side, side)
@@ -849,53 +763,20 @@ open class PartFluidInterface : PartECBase(), IFluidHandler, IFluidInterface, IF
     private fun writeOutputToNBT(tag: NBTTagCompound): NBTTagCompound {
         var i = 0
         for (s in removeFromExport) {
-            if (s != null) {
-                tag.setBoolean("remove-$i-isItem", s.isItem)
-                val data = NBTTagCompound()
-                if (s.isItem) {
-                    (s as IAEItemStack).itemStack.writeToNBT(data)
-                } else {
-                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
-                }
-                tag.setTag("remove-$i", data)
-                tag.setLong("remove-$i-amount", s.stackSize)
+            tag.setBoolean("remove-$i-isItem", s.isItem)
+            val data = NBTTagCompound()
+            if (s.isItem) {
+                (s as IAEItemStack).itemStack.writeToNBT(data)
+            } else {
+                (s as IAEFluidStack).fluidStack.writeToNBT(data)
             }
+            tag.setTag("remove-$i", data)
+            tag.setLong("remove-$i-amount", s.stackSize)
             i++
         }
         tag.setInteger("remove", removeFromExport.size)
         i = 0
-        for (s in addToExport) {
-            if (s != null) {
-                tag.setBoolean("add-$i-isItem", s.isItem)
-                val data = NBTTagCompound()
-                if (s.isItem) {
-                    (s as IAEItemStack).itemStack.writeToNBT(data)
-                } else {
-                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
-                }
-                tag.setTag("add-$i", data)
-                tag.setLong("add-$i-amount", s.stackSize)
-            }
-            i++
-        }
-        tag.setInteger("add", addToExport.size)
-        i = 0
-        for (s in export) {
-            if (s != null) {
-                tag.setBoolean("export-$i-isItem", s.isItem)
-                val data = NBTTagCompound()
-                if (s.isItem) {
-                    (s as IAEItemStack).itemStack.writeToNBT(data)
-                } else {
-                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
-                }
-                tag.setTag("export-$i", data)
-                tag.setLong("export-$i-amount", s.stackSize)
-            }
-            i++
-        }
-        tag.setInteger("export", export.size)
-        return tag
+        return PatternUtil.writePattern(i, addToExport, export, tag)
     }
 
     override fun writeToNBT(data: NBTTagCompound) {

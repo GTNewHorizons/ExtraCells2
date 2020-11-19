@@ -17,34 +17,26 @@ import cpw.mods.fml.common.FMLCommonHandler
 import extracells.api.IECTileEntity
 import extracells.crafting.CraftingPattern
 import extracells.gridblock.ECFluidGridBlock
+import extracells.util.PatternUtil
+import extracells.util.SlotUtil
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.InventoryCrafting
 import net.minecraft.item.ItemStack
 import net.minecraft.nbt.NBTTagCompound
-import net.minecraft.nbt.NBTTagList
 import net.minecraftforge.common.util.ForgeDirection
 import net.minecraftforge.fluids.Fluid
 import net.minecraftforge.fluids.FluidStack
 import java.util.*
+
 open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, ICraftingWatcherHost, IECTileEntity {
     inner class FluidCrafterInventory : IInventory {
         val inv = arrayOfNulls<ItemStack>(9)
         override fun closeInventory() {}
         override fun decrStackSize(slot: Int, amt: Int): ItemStack? {
-            var stack = getStackInSlot(slot)
-            if (stack != null) {
-                if (stack.stackSize <= amt) {
-                    setInventorySlotContents(slot, null)
-                } else {
-                    stack = stack.splitStack(amt)
-                    if (stack.stackSize == 0) {
-                        setInventorySlotContents(slot, null)
-                    }
-                }
-            }
+            val its = SlotUtil.decreaseStackInSlot(this, slot, amt)
             update = true
-            return stack
+            return its
         }
 
         override fun getInventoryName(): String {
@@ -87,14 +79,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
         override fun markDirty() {}
         override fun openInventory() {}
         fun readFromNBT(tagCompound: NBTTagCompound) {
-            val tagList = tagCompound.getTagList("Inventory", 10)
-            for (i in 0 until tagList.tagCount()) {
-                val tag = tagList.getCompoundTagAt(i)
-                val slot = tag.getByte("Slot")
-                if (slot >= 0 && slot < inv.size) {
-                    inv[slot.toInt()] = ItemStack.loadItemStackFromNBT(tag)
-                }
-            }
+            SlotUtil.readSlotsFromNbt(inv, tagCompound)
         }
 
         override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
@@ -106,17 +91,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
         }
 
         fun writeToNBT(tagCompound: NBTTagCompound) {
-            val itemList = NBTTagList()
-            for (i in inv.indices) {
-                val stack = inv[i]
-                if (stack != null) {
-                    val tag = NBTTagCompound()
-                    tag.setByte("Slot", i.toByte())
-                    stack.writeToNBT(tag)
-                    itemList.appendTag(tag)
-                }
-            }
-            tagCompound.setTag("Inventory", itemList)
+            SlotUtil.writeSlotsToNbt(inv, tagCompound)
         }
     }
 
@@ -207,8 +182,8 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
             }
             if (currentPatternStack != null && currentPatternStack.item != null && currentPatternStack.item is ICraftingPatternItem) {
                 val currentPattern = currentPatternStack
-                        .item as ICraftingPatternItem
-                if (currentPattern != null && currentPattern.getPatternForItem(
+                        .item as ICraftingPatternItem?
+                if (currentPattern?.getPatternForItem(
                                 currentPatternStack, getWorldObj()) != null && currentPattern.getPatternForItem(
                                 currentPatternStack, getWorldObj())
                                 .isCraftable) {
@@ -217,7 +192,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
                                     currentPatternStack, getWorldObj()))
                     patternHandlers.add(pattern)
                     patternHandlerSlot[i] = pattern
-                    if (pattern.condensedInputs.size == 0) {
+                    if (pattern.condensedInputs.isEmpty()) {
                         craftingTracker.setEmitable(pattern
                                 .condensedOutputs[0])
                     } else {
@@ -235,36 +210,20 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
                              table: InventoryCrafting): Boolean {
         if (isBusy) return false
         if (patternDetails is CraftingPattern) {
-            val patter = patternDetails
             val fluids = HashMap<Fluid, Long>()
-            for (stack in patter.condensedFluidInputs!!) {
-                if (fluids.containsKey(stack!!.fluid)) {
-                    val amount = fluids[stack.fluid]!! + stack.stackSize
-                    fluids.remove(stack.fluid)
-                    fluids[stack.fluid] = amount
-                } else {
-                    fluids[stack.fluid] = stack.stackSize
-                }
-            }
+            PatternUtil.pushPatternToFluid(patternDetails, fluids)
             val grid = node!!.grid ?: return false
             val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return false
+            if (!PatternUtil.canExtractFluid(storage, fluids, this))
+                return false
             for (fluid in fluids.keys) {
                 val amount = fluids[fluid]
-                val extractFluid = storage.fluidInventory.extractItems(
-                        AEApi.instance().storage().createFluidStack(FluidStack(fluid, (amount!! + 0).toInt())),
-                        Actionable.SIMULATE, MachineSource(this))
-                if (extractFluid == null || extractFluid.stackSize != amount) {
-                    return false
-                }
-            }
-            for (fluid in fluids.keys) {
-                val amount = fluids[fluid]
-                val extractFluid = storage.fluidInventory.extractItems(
+                storage.fluidInventory.extractItems(
                         AEApi.instance().storage().createFluidStack(FluidStack(fluid, (amount!! + 0).toInt())),
                         Actionable.MODULATE, MachineSource(this))
             }
             finishCraftingTime = System.currentTimeMillis() + 1000
-            returnStack = patter.getOutput(table, getWorldObj())
+            returnStack = patternDetails.getOutput(table, getWorldObj())
             optionalReturnStack = arrayOfNulls(9)
             for (i in 0..8) {
                 val s = table.getStackInSlot(i)
@@ -330,15 +289,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
                         if (details.condensedOutputs[0] == s) {
                             val patter = details as CraftingPattern
                             val fluids = HashMap<Fluid, Long>()
-                            for (stack in patter.condensedFluidInputs!!) {
-                                if (fluids.containsKey(stack!!.fluid)) {
-                                    val amount = fluids[stack.fluid]!! + stack.stackSize
-                                    fluids.remove(stack.fluid)
-                                    fluids[stack.fluid] = amount
-                                } else {
-                                    fluids[stack.fluid] = stack.stackSize
-                                }
-                            }
+                            PatternUtil.pushPatternToFluid(patter, fluids)
                             val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: break
                             var doBreak = false
                             for (fluid in fluids.keys) {
@@ -355,7 +306,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
                             if (doBreak) break
                             for (fluid in fluids.keys) {
                                 val amount = fluids[fluid]
-                                val extractFluid = storage.fluidInventory.extractItems(
+                                storage.fluidInventory.extractItems(
                                         AEApi.instance().storage().createFluidStack(
                                                 FluidStack(fluid, (amount!! + 0).toInt())), Actionable.MODULATE,
                                         MachineSource(this))
@@ -373,7 +324,7 @@ open class TileEntityFluidCrafter : TileBase(), IActionHost, ICraftingProvider, 
 
     private fun updateWatcher() {
         requestedItems = ArrayList()
-        var grid: IGrid? = null
+        val grid: IGrid?
         val node = gridNode
         var crafting: ICraftingGrid? = null
         if (node != null) {

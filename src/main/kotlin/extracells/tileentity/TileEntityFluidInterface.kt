@@ -31,8 +31,7 @@ import extracells.gridblock.ECFluidGridBlock
 import extracells.integration.waila.IWailaTile
 import extracells.network.packet.other.IFluidSlotPartOrBlock
 import extracells.registries.ItemEnum
-import extracells.util.EmptyMeItemMonitor
-import extracells.util.ItemUtils
+import extracells.util.*
 import net.minecraft.entity.player.EntityPlayer
 import net.minecraft.inventory.IInventory
 import net.minecraft.inventory.ISidedInventory
@@ -51,20 +50,10 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
     inner class FluidInterfaceInventory : IInventory {
         val inv = arrayOfNulls<ItemStack>(9)
         override fun closeInventory() {}
-        override fun decrStackSize(slot: Int, amt: Int): ItemStack {
-            var stack = getStackInSlot(slot)
-            if (stack != null) {
-                if (stack.stackSize <= amt) {
-                    setInventorySlotContents(slot, null)
-                } else {
-                    stack = stack.splitStack(amt)
-                    if (stack.stackSize == 0) {
-                        setInventorySlotContents(slot, null)
-                    }
-                }
-            }
+        override fun decrStackSize(slot: Int, amt: Int): ItemStack? {
+            val its = SlotUtil.decreaseStackInSlot(this, slot, amt)
             update = true
-            return stack
+            return its
         }
 
         override fun getInventoryName(): String {
@@ -79,8 +68,8 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
             return inv.size
         }
 
-        override fun getStackInSlot(slot: Int): ItemStack {
-            return inv[slot]!!
+        override fun getStackInSlot(slot: Int): ItemStack? {
+            return inv[slot]
         }
 
         override fun getStackInSlotOnClosing(slot: Int): ItemStack? {
@@ -107,14 +96,7 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         override fun markDirty() {}
         override fun openInventory() {}
         fun readFromNBT(tagCompound: NBTTagCompound) {
-            val tagList = tagCompound.getTagList("Inventory", 10)
-            for (i in 0 until tagList.tagCount()) {
-                val tag = tagList.getCompoundTagAt(i)
-                val slot = tag.getByte("Slot")
-                if (slot >= 0 && slot < inv.size) {
-                    inv[slot.toInt()] = ItemStack.loadItemStackFromNBT(tag)
-                }
-            }
+            SlotUtil.readSlotsFromNbt(inv, tagCompound)
         }
 
         override fun setInventorySlotContents(slot: Int, stack: ItemStack?) {
@@ -126,22 +108,12 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         }
 
         fun writeToNBT(tagCompound: NBTTagCompound) {
-            val itemList = NBTTagList()
-            for (i in inv.indices) {
-                val stack = inv[i]
-                if (stack != null) {
-                    val tag = NBTTagCompound()
-                    tag.setByte("Slot", i.toByte())
-                    stack.writeToNBT(tag)
-                    itemList.appendTag(tag)
-                }
-            }
-            tagCompound.setTag("Inventory", itemList)
+            SlotUtil.writeSlotsToNbt(inv, tagCompound)
         }
     }
 
     var listeners: MutableList<IContainerListener> = ArrayList()
-    private val gridBlock: ECFluidGridBlock
+    private val gridBlock: ECFluidGridBlock = ECFluidGridBlock(this)
     private var node: IGridNode? = null
     var tanks = arrayOfNulls<FluidTank>(6)
     var fluidFilter = arrayOfNulls<Int>(tanks.size)
@@ -153,7 +125,7 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
     private val patternConvert = HashMap<ICraftingPatternDetails, IFluidCraftingPatternDetails>()
     private val requestedItems: List<IAEItemStack?> = ArrayList()
     private val removeList: List<IAEItemStack?> = ArrayList()
-    val inventory: FluidInterfaceInventory
+    val inventory: FluidInterfaceInventory = FluidInterfaceInventory()
     private var toExport: IAEItemStack? = null
     private val encodedPattern = AEApi.instance().definitions().items().encodedPattern()
             .maybeItem().orNull()
@@ -189,7 +161,7 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         return drained
     }
 
-    override fun fill(from: ForgeDirection, resource: FluidStack, doFill: Boolean): Int {
+    override fun fill(from: ForgeDirection, resource: FluidStack?, doFill: Boolean): Int {
         if (from == ForgeDirection.UNKNOWN || resource == null) return 0
         if ((tanks[from.ordinal]!!.fluid == null || tanks[from
                         .ordinal]!!.fluid.getFluid() === resource.getFluid())
@@ -200,38 +172,19 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
                 doNextUpdate = true
                 return added
             }
-            added += fillToNetwork(FluidStack(resource.getFluid(),
+            added += PatternUtil.fillToNetwork(this, FluidStack(resource.getFluid(),
                     resource.amount - added), doFill)
             doNextUpdate = true
             return added
         }
         var filled = 0
-        filled += fillToNetwork(resource, doFill)
+        filled += PatternUtil.fillToNetwork(this, resource, doFill)
         if (filled < resource.amount) filled += tanks[from.ordinal]!!.fill(FluidStack(
                 resource.getFluid(), resource.amount - filled), doFill)
         if (filled > 0) if (getWorldObj() != null) getWorldObj().markBlockForUpdate(xCoord, yCoord,
                 zCoord)
         doNextUpdate = true
         return filled
-    }
-
-    fun fillToNetwork(resource: FluidStack?, doFill: Boolean): Int {
-        val node = getGridNode(ForgeDirection.UNKNOWN)
-        if (node == null || resource == null) return 0
-        val grid = node.grid ?: return 0
-        val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return 0
-        val notRemoved: IAEFluidStack?
-        val copy = resource.copy()
-        notRemoved = if (doFill) {
-            storage.fluidInventory.injectItems(
-                    AEApi.instance().storage().createFluidStack(resource),
-                    Actionable.MODULATE, MachineSource(this))
-        } else {
-            storage.fluidInventory.injectItems(
-                    AEApi.instance().storage().createFluidStack(resource),
-                    Actionable.SIMULATE, MachineSource(this))
-        }
-        return if (notRemoved == null) resource.amount else (resource.amount - notRemoved.stackSize).toInt()
     }
 
     private fun forceUpdate() {
@@ -389,11 +342,8 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         patternConvert.clear()
         for (currentPatternStack in inventory.inv) {
             if (currentPatternStack != null && currentPatternStack.item != null && currentPatternStack.item is ICraftingPatternItem) {
-                val currentPattern = currentPatternStack
-                        .item as ICraftingPatternItem
-                if (currentPattern != null
-                        && currentPattern.getPatternForItem(
-                                currentPatternStack, getWorldObj()) != null) {
+                val currentPattern = currentPatternStack.item as ICraftingPatternItem?
+                if (currentPattern?.getPatternForItem(currentPatternStack, getWorldObj()) != null) {
                     val pattern: IFluidCraftingPatternDetails = CraftingPattern2(
                             currentPattern.getPatternForItem(
                                     currentPatternStack, getWorldObj()))
@@ -526,35 +476,12 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         if (isBusy || !patternConvert.containsKey(patDetails)) return false
         val patternDetails: ICraftingPatternDetails? = patternConvert[patDetails]
         if (patternDetails is CraftingPattern) {
-            val patter = patternDetails
             val fluids = HashMap<Fluid, Long>()
-            for (stack in patter.condensedFluidInputs!!) {
-                if (fluids.containsKey(stack!!.fluid)) {
-                    val amount = (fluids[stack.fluid]!!
-                            + stack.stackSize)
-                    fluids.remove(stack.fluid)
-                    fluids[stack.fluid] = amount
-                } else {
-                    fluids[stack.fluid] = stack.stackSize
-                }
-            }
+            PatternUtil.pushPatternToFluid(patternDetails, fluids)
             val grid = node!!.grid ?: return false
             val storage = grid.getCache<IStorageGrid>(IStorageGrid::class.java) ?: return false
-            for (fluid in fluids.keys) {
-                val amount = fluids[fluid]
-                val extractFluid = storage.fluidInventory
-                        .extractItems(
-                                AEApi.instance()
-                                        .storage()
-                                        .createFluidStack(
-                                                FluidStack(fluid,
-                                                        (amount!! + 0).toInt())),
-                                Actionable.SIMULATE, MachineSource(this))
-                if (extractFluid == null
-                        || extractFluid.stackSize != amount) {
-                    return false
-                }
-            }
+            if (!PatternUtil.canExtractFluid(storage, fluids, this))
+                return false
             for (fluid in fluids.keys) {
                 val amount = fluids[fluid]
                 val extractFluid = storage.fluidInventory
@@ -567,8 +494,9 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
                                 Actionable.MODULATE, MachineSource(this))
                 export.add(extractFluid)
             }
-            for (s in patter.condensedInputs!!) {
-                if (s == null) continue
+            for (s in patternDetails.condensedInputs!!) {
+                if (s == null)
+                    continue
                 if (s.item === ItemEnum.FLUIDPATTERN.item) {
                     toExport = s.copy()
                     continue
@@ -599,56 +527,7 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
             }
         }
         if (tag.hasKey("inventory")) inventory.readFromNBT(tag.getCompoundTag("inventory"))
-        if (tag.hasKey("export")) readOutputFromNBT(tag.getCompoundTag("export"))
-    }
-
-    private fun readOutputFromNBT(tag: NBTTagCompound) {
-        addToExport.clear()
-        export.clear()
-        var i = tag.getInteger("add")
-        for (j in 0 until i) {
-            if (tag.getBoolean("add-$j-isItem")) {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createItemStack(
-                                ItemStack.loadItemStackFromNBT(tag
-                                        .getCompoundTag("add-$j")))
-                s.stackSize = tag.getLong("add-$j-amount")
-                addToExport.add(s)
-            } else {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createFluidStack(
-                                FluidStack.loadFluidStackFromNBT(tag
-                                        .getCompoundTag("add-$j")))
-                s.stackSize = tag.getLong("add-$j-amount")
-                addToExport.add(s)
-            }
-        }
-        i = tag.getInteger("export")
-        for (j in 0 until i) {
-            if (tag.getBoolean("export-$j-isItem")) {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createItemStack(
-                                ItemStack.loadItemStackFromNBT(tag
-                                        .getCompoundTag("export-$j")))
-                s.stackSize = tag.getLong("export-$j-amount")
-                export.add(s)
-            } else {
-                val s = AEApi
-                        .instance()
-                        .storage()
-                        .createFluidStack(
-                                FluidStack.loadFluidStackFromNBT(tag
-                                        .getCompoundTag("export-$j")))
-                s.stackSize = tag.getLong("export-$j-amount")
-                export.add(s)
-            }
-        }
+        if (tag.hasKey("export")) NBTUtil.readOutputFromNBT(tag, export, addToExport)
     }
 
     fun registerListener(listener: IContainerListener) {
@@ -785,48 +664,9 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
         return tag
     }
 
-    private fun writeOutputToNBT(tag: NBTTagCompound): NBTTagCompound {
-        var i = 0
-        i = 0
-        for (s in addToExport) {
-            if (s != null) {
-                tag.setBoolean("add-$i-isItem", s.isItem)
-                val data = NBTTagCompound()
-                if (s.isItem) {
-                    (s as IAEItemStack).itemStack.writeToNBT(data)
-                } else {
-                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
-                }
-                tag.setTag("add-$i", data)
-                tag.setLong("add-$i-amount", s.stackSize)
-            }
-            i++
-        }
-        tag.setInteger("add", addToExport.size)
-        i = 0
-        for (s in export) {
-            if (s != null) {
-                tag.setBoolean("export-$i-isItem", s.isItem)
-                val data = NBTTagCompound()
-                if (s.isItem) {
-                    (s as IAEItemStack).itemStack.writeToNBT(data)
-                } else {
-                    (s as IAEFluidStack).fluidStack.writeToNBT(data)
-                }
-                tag.setTag("export-$i", data)
-                tag.setLong("export-$i-amount", s.stackSize)
-            }
-            i++
-        }
-        tag.setInteger("export", export.size)
-        return tag
-    }
-
     override fun writeToNBT(data: NBTTagCompound) {
         writeToNBTWithoutExport(data)
-        val tag = NBTTagCompound()
-        writeOutputToNBT(tag)
-        data.setTag("export", tag)
+        data.setTag("export", PatternUtil.writePattern(0, addToExport, export, NBTTagCompound()))
     }
 
     fun writeToNBTWithoutExport(tag: NBTTagCompound) {
@@ -836,7 +676,8 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
                     tanks[i]!!.writeToNBT(NBTTagCompound()))
             tag.setInteger("filter#$i", fluidFilter[i]!!)
         }
-        if (!hasWorldObj()) return
+        if (!hasWorldObj())
+            return
         val node = getGridNode(ForgeDirection.UNKNOWN)
         if (node != null) {
             val nodeTag = NBTTagCompound()
@@ -849,8 +690,6 @@ open class TileEntityFluidInterface : TileBase(), IActionHost, IFluidHandler, IE
     }
 
     init {
-        inventory = FluidInterfaceInventory()
-        gridBlock = ECFluidGridBlock(this)
         for (i in tanks.indices) {
             tanks[i] = object : FluidTank(10000) {
                 override fun readFromNBT(nbt: NBTTagCompound): FluidTank {
