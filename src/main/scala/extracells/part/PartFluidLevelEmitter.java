@@ -9,6 +9,9 @@ import appeng.api.networking.security.BaseActionSource;
 import appeng.api.networking.storage.IStackWatcher;
 import appeng.api.networking.storage.IStackWatcherHost;
 import appeng.api.networking.storage.IStorageGrid;
+import appeng.api.networking.ticking.IGridTickable;
+import appeng.api.networking.ticking.TickRateModulation;
+import appeng.api.networking.ticking.TickingRequest;
 import appeng.api.parts.IPart;
 import appeng.api.parts.IPartHost;
 import appeng.api.parts.IPartCollisionHelper;
@@ -18,6 +21,7 @@ import appeng.api.storage.StorageChannel;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEStack;
 import appeng.api.storage.data.IItemList;
+import appeng.core.settings.TickRates;
 import com.google.common.collect.Lists;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
@@ -45,7 +49,7 @@ import java.io.IOException;
 import java.util.Random;
 
 public class PartFluidLevelEmitter extends PartECBase implements
-		IStackWatcherHost, IFluidSlotPartOrBlock {
+		IStackWatcherHost, IFluidSlotPartOrBlock, IGridTickable {
 
 	private Fluid fluid;
 	private RedstoneMode mode = RedstoneMode.HIGH_SIGNAL;
@@ -53,6 +57,30 @@ public class PartFluidLevelEmitter extends PartECBase implements
 	private long wantedAmount;
 	private long currentAmount;
 	private boolean clientRedstoneOutput = false;
+
+	@Override
+	public TickingRequest getTickingRequest(final IGridNode node )
+	{
+		return new TickingRequest( TickRates.IOPort.getMin(), TickRates.IOPort.getMax(), false, true );
+	}
+
+	@Override
+	public TickRateModulation tickingRequest(final IGridNode node, final int ticksSinceLastCall )
+	{
+		if (this.fluid != null) {
+			long lastAmount = this.currentAmount;
+			updateCurrentAmount();
+			if (this.currentAmount != lastAmount) {
+				if (node != null) {
+					setActive(node.isActive());
+					getHost().markForUpdate();
+					notifyTargetBlock(getHostTile(), getSide());
+				}
+				return TickRateModulation.FASTER;
+			}
+		}
+		return TickRateModulation.SLOWER;
+	}
 
 	@Override
 	public int cableConnectionRenderTo() {
