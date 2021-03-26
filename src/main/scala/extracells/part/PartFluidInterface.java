@@ -75,6 +75,8 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 	private class FluidInterfaceInventory implements IInventory {
 
 		private ItemStack[] inv = new ItemStack[9];
+	        private static final Integer MAX_TANK = 32000;
+      	        private static final Integer MAX_IO   = 8000;
 
 		@Override
 		public void closeInventory() {}
@@ -207,7 +209,7 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 	private IAEItemStack toExport = null;
 
 	private final Item encodedPattern = AEApi.instance().definitions().items().encodedPattern().maybeItem().orNull();
-	private FluidTank tank = new FluidTank(10000) {
+	private FluidTank tank = new FluidTank(this.MAX_TANK) {
 		@Override
 		public FluidTank readFromNBT(NBTTagCompound nbt) {
 			if (!nbt.hasKey("Empty")) {
@@ -931,7 +933,7 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 		if (this.tank.getFluid() != null
 				&& FluidRegistry.getFluid(this.fluidFilter) != this.tank
 						.getFluid().getFluid()) {
-			FluidStack s = this.tank.drain(125, false);
+			FluidStack s = this.tank.drain(this.MAX_IO, false);
 			if (s != null) {
 				IAEFluidStack notAdded = storage.getFluidInventory()
 						.injectItems(
