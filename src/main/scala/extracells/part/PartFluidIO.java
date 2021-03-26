@@ -60,6 +60,7 @@ public abstract class PartFluidIO extends PartECBase implements IGridTickable,
 			return false;
 		}
 	};
+        private static final Integer MAX_IO = 1000;
 
 	@Override
 	public void getDrops( List<ItemStack> drops, boolean wrenched) {
@@ -135,13 +136,13 @@ public abstract class PartFluidIO extends PartECBase implements IGridTickable,
 		if (tag.hasKey("speed"))
 			oldList.add(tag.getInteger("speed") + "mB/t");
 		else
-			oldList.add("125mB/t");
+		    oldList.add(String.format("%d mB/t", this.MAX_IO));
 		return oldList;
 	}
 
 	@Override
 	public NBTTagCompound getWailaTag(NBTTagCompound tag) {
-		tag.setInteger("speed", 125 + this.speedState * 125);
+		tag.setInteger("speed", this.MAX_IO + this.speedState * this.MAX_IO);
 		return tag;
 	}
 
@@ -254,7 +255,7 @@ public abstract class PartFluidIO extends PartECBase implements IGridTickable,
 	public final TickRateModulation tickingRequest(IGridNode node,
 			int TicksSinceLastCall) {
 		if (canDoWork())
-			return doWork(125 + this.speedState * 125, TicksSinceLastCall) ? TickRateModulation.FASTER
+			return doWork(this.MAX_IO + this.speedState * this.MAX_IO, TicksSinceLastCall) ? TickRateModulation.FASTER
 					: TickRateModulation.SLOWER;
 		return TickRateModulation.SLOWER;
 	}
