@@ -196,13 +196,16 @@ public class TileEntityFluidInterface extends TileBase implements
 	private List<IAEItemStack> watcherList = new ArrayList<IAEItemStack>();
 
 	private boolean isFirstGetGridNode = true;
+	
+	private static final Integer MAX_SIZE = 32000;
+	private static final Integer MAX_DRAIN = 8000;
 
 	public TileEntityFluidInterface() {
 		super();
 		this.inventory = new FluidInterfaceInventory();
 		this.gridBlock = new ECFluidGridBlock(this);
 		for (int i = 0; i < this.tanks.length; i++) {
-			this.tanks[i] = new FluidTank(10000) {
+			this.tanks[i] = new FluidTank(this.MAX_SIZE) {
 				@Override
 				public FluidTank readFromNBT(NBTTagCompound nbt) {
 					if (!nbt.hasKey("Empty")) {
@@ -866,7 +869,7 @@ public class TileEntityFluidInterface extends TileBase implements
 			if (this.tanks[i].getFluid() != null
 					&& FluidRegistry.getFluid(this.fluidFilter[i]) != this.tanks[i]
 							.getFluid().getFluid()) {
-				FluidStack s = this.tanks[i].drain(125, false);
+				FluidStack s = this.tanks[i].drain(this.MAX_DRAIN, false);
 				if (s != null) {
 					IAEFluidStack notAdded = storage.getFluidInventory()
 							.injectItems(
