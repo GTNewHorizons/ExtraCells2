@@ -19,6 +19,25 @@ shapeless=
 	ae2:ItemMaterial.Cell1kPart ae2:ItemMaterial.EmptyStorageCell mc:chest
 	-> ec:physCellContainer
 
+shapeless=
+    ae2:BlockCraftingUnit:0
+    ec:cell256kPart
+    -> ec:craftingStorage256k
+
+shapeless=
+    ae2:BlockCraftingUnit:0
+    ec:cell1024kPart
+    -> ec:craftingStorage1024k
+
+shapeless=
+    ae2:BlockCraftingUnit:0
+    ec:cell4096kPart
+    -> ec:craftingStorage4096k
+
+shapeless=
+    ae2:BlockCraftingUnit:0
+    ec:cell16384kPart
+    -> ec:craftingStorage16384k
 
 shapeless=
 	ec:physCasing ec:cell256kPart
