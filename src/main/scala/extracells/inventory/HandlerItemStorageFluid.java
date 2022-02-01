@@ -14,6 +14,7 @@ import extracells.api.ECApi;
 import extracells.api.IFluidStorageCell;
 import extracells.api.IHandlerFluidStorage;
 import extracells.container.ContainerFluidStorage;
+import extracells.util.FluidUtil;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraftforge.fluids.Fluid;
@@ -73,7 +74,6 @@ public class HandlerItemStorageFluid implements IMEInventoryHandler<IAEFluidStac
 			BaseActionSource src) {
 		if (request == null || !allowedByFormat(request.getFluid()))
 			return null;
-
 		IAEFluidStack removedStack;
 		List<FluidStack> currentFluids = Lists.newArrayList(this.fluidStacks);
 		for (int i = 0; i < this.fluidStacks.size(); i++) {
@@ -88,7 +88,7 @@ public class HandlerItemStorageFluid implements IMEInventoryHandler<IAEFluidStac
 						writeFluidToSlot(i, toWrite);
 					}
 				} else {
-					removedStack = AEApi.instance().storage().createFluidStack(currentStack.copy());
+					removedStack = FluidUtil.createAEFluidStack(currentStack.getFluidID(), currentStack.amount);
 					if (mode == Actionable.MODULATE) {
 						writeFluidToSlot(i, null);
 					}
