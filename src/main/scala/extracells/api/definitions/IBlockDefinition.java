@@ -12,7 +12,7 @@ public interface IBlockDefinition {
 
 	ITileDefinition fluidFiller();
 
-	ITileDefinition walrus();
+	default ITileDefinition walrus() { return null; }
 
 	ITileDefinition craftingStorage256k();
 

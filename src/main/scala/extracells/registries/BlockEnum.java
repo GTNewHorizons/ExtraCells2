@@ -12,7 +12,7 @@ import net.minecraft.util.StatCollector;
 
 public enum BlockEnum {
 	CERTUSTANK("certustank", new BlockCertusTank(), ItemBlockCertusTank.class),
-	WALRUS("walrus", new BlockWalrus()),
+	WALRUS("walrus", null),
 	FLUIDCRAFTER("fluidcrafter", new BlockFluidCrafter()),
 	ECBASEBLOCK("ecbaseblock", new ECBaseBlock(), ItemBlockECBase.class),
 	BLASTRESISTANTMEDRIVE("hardmedrive", BlockHardMEDrive.instance()),

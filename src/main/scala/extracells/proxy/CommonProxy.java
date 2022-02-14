@@ -61,7 +61,6 @@ public class CommonProxy {
 	public void registerMovables() {
 		IAppEngApi api = AEApi.instance();
 		api.registries().movable().whiteListTileEntity(TileEntityCertusTank.class);
-		api.registries().movable().whiteListTileEntity(TileEntityWalrus.class);
 		api.registries().movable().whiteListTileEntity(TileEntityFluidCrafter.class);
 		api.registries().movable().whiteListTileEntity(TileEntityFluidInterface.class);
 		api.registries().movable().whiteListTileEntity(TileEntityFluidFiller.class);
@@ -76,7 +75,6 @@ public class CommonProxy {
 
 	public void registerTileEntities() {
 		GameRegistry.registerTileEntity(TileEntityCertusTank.class, "tileEntityCertusTank");
-		GameRegistry.registerTileEntity(TileEntityWalrus.class, "tileEntityWalrus");
 		GameRegistry.registerTileEntity(TileEntityFluidCrafter.class, "tileEntityFluidCrafter");
 		GameRegistry.registerTileEntity(TileEntityFluidInterface.class, "tileEntityFluidInterface");
 		GameRegistry.registerTileEntity(TileEntityFluidFiller.class, "tileEntityFluidFiller");

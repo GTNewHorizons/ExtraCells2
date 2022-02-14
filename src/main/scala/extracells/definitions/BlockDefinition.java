@@ -33,12 +33,6 @@ public class BlockDefinition implements IBlockDefinition {
 				TileEntityFluidFiller.class);
 	}
 
-	@Override
-	public ITileDefinition walrus() {
-		return new BlockItemDefinitions(BlockEnum.WALRUS.getBlock(),
-				TileEntityWalrus.class);
-	}
-
     @Override
     public ITileDefinition craftingStorage256k() {
         return new BlockItemDefinitions(BlockEnum.CRAFTINGSTORAGE.getBlock(), 0,
