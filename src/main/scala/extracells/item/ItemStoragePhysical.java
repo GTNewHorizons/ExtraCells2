@@ -179,7 +179,9 @@ public class ItemStoragePhysical extends ItemECBase implements IStorageCell,
 
 	@Override
 	public double getIdleDrain() {
-		return 0;
+		// AE2 API needs fixing to provide an ItemStack here to allow type-dependent idle drain.
+		// 2.5 corresponds to 256k based on vanilla AE2 idle drain progression
+		return 2.5;
 	}
 
 	@SideOnly(Side.CLIENT)
