@@ -205,6 +205,7 @@ public class PartFluidStorageMonitor extends PartECBase implements IStackWatcher
 			this.fluid = FluidUtil.getFluidFromContainer(s).getFluid();
 			if (this.watcher != null)
 				this.watcher.add(FluidUtil.createAEFluidStack(this.fluid));
+			updateFluidAmount();
 			IPartHost host = getHost();
 			if (host != null)
 				host.markForUpdate();
@@ -213,9 +214,7 @@ public class PartFluidStorageMonitor extends PartECBase implements IStackWatcher
 		return false;
 	}
 
-	@Override
-	public void onStackChange(IItemList arg0, IAEStack arg1, IAEStack arg2,
-			BaseActionSource arg3, StorageChannel arg4) {
+	protected void updateFluidAmount() {
 		if (this.fluid != null) {
 			IGridNode n = getGridNode();
 			if (n == null)
@@ -243,7 +242,12 @@ public class PartFluidStorageMonitor extends PartECBase implements IStackWatcher
 			if (host != null)
 				host.markForUpdate();
 		}
+	}
 
+	@Override
+	public void onStackChange(IItemList arg0, IAEStack arg1, IAEStack arg2,
+			BaseActionSource arg3, StorageChannel arg4) {
+		updateFluidAmount();
 	}
 
 	@Override
