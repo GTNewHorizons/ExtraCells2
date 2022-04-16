@@ -294,20 +294,22 @@ public class ItemStoragePhysical extends ItemECBase implements IStorageCell,
 			EntityPlayer entityPlayer) {
 		if (itemStack == null)
 			return itemStack;
-		if (itemStack.getItemDamage() == 4 && !world.isRemote && entityPlayer.isSneaking()) {
-			switch (itemStack.getTagCompound().getInteger("mode")) {
-			case 0:
-				itemStack.getTagCompound().setInteger("mode", 1);
-				entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.1"));
-				break;
-			case 1:
-				itemStack.getTagCompound().setInteger("mode", 2);
-				entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.2"));
-				break;
-			case 2:
-				itemStack.getTagCompound().setInteger("mode", 0);
-				entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.0"));
-				break;
+		if (itemStack.getItemDamage() == 4 && entityPlayer.isSneaking()) {
+			if (!world.isRemote) {
+				switch (itemStack.getTagCompound().getInteger("mode")) {
+					case 0:
+						itemStack.getTagCompound().setInteger("mode", 1);
+						entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.1"));
+						break;
+					case 1:
+						itemStack.getTagCompound().setInteger("mode", 2);
+						entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.2"));
+						break;
+					case 2:
+						itemStack.getTagCompound().setInteger("mode", 0);
+						entityPlayer.addChatMessage(new ChatComponentTranslation("extracells.tooltip.storage.container.0"));
+						break;
+				}
 			}
 			return itemStack;
 		}
