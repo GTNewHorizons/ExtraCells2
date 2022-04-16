@@ -15,6 +15,7 @@ import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IAEStack;
 import appeng.api.storage.data.IItemList;
 import appeng.api.util.AEColor;
+import appeng.api.util.INetworkToolAgent;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import extracells.render.TextureManager;
@@ -32,10 +33,7 @@ import net.minecraft.entity.item.EntityItem;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChatComponentTranslation;
-import net.minecraft.util.IIcon;
-import net.minecraft.util.StatCollector;
-import net.minecraft.util.Vec3;
+import net.minecraft.util.*;
 import net.minecraft.world.World;
 import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.fluids.Fluid;
@@ -48,7 +46,7 @@ import org.lwjgl.opengl.GL12;
 import java.io.IOException;
 import java.util.List;
 
-public class PartFluidStorageMonitor extends PartECBase implements IStackWatcherHost {
+public class PartFluidStorageMonitor extends PartECBase implements IStackWatcherHost, INetworkToolAgent {
 
 	Fluid fluid = null;
 	long amount = 0L;
@@ -519,5 +517,11 @@ public class PartFluidStorageMonitor extends PartECBase implements IStackWatcher
 			data.writeInt(this.fluid.getID());
 		data.writeBoolean(this.locked);
 
+	}
+
+	@Override
+	public boolean showNetworkInfo( final MovingObjectPosition where )
+	{
+		return false;
 	}
 }
