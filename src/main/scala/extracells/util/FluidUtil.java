@@ -86,7 +86,7 @@ public class FluidUtil {
 		return null;
 	}
 
-	public static int getCapacity(ItemStack itemStack) {
+	public static int getCapacity(ItemStack itemStack, Fluid fluid) {
 		if (itemStack == null)
 			return 0;
 		Item item = itemStack.getItem();
@@ -95,7 +95,7 @@ public class FluidUtil {
 		} else if (FluidContainerRegistry.isEmptyContainer(itemStack)) {
 			for (FluidContainerRegistry.FluidContainerData data : FluidContainerRegistry
 					.getRegisteredFluidContainerData()) {
-				if (data != null && data.emptyContainer.isItemEqual(itemStack)) {
+				if (data != null && data.emptyContainer.isItemEqual(itemStack) && data.fluid.getFluidID() == fluid.getID()) {
 					FluidStack interior = data.fluid;
 					return interior != null ? interior.amount : 0;
 				}
