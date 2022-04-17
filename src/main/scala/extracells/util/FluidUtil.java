@@ -2,6 +2,7 @@ package extracells.util;
 
 import appeng.api.AEApi;
 import appeng.api.storage.data.IAEFluidStack;
+import extracells.Extracells;
 import extracells.item.ItemFluidPattern;
 import extracells.registries.ItemEnum;
 import net.minecraft.item.Item;
@@ -151,5 +152,24 @@ public class FluidUtil {
 		return item instanceof IFluidContainerItem
 				|| item == ItemEnum.FLUIDPATTERN.getItem()
 				|| FluidContainerRegistry.isContainer(itemStack);
+	}
+
+	public static String formatFluidAmount(long millibuckets, boolean forceLongForm) {
+		if (!forceLongForm) {
+			if (millibuckets >= 1_000_000_000_000L)
+				return String.format("%.1fG",millibuckets / 1_000_000_000_000.0);
+			else if (millibuckets >= 1_000_000_000L)
+				return String.format("%.1fM",millibuckets / 1_000_000_000.0);
+			else if (millibuckets >= 1_000_000L)
+				return String.format("%.1fk", millibuckets / 1_000_000.0);
+			else if (millibuckets >= 1_000L) {
+				return String.format("%.1f", millibuckets / 1_000.0);
+			}
+		}
+		return String.format("%,d%s", millibuckets, forceLongForm ? " mB" : "m");
+	}
+
+	public static String formatFluidAmount(long millibuckets) {
+		return formatFluidAmount(millibuckets, false);
 	}
 }
