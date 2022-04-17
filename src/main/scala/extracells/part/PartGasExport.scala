@@ -16,11 +16,11 @@ class PartGasExport extends PartFluidExport{
   private val isMekanismEnabled = Integration.Mods.MEKANISMGAS.isEnabled
 
 
-  override def doWork(rate: Int, tickSinceLastCall: Int): Boolean ={
+  override def doWork(rate: Int, tickSinceLastCall: Int): TickRateModulation ={
     if (isMekanismEnabled)
       work(rate, tickSinceLastCall)
     else
-      false
+      TickRateModulation.IDLE
   }
 
 
