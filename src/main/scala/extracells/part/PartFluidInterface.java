@@ -413,7 +413,7 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 
 	@Override
 	public TickingRequest getTickingRequest(IGridNode node) {
-		return new TickingRequest(1, 40, false, false);
+		return new TickingRequest(5, 120, false, false);
 	}
 
 	@Override
