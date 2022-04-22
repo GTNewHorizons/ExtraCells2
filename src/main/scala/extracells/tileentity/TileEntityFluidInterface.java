@@ -905,6 +905,7 @@ public class TileEntityFluidInterface extends TileBase implements
 			}
 			if ((this.tanks[i].getFluid() == null || this.tanks[i].getFluid()
 					.getFluid() == FluidRegistry.getFluid(this.fluidFilter[i]))
+					&& this.tanks[i].getFluidAmount() < this.tanks[i].getCapacity()
 					&& FluidRegistry.getFluid(this.fluidFilter[i]) != null) {
 				IAEFluidStack extracted = storage
 						.getFluidInventory()
