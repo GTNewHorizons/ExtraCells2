@@ -74,9 +74,9 @@ public class PartFluidExport extends PartFluidIO {
 					stack = this.extractFluid(stack, Actionable.MODULATE);
 					if (stack != null && stack.getStackSize() > 0) {
 						int actuallyFilled = facingTank.fill(this.getSide().getOpposite(), stack.getFluidStack(), true);
-						if (actuallyFilled < filled) {
+						if (actuallyFilled < stack.getStackSize()) {
 							// try to return to AE
-							int toReturn = filled - actuallyFilled;
+							int toReturn = (int)stack.getStackSize() - actuallyFilled;
 							IAEFluidStack returned = injectFluid(AEApi.instance().storage().createFluidStack(new FluidStack(fluid, toReturn)), Actionable.MODULATE);
 							if (returned != null) {
 								FMLLog.severe("[ExtraCells2] Export bus at %d:%d,%d,%d voided %d mL of %s",
