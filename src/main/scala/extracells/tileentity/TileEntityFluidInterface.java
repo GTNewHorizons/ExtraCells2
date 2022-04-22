@@ -867,14 +867,14 @@ public class TileEntityFluidInterface extends TileBase implements
 			if (tank.getFluid() != null
 				&& FluidRegistry.getFluid(this.fluidFilter[i]) != tank
 				.getFluid().getFluid()) {
-				FluidStack s = tank.drain(125, false);
+				FluidStack s = tank.drain(1000, false);
 				if (s != null) {
 					IAEFluidStack notAdded = storage.getFluidInventory()
 						.injectItems(
 							AEApi.instance().storage()
 								.createFluidStack(s),
 							Actionable.SIMULATE, new MachineSource(this));
-					int toAdd = s.amount;
+					int toAdd = s.amount - (notAdded != null ? (int)notAdded.getStackSize() : 0);
 					IAEFluidStack actuallyNotInjected = storage.getFluidInventory().injectItems(
 						AEApi.instance()
 							.storage()
@@ -902,7 +902,7 @@ public class TileEntityFluidInterface extends TileBase implements
 			)
 				&& FluidRegistry.getFluid(this.fluidFilter[i]) != null)
 			{
-				IAEFluidStack request = FluidUtil.createAEFluidStack(this.fluidFilter[i], 125);
+				IAEFluidStack request = FluidUtil.createAEFluidStack(this.fluidFilter[i], 1000);
 				IAEFluidStack extracted = storage.getFluidInventory().extractItems(
 					request,
 					Actionable.SIMULATE, new MachineSource(this));
@@ -915,6 +915,9 @@ public class TileEntityFluidInterface extends TileBase implements
 				extracted = storage.getFluidInventory().extractItems(
 					request,
 					Actionable.MODULATE, new MachineSource(this));
+				if (extracted == null || extracted.getStackSize() <= 0) {
+					continue;
+				}
 				accepted = tank.fill(extracted.getFluidStack(), true);
 				if (extracted.getStackSize() != accepted) {
 					// This should never happen, but log it in case it does

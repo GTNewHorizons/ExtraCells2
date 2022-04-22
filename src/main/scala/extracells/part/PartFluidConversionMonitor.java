@@ -67,6 +67,7 @@ public class PartFluidConversionMonitor extends PartFluidStorageMonitor {
 			ItemStack newHeldItem = heldItem.copy();
 			newHeldItem.stackSize--;
 			player.inventory.setInventorySlotContents(player.inventory.currentItem, newHeldItem.stackSize <= 0 ? null : newHeldItem);
+			return true;
 		}
 		return false;
 	}

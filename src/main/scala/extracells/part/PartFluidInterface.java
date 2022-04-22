@@ -928,7 +928,7 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 								AEApi.instance().storage()
 										.createFluidStack(s),
 								Actionable.SIMULATE, new MachineSource(this));
-				int toAdd = s.amount;
+				int toAdd = s.amount - (notAdded != null ? (int)notAdded.getStackSize() : 0);
 				IAEFluidStack actuallyNotInjected = storage.getFluidInventory().injectItems(
 					AEApi.instance()
 						.storage()
@@ -971,6 +971,9 @@ public class PartFluidInterface extends PartECBase implements IFluidHandler,
 			extracted = storage.getFluidInventory().extractItems(
 				request,
 				Actionable.MODULATE, new MachineSource(this));
+			if (extracted == null || extracted.getStackSize() <= 0) {
+				return TickRateModulation.SLOWER;
+			}
 			accepted = this.tank.fill(extracted.getFluidStack(), true);
 			if (extracted.getStackSize() != accepted) {
 				// This should never happen, but log it in case it does

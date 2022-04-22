@@ -78,7 +78,7 @@ public class PartFluidExport extends PartFluidIO {
 							// try to return to AE
 							int toReturn = filled - actuallyFilled;
 							IAEFluidStack returned = injectFluid(AEApi.instance().storage().createFluidStack(new FluidStack(fluid, toReturn)), Actionable.MODULATE);
-							if (returned.getStackSize() != toReturn) {
+							if (returned != null) {
 								FMLLog.severe("[ExtraCells2] Export bus at %d:%d,%d,%d voided %d mL of %s",
 									tile.getWorldObj().provider.dimensionId,
 									tile.xCoord,
