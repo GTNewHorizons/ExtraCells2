@@ -12,6 +12,7 @@ public enum ItemEnum {
 	PARTITEM("part.base", new ItemPartECBase()),
 	FLUIDSTORAGE("storage.fluid", new ItemStorageFluid()),
 	PHYSICALSTORAGE("storage.physical", new ItemStoragePhysical()),
+	PHYSICALSTORAGEADVANCED("storage.physical.advanced", new ItemAdvancedStorageCell()),
 	GASSTORAGE("storage.gas", new ItemStorageGas(), Integration.Mods.MEKANISMGAS),
 	FLUIDPATTERN("pattern.fluid", new ItemFluidPattern()),
 	FLUIDWIRELESSTERMINAL("terminal.fluid.wireless", ItemWirelessTerminalFluid.THIS()),

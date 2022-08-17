@@ -61,6 +61,8 @@ public interface IItemDefinition {
 
 	appeng.api.definitions.IItemDefinition physCellContainer();
 
+	appeng.api.definitions.IItemDefinition physCellAdvanced();
+
 	// MISC
 	appeng.api.definitions.IItemDefinition wirelessFluidTerminal();
 
