@@ -43,23 +43,29 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.Random;
+import java.util.HashMap;
 
 public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorageCellAdvanced, IItemGroup
 {
 	private final long totalBytes;
+	private final int totalTypes;
 	private final int perType;
 	private final double idleDrain;
-	private IIcon[] icons;
+	private final String suffix;
+	private IIcon icon;
 	Random r = new Random();
 
-	public ItemAdvancedStorageCell()
+	public ItemAdvancedStorageCell(long bytes, int types, int bytesPerType, double drain, String suffix)
 	{
 
 		this.setFeature( EnumSet.of( AEFeature.StorageCells ) );
 		this.setMaxStackSize( 1 );
-		this.totalBytes = (Long.MAX_VALUE) / 16;
-		this.idleDrain = 15000.0;
-		this.perType = 512;
+		this.totalBytes = bytes;
+		this.totalTypes = types;
+		this.perType = bytesPerType;
+		this.idleDrain = drain;
+		this.suffix = suffix;
+	
 	}
 
     @SideOnly(Side.CLIENT)
@@ -76,7 +82,7 @@ public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorag
 
 			if( cellInventory != null )
 			{
-				lines.add( cellInventory.getUsedBytes() + " " + GuiText.BytesUsed.getLocal() );
+				lines.add( cellInventory.getUsedBytes() + " " + GuiText.Of.getLocal() + ' ' + cellInventory.getTotalBytes() + ' ' + GuiText.BytesUsed.getLocal() );
 
 				lines.add( cellInventory.getStoredItemTypes() + " " + GuiText.Of.getLocal() + ' ' + cellInventory.getTotalItemTypes() + ' ' + GuiText.Types.getLocal() );
 
@@ -122,7 +128,7 @@ public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorag
 	@Override
 	public int getTotalTypes( final ItemStack cellItem )
 	{
-		return 1;
+		return this.totalTypes;
 	}
 
 	@Override
@@ -157,19 +163,17 @@ public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorag
 
 	@Override
 	public String getUnlocalizedName(ItemStack itemStack) {
-		return "extracells.item.storage.physical.advanced";
+		return "extracells.item.storage.physical.advanced." + this.suffix;
 	}
 
 	@Override
 	public void registerIcons(IIconRegister iconRegister) {
-		this.icons = new IIcon[1];
-
-		this.icons[0] = iconRegister.registerIcon("extracells:"	+ "storage.physical." + "advanced");
+		this.icon = iconRegister.registerIcon("extracells:storage.physical.advanced." + this.suffix);
 	}
 
 	@Override
 	public IIcon getIconFromDamage(int dmg) {
-		return this.icons[0];
+		return this.icon;
 	}
 
 	@Override
