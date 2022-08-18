@@ -83,14 +83,6 @@ public interface IStorageCellAdvanced extends ICellWorkbenchItem
      * @param i item
 	 * @return drain in ae/t this storage cell will use.
 	 */
-	default double getIdleDrain( @Nullable ItemStack i ) {
-        // provided for API backwards compatibility
-        return getIdleDrain();
-    }
+	double getIdleDrain( @Nullable ItemStack i );
 
-    /**
-     * The old idle drain API that didn't accept an ItemStack. Unused in base AE2.
-     * @return drain in ae/t this storage cell will use.
-     */
-    double getIdleDrain();
 }

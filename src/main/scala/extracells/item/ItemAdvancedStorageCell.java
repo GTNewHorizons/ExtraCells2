@@ -144,7 +144,7 @@ public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorag
 	}
 
 	@Override
-	public double getIdleDrain()
+	public double getIdleDrain( ItemStack i )
 	{
 		return this.idleDrain;
 	}
