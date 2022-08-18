@@ -16,29 +16,20 @@ import javax.annotation.Nullable;
  * Good cause it means you don't have to do anything, bad because you have
  * little to no control over it.
  * <p>
- * The standard AE implementation only provides 1-63 Types
+ * This implementation is a mirror of the standard AE2 item cell type, but
+ * allows for any amount of types (within reason) and larger byte amounts.
  */
 public interface IStorageCellAdvanced extends ICellWorkbenchItem
 {
 
 	/**
 	 * It wont work if the return is not a multiple of 8.
-	 * The limit is ({@link Integer#MAX_VALUE} + 1) / 8.
+	 * The limit is ({@link Long#MAX_VALUE}) / 8.
 	 *
 	 * @param cellItem item
 	 * @return number of bytes
 	 */
 	long getBytes( ItemStack cellItem );
-
-	/**
-	 * Determines the number of bytes used for any type included on the cell.
-	 *
-	 * @param cellItem item
-	 * @return number of bytes
-	 * @deprecated use {@link IStorageCell#getBytesPerType(ItemStack)}
-	 */
-	@Deprecated
-	int BytePerType( ItemStack cellItem );
 
 	/**
 	 * Determines the number of bytes used for any type included on the cell.

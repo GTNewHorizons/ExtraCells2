@@ -114,12 +114,6 @@ public final class ItemAdvancedStorageCell extends AEBaseItem implements IStorag
 	}
 
 	@Override
-	public int BytePerType( final ItemStack cell )
-	{
-		return this.perType;
-	}
-
-	@Override
 	public int getBytesPerType( final ItemStack cellItem )
 	{
 		return this.perType;
