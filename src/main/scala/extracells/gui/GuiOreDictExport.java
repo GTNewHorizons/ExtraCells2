@@ -18,14 +18,13 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.input.Mouse;
 import org.lwjgl.opengl.GL11;
 
-import java.util.*;
+import java.util.Iterator;
 
 
 public class GuiOreDictExport extends GuiContainer {
 
 	public ContainerOreDictExport _containerOreDictExport;
 	private int currentScroll = 0;
-	private int deltaWheel = 0;
 	public static void updateFilter(String _filter) {
 		if (filter != null) {
 			filter = _filter;
@@ -38,9 +37,9 @@ public class GuiOreDictExport extends GuiContainer {
 		}
 	}
 
-	private ResourceLocation guiTexture = new ResourceLocation("extracells",
-			"textures/gui/oredictexport.png");
-	private EntityPlayer player;
+	private final ResourceLocation guiTexture = new ResourceLocation("extracells",
+		"textures/gui/oredictexport.png");
+	private final EntityPlayer player;
 	private static String filter = "";
 
 	private GuiTextField searchbar;
@@ -60,7 +59,7 @@ public class GuiOreDictExport extends GuiContainer {
 	@Override
 	public void handleMouseInput() {
 		super.handleMouseInput();
-		deltaWheel = Mouse.getEventDWheel();
+		int deltaWheel = Mouse.getEventDWheel();
 		if (deltaWheel < 0) {
 			currentScroll++;
 		} else if (deltaWheel > 0) {
@@ -105,7 +104,6 @@ public class GuiOreDictExport extends GuiContainer {
 	@Override
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
 		super.drawGuiContainerForegroundLayer(mouseX, mouseY);
-		if (!Objects.equals(filter, "")) {
 			this.fontRendererObj.drawString(
 				StatCollector.translateToLocal(
 					"extracells.part.oredict.export.name").replace("ME ",
@@ -113,10 +111,10 @@ public class GuiOreDictExport extends GuiContainer {
 			this.fontRendererObj.drawString(
 				StatCollector.translateToLocal("container.inventory"), 8,
 				this.ySize - 94, 0x000000);
+		if (!filter.isEmpty() && !filter.startsWith("*")) {
 			this._containerOreDictExport.part.setFilter(filter, false);
 			Iterator<AEItemStack> items = this._containerOreDictExport.part.getOres().iterator();
 			int size = this._containerOreDictExport.part.getOres().size();
-
 			if (this.currentScroll < 0)
 				this.currentScroll = 0;
 			int maxPage = size / (4 * 10);
@@ -161,18 +159,18 @@ public class GuiOreDictExport extends GuiContainer {
 				this.guiLeft + this.xSize / 2 - 44, this.guiTop + 35, 88, 20,
 				StatCollector.translateToLocal("extracells.tooltip.save")));
 		this.searchbar = new GuiTextField(this.fontRendererObj, this.guiLeft
-				+ this.xSize / 2 - 75, this.guiTop + 20, 150, 10) {
+			+ this.xSize / 2 - 75, this.guiTop + 20, 150, 10) {
 
-			private int xPos = 0;
-			private int yPos = 0;
-			private int width = 0;
-			private int height = 0;
+			private final int xPos = 0;
+			private final int yPos = 0;
+			private final int width = 0;
+			private final int height = 0;
 
 
 			@Override
 			public void mouseClicked(int x, int y, int mouseBtn) {
 				boolean flag = x >= this.xPos && x < this.xPos + this.width
-						&& y >= this.yPos && y < this.yPos + this.height;
+					&& y >= this.yPos && y < this.yPos + this.height;
 				if (flag && mouseBtn == 3)
 					setText("");
 			}
@@ -181,6 +179,7 @@ public class GuiOreDictExport extends GuiContainer {
 		this.searchbar.setFocused(true);
 		this.searchbar.setMaxStringLength(128);
 		this.searchbar.setText(filter);
+
 	}
 
 	@Override

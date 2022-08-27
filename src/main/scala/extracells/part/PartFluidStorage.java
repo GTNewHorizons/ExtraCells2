@@ -20,6 +20,7 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import extracells.container.ContainerBusFluidStorage;
 import extracells.gui.GuiBusFluidStorage;
+import extracells.gui.GuiFluidStorage;
 import extracells.inventory.HandlerPartStorageFluid;
 import extracells.network.packet.other.IFluidSlotPartOrBlock;
 import extracells.network.packet.other.PacketFluidSlot;
@@ -28,6 +29,7 @@ import extracells.render.TextureManager;
 import extracells.util.PermissionUtil;
 import extracells.util.inventory.ECPrivateInventory;
 import extracells.util.inventory.IInventoryUpdateReceiver;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
@@ -46,12 +48,12 @@ import java.util.List;
 
 public class PartFluidStorage extends PartECBase implements ICellContainer, IInventoryUpdateReceiver, IFluidSlotPartOrBlock, IPriorityHost {
 
-	private HashMap<IAEFluidStack, Long> fluidList = new HashMap<IAEFluidStack, Long>();
+	private final HashMap<IAEFluidStack, Long> fluidList = new HashMap<IAEFluidStack, Long>();
 	private int priority = 0;
 	protected HandlerPartStorageFluid handler = new HandlerPartStorageFluid(this);
-	private Fluid[] filterFluids = new Fluid[54];
+	private final Fluid[] filterFluids = new Fluid[54];
 	private AccessRestriction access = AccessRestriction.READ_WRITE;
-	private ECPrivateInventory upgradeInventory = new ECPrivateInventory("", 1, 1, this) {
+	private final ECPrivateInventory upgradeInventory = new ECPrivateInventory("", 1, 1, this) {
 
 		@Override
 		public boolean isItemValidForSlot(int i, ItemStack itemStack) {
@@ -95,7 +97,11 @@ public class PartFluidStorage extends PartECBase implements ICellContainer, IInv
 
 	@Override
 	public Object getClientGuiElement(EntityPlayer player) {
-		return new GuiBusFluidStorage(this, player);
+		if (Minecraft.getMinecraft().currentScreen instanceof GuiFluidStorage) {
+			return Minecraft.getMinecraft().currentScreen;
+		} else {
+			return new GuiBusFluidStorage(this, player);
+		}
 	}
 
 	@Override

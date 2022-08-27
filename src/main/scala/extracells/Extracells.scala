@@ -1,7 +1,5 @@
 package extracells
 
-import java.io.File
-
 import appeng.api.AEApi
 import cpw.mods.fml.client.registry.RenderingRegistry
 import cpw.mods.fml.common.Mod.EventHandler
@@ -13,13 +11,14 @@ import extracells.network.{ChannelHandler, GuiHandler}
 import extracells.proxy.CommonProxy
 import extracells.registries.ItemEnum
 import extracells.render.RenderHandler
-import extracells.util.{ExtraCellsEventHandler, FluidCellHandler, NameHandler}
-import extracells.util.AdvancedCellHandler
+import extracells.util.{AdvancedCellHandler, ExtraCellsEventHandler, FluidCellHandler, NameHandler}
 import extracells.wireless.AEWirelessTermHandler
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.item.ItemStack
 import net.minecraftforge.common.MinecraftForge
 import net.minecraftforge.common.config.Configuration
+
+import java.io.File
 
 @Mod(modid = "extracells", name = "Extra Cells", version = "GRADLETOKEN_VERSION", modLanguage = "scala", dependencies = "after:LogisticsPipes|Main;after:Waila;required-after:appliedenergistics2")
 object Extracells {
@@ -31,12 +30,12 @@ object Extracells {
 	var VERSION = ""
 
 	var bcBurnTimeMultiplicator = 4
-
+	var terminalUpdateInterval = 20
 	var configFolder: File = null
 	var shortenedBuckets = true
 	var dynamicTypes = true
 	val integration = new Integration
-	
+
 	val ModTab = new CreativeTabs("Extra_Cells") {
 		override def getIconItemStack = new ItemStack(ItemEnum.FLUIDSTORAGE.getItem)
 		override def getTabIconItem = ItemEnum.FLUIDSTORAGE.getItem
@@ -78,6 +77,7 @@ object Extracells {
 		config.load()
 		shortenedBuckets = config.get("Tooltips", "shortenedBuckets", true, "Shall the guis shorten large mB values?").getBoolean(true)
 		dynamicTypes = config.get("Storage Cells", "dynamicTypes", true, "Should the mount of bytes needed for a new type depend on the cellsize?").getBoolean(true)
+		terminalUpdateInterval = config.get("Terminal", "Interval", 20, "How often is the fluid in the terminal updated?").getInt(20)
 		integration.loadConfig(config)
 
 		config.save()

@@ -1,6 +1,7 @@
 package extracells.gui;
 
 import appeng.api.storage.data.IAEFluidStack;
+import extracells.Extracells;
 import extracells.api.ECApi;
 import extracells.container.ContainerFluidStorage;
 import extracells.gui.widget.FluidWidgetComparator;
@@ -23,20 +24,21 @@ import org.lwjgl.opengl.GL11;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
 
 public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 
-	private EntityPlayer player;
+	private final EntityPlayer player;
 	private int currentScroll = 0;
 	private GuiTextField searchbar;
 	private List<AbstractFluidWidget> fluidWidgets = new ArrayList<AbstractFluidWidget>();
-	private ResourceLocation guiTexture = new ResourceLocation("extracells",
-			"textures/gui/terminalfluid.png");
+	private final ResourceLocation guiTexture = new ResourceLocation("extracells",
+		"textures/gui/terminalfluid.png");
 	public IAEFluidStack currentFluid;
-	private ContainerFluidStorage containerFluidStorage;
+	private final ContainerFluidStorage containerFluidStorage;
 	private final String guiName;
-	private int deltaWheel = 0;
+	private List<AbstractFluidWidget> cache = new ArrayList<AbstractFluidWidget>();
+	private int tick = Extracells.terminalUpdateInterval();
+
 
 	public GuiFluidStorage(EntityPlayer _player, String _guiName) {
 		super(new ContainerFluidStorage(_player));
@@ -57,7 +59,6 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 		drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize,
 				this.ySize);
 		this.searchbar.drawTextBox();
-		new PacketFluidStorage(this.player).sendPacketToServer();
 	}
 
 	@Override
@@ -84,7 +85,7 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 	@Override
 	public void handleMouseInput() {
 		super.handleMouseInput();
-		deltaWheel = Mouse.getEventDWheel();
+		int deltaWheel = Mouse.getEventDWheel();
 		if (deltaWheel < 0) {
 			currentScroll++;
 		} else if (deltaWheel > 0) {
@@ -92,15 +93,30 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 		}
 	}
 
+	private List<AbstractFluidWidget> getCache() {
+		return this.cache;
+	}
+
+	private void setCache(List<AbstractFluidWidget> _list) {
+		this.cache = _list;
+	}
+
 	public void drawWidgets(int mouseX, int mouseY) {
-		int listSize = this.fluidWidgets.size();
+		if (tick < Extracells.terminalUpdateInterval() && this.getCache().size() > 0) {
+			tick++;
+		} else {
+			tick = 0;
+			this.setCache(this.fluidWidgets);
+		}
+		List<AbstractFluidWidget> tmp = this.getCache();
+		int listSize = tmp.size();
 		if (!this.containerFluidStorage.getFluidStackList().isEmpty()) {
 			outerLoop:
 			for (int y = 0; y < 4; y++) {
 				for (int x = 0; x < 9; x++) {
 					int widgetIndex = y * 9 + x + this.currentScroll * 9;
 					if (0 <= widgetIndex && widgetIndex < listSize) {
-						AbstractFluidWidget widget = this.fluidWidgets
+						AbstractFluidWidget widget = tmp
 							.get(widgetIndex);
 						widget.drawWidget(x * 18 + 7, y * 18 + 17);
 					} else {
@@ -113,8 +129,8 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 				for (int y = 0; y < 4; y++) {
                     int widgetIndex = y * 9 + x + this.currentScroll * 9;
 					if (0 <= widgetIndex && widgetIndex < listSize) {
-						this.fluidWidgets.get(widgetIndex).drawTooltip(
-								x * 18 + 7, y * 18 - 1, mouseX, mouseY);
+						tmp.get(widgetIndex).drawTooltip(
+							x * 18 + 7, y * 18 - 1, mouseX, mouseY);
 					} else {
 						break;
 					}
@@ -156,17 +172,17 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 		updateFluids();
 		Collections.sort(this.fluidWidgets, new FluidWidgetComparator());
 		this.searchbar = new GuiTextField(this.fontRendererObj,
-				this.guiLeft + 81, this.guiTop + 6, 88, 10) {
+			this.guiLeft + 81, this.guiTop + 6, 88, 10) {
 
-			private int xPos = 0;
-			private int yPos = 0;
-			private int width = 0;
-			private int height = 0;
+			private final int xPos = 0;
+			private final int yPos = 0;
+			private final int width = 0;
+			private final int height = 0;
 
 			@Override
 			public void mouseClicked(int x, int y, int mouseBtn) {
 				boolean flag = x >= this.xPos && x < this.xPos + this.width
-						&& y >= this.yPos && y < this.yPos + this.height;
+					&& y >= this.yPos && y < this.yPos + this.height;
 				if (flag && mouseBtn == 3)
 					setText("");
 			}
@@ -189,12 +205,12 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 	protected void mouseClicked(int mouseX, int mouseY, int mouseBtn) {
 		super.mouseClicked(mouseX, mouseY, mouseBtn);
 		this.searchbar.mouseClicked(mouseX, mouseY, mouseBtn);
-		int listSize = this.fluidWidgets.size();
+		int listSize = this.getCache().size();
 		for (int x = 0; x < 9; x++) {
 			for (int y = 0; y < 4; y++) {
 				int index = y * 9 + x+ this.currentScroll * 9;
 				if (0 <= index && index < listSize) {
-					AbstractFluidWidget widget = this.fluidWidgets.get(index);
+					AbstractFluidWidget widget = this.getCache().get(index);
 					widget.mouseClicked(x * 18 + 7, y * 18 - 1, mouseX, mouseY);
 				}
 			}
@@ -202,7 +218,7 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 	}
 
 	public void updateFluids() {
-		if (this.searchbar != null && !Objects.equals(this.searchbar.getText(), "")) {
+		if (this.searchbar != null && !this.searchbar.getText().isEmpty()) {
 			this.containerFluidStorage.forceFluidUpdate(this.searchbar.getText());
 		} else {
 			this.containerFluidStorage.forceFluidUpdate();

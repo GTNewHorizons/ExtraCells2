@@ -9,6 +9,8 @@ import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.IMEMonitorHandlerReceiver;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IItemList;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import extracells.container.slot.SlotRespective;
 import extracells.gui.GuiGasTerminal;
 import extracells.gui.widget.fluid.IFluidSelectorContainer;
@@ -17,6 +19,8 @@ import extracells.part.PartFluidTerminal;
 import extracells.part.PartGasTerminal;
 import extracells.util.GasUtil;
 import extracells.util.PermissionUtil;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
@@ -29,12 +33,12 @@ import net.minecraftforge.fluids.Fluid;
 public class ContainerGasTerminal extends Container implements
 		IMEMonitorHandlerReceiver<IAEFluidStack>, IFluidSelectorContainer {
 
-	private PartGasTerminal terminal;
+	private final PartGasTerminal terminal;
 	private IMEMonitor<IAEFluidStack> monitor;
 	private IItemList<IAEFluidStack> fluidStackList = AEApi.instance()
 			.storage().createFluidList();
 	private Fluid selectedFluid;
-	private EntityPlayer player;
+	private final EntityPlayer player;
 	private GuiGasTerminal guiGasTerminal;
 
 	public ContainerGasTerminal(PartGasTerminal _terminal, EntityPlayer _player) {
@@ -202,6 +206,27 @@ public class ContainerGasTerminal extends Container implements
 
 	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList) {
 		this.fluidStackList = _fluidStackList;
+		if (this.guiGasTerminal != null)
+			this.guiGasTerminal.updateFluids();
+	}
+
+	@SideOnly(Side.CLIENT)
+	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList, boolean incremental) {
+		if (incremental) {
+			Gui gui = Minecraft.getMinecraft().currentScreen;
+			ContainerGasTerminal container = (ContainerGasTerminal) ((GuiGasTerminal) gui).inventorySlots;
+			IItemList<IAEFluidStack> temp = container.getFluidStackList();
+			for (IAEFluidStack f1 : _fluidStackList) {
+				for (IAEFluidStack f2 : temp) {
+					if (f1.getFluid().getID() == f2.getFluid().getID()) {
+						f2.setStackSize(f2.getStackSize() + f1.getStackSize());
+					}
+				}
+			}
+			this.fluidStackList = temp;
+		} else {
+			this.fluidStackList = _fluidStackList;
+		}
 		if (this.guiGasTerminal != null)
 			this.guiGasTerminal.updateFluids();
 	}

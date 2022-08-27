@@ -9,6 +9,8 @@ import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.IMEMonitorHandlerReceiver;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IItemList;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import extracells.api.ECApi;
 import extracells.container.slot.SlotRespective;
 import extracells.gui.GuiFluidTerminal;
@@ -17,6 +19,8 @@ import extracells.network.packet.part.PacketFluidTerminal;
 import extracells.part.PartFluidTerminal;
 import extracells.util.FluidUtil;
 import extracells.util.PermissionUtil;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.entity.player.InventoryPlayer;
@@ -25,20 +29,17 @@ import net.minecraft.inventory.Slot;
 import net.minecraft.inventory.SlotFurnace;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.fluids.Fluid;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 
 public class ContainerFluidTerminal extends Container implements
 	IMEMonitorHandlerReceiver<IAEFluidStack>, IFluidSelectorContainer {
 
-	private PartFluidTerminal terminal;
+	private final PartFluidTerminal terminal;
 	private IMEMonitor<IAEFluidStack> monitor;
 	private IItemList<IAEFluidStack> fluidStackList = AEApi.instance()
 		.storage().createFluidList();
 	private Fluid selectedFluid;
-	private EntityPlayer player;
+	private final EntityPlayer player;
 	private GuiFluidTerminal guiFluidTerminal;
-	private Instant LastUpdateTime = Instant.now();
 
 	public ContainerFluidTerminal(PartFluidTerminal _terminal,
 			EntityPlayer _player) {
@@ -82,12 +83,12 @@ public class ContainerFluidTerminal extends Container implements
 		return terminal.isValid();
 	}
 
-	public void forceFluidUpdate(String text) {
+	public void forceFluidUpdate(String searchText) {
 		if (this.monitor != null) {
 			IItemList<IAEFluidStack> fluidStackList = AEApi.instance()
 				.storage().createFluidList();
 			for (IAEFluidStack fluidStack : this.monitor.getStorageList()) {
-				if (fluidStack.getFluid().getLocalizedName(fluidStack.getFluidStack()).toLowerCase().contains(text.toLowerCase()) && ECApi.instance().canFluidSeeInTerminal(
+				if (fluidStack.getFluid().getLocalizedName(fluidStack.getFluidStack()).toLowerCase().contains(searchText.toLowerCase()) && ECApi.instance().canFluidSeeInTerminal(
 					fluidStack.getFluid())) {
 					fluidStackList.add(fluidStack);
 				}
@@ -142,13 +143,10 @@ public class ContainerFluidTerminal extends Container implements
 	@Override
 	public void postChange(IBaseMonitor<IAEFluidStack> monitor,
 			Iterable<IAEFluidStack> change, BaseActionSource actionSource) {
-		if (Instant.now().compareTo(this.LastUpdateTime.plus(250, ChronoUnit.MILLIS)) > 0) {
-			this.fluidStackList = ((IMEMonitor<IAEFluidStack>) monitor)
-				.getStorageList();
-			new PacketFluidTerminal(this.player, this.fluidStackList)
+		this.fluidStackList = ((IMEMonitor<IAEFluidStack>) monitor)
+			.getStorageList();
+		new PacketFluidTerminal(this.player, change, this.fluidStackList)
 				.sendPacketToPlayer(this.player);
-			this.LastUpdateTime = Instant.now();
-		}
 	}
 
 	public void receiveSelectedFluid(Fluid _selectedFluid) {
@@ -233,6 +231,27 @@ public class ContainerFluidTerminal extends Container implements
 
 	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList) {
 		this.fluidStackList = _fluidStackList;
+		if (this.guiFluidTerminal != null)
+			this.guiFluidTerminal.updateFluids();
+	}
+
+	@SideOnly(Side.CLIENT)
+	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList, boolean incremental) {
+		if (incremental) {
+			Gui gui = Minecraft.getMinecraft().currentScreen;
+			ContainerFluidTerminal container = (ContainerFluidTerminal) ((GuiFluidTerminal) gui).inventorySlots;
+			IItemList<IAEFluidStack> temp = container.getFluidStackList();
+			for (IAEFluidStack f1 : _fluidStackList) {
+				for (IAEFluidStack f2 : temp) {
+					if (f1.getFluid().getID() == f2.getFluid().getID()) {
+						f2.setStackSize(f2.getStackSize() + f1.getStackSize());
+					}
+				}
+			}
+			this.fluidStackList = temp;
+		} else {
+			this.fluidStackList = _fluidStackList;
+		}
 		if (this.guiFluidTerminal != null)
 			this.guiFluidTerminal.updateFluids();
 	}

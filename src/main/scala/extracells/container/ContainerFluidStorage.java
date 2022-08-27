@@ -9,6 +9,8 @@ import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.IMEMonitorHandlerReceiver;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IItemList;
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 import extracells.api.ECApi;
 import extracells.api.IPortableFluidStorageCell;
 import extracells.api.IWirelessFluidTermHandler;
@@ -21,6 +23,8 @@ import extracells.network.packet.part.PacketFluidStorage;
 import extracells.util.FluidUtil;
 import extracells.util.inventory.ECPrivateInventory;
 import extracells.util.inventory.IInventoryUpdateReceiver;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
@@ -31,9 +35,6 @@ import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 import org.apache.commons.lang3.tuple.MutablePair;
 
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-
 public class ContainerFluidStorage extends Container implements
 	IMEMonitorHandlerReceiver<IAEFluidStack>, IFluidSelectorContainer,
 	IInventoryUpdateReceiver, IStorageContainer {
@@ -42,15 +43,14 @@ public class ContainerFluidStorage extends Container implements
 	private IItemList<IAEFluidStack> fluidStackList;
 	private Fluid selectedFluid;
 	private IAEFluidStack selectedFluidStack;
-	private EntityPlayer player;
-	private IMEMonitor<IAEFluidStack> monitor;
+	private final EntityPlayer player;
+	private final IMEMonitor<IAEFluidStack> monitor;
 	private HandlerItemStorageFluid storageFluid;
 	private IWirelessFluidTermHandler handler = null;
 	private IPortableFluidStorageCell storageCell = null;
 	public boolean hasWirelessTermHandler = false;
-	private Instant LastUpdateTime = Instant.now();
-	private boolean UpdateOnce = true;
-	private ECPrivateInventory inventory = new ECPrivateInventory("extracells.item.fluid.storage", 2, 64, this) {
+
+	private final ECPrivateInventory inventory = new ECPrivateInventory("extracells.item.fluid.storage", 2, 64, this) {
 
 		@Override
 		public boolean isItemValidForSlot(int i, ItemStack itemStack) {
@@ -281,22 +281,12 @@ public class ContainerFluidStorage extends Container implements
 		}
 	}
 
-	public void FluidUpdateOnce() {
-		if (this.monitor != null && this.UpdateOnce) {
-			new PacketFluidStorage(this.player, this.monitor.getStorageList())
-				.sendPacketToPlayer(this.player);
-			new PacketFluidStorage(this.player, this.hasWirelessTermHandler)
-				.sendPacketToPlayer(this.player);
-			this.UpdateOnce = false;
-		}
-	}
-
-	public void forceFluidUpdate(String text) {
+	public void forceFluidUpdate(String searchText) {
 		if (this.monitor != null) {
 			IItemList<IAEFluidStack> fluidStackList = AEApi.instance()
 				.storage().createFluidList();
 			for (IAEFluidStack fluidStack : this.monitor.getStorageList()) {
-				if (fluidStack.getFluid().getLocalizedName(fluidStack.getFluidStack()).toLowerCase().contains(text.toLowerCase()) && ECApi.instance().canFluidSeeInTerminal(
+				if (fluidStack.getFluid().getLocalizedName(fluidStack.getFluidStack()).toLowerCase().contains(searchText.toLowerCase()) && ECApi.instance().canFluidSeeInTerminal(
 					fluidStack.getFluid())) {
 					fluidStackList.add(fluidStack);
 				}
@@ -306,7 +296,6 @@ public class ContainerFluidStorage extends Container implements
 			new PacketFluidStorage(this.player, this.hasWirelessTermHandler)
 				.sendPacketToPlayer(this.player);
 		}
-
 	}
 	public IItemList<IAEFluidStack> getFluidStackList() {
 		return this.fluidStackList;
@@ -354,17 +343,11 @@ public class ContainerFluidStorage extends Container implements
 
 	@Override
 	public void postChange(IBaseMonitor<IAEFluidStack> monitor, Iterable<IAEFluidStack> change, BaseActionSource actionSource) {
-		if (Instant.now().compareTo(this.LastUpdateTime.plus(250, ChronoUnit.MILLIS)) > 0) {
-			this.fluidStackList = ((IMEMonitor<IAEFluidStack>) monitor)
-				.getStorageList();
-			new PacketFluidStorage(this.player, this.fluidStackList)
-				.sendPacketToPlayer(this.player);
-			new PacketFluidStorage(this.player, this.hasWirelessTermHandler).sendPacketToPlayer(this.player);
-			this.LastUpdateTime = Instant.now();
-		}
-//		this.fluidStackList = ((IMEMonitor<IAEFluidStack>) monitor).getStorageList();
-//		new PacketFluidStorage(this.player, this.fluidStackList).sendPacketToPlayer(this.player);
-//		new PacketFluidStorage(this.player, this.hasWirelessTermHandler).sendPacketToPlayer(this.player);
+		this.fluidStackList = ((IMEMonitor<IAEFluidStack>) monitor)
+			.getStorageList();
+		new PacketFluidStorage(this.player, change, this.fluidStackList)
+			.sendPacketToPlayer(this.player);
+		new PacketFluidStorage(this.player, this.hasWirelessTermHandler).sendPacketToPlayer(this.player);
 	}
 
 	public void receiveSelectedFluid(Fluid _selectedFluid) {
@@ -438,6 +421,27 @@ public class ContainerFluidStorage extends Container implements
 
 	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList) {
 		this.fluidStackList = _fluidStackList;
+		if (this.guiFluidStorage != null)
+			this.guiFluidStorage.updateFluids();
+	}
+
+	@SideOnly(Side.CLIENT)
+	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList, boolean incremental) {
+		if (incremental) {
+			Gui gui = Minecraft.getMinecraft().currentScreen;
+			ContainerFluidStorage container = (ContainerFluidStorage) ((GuiFluidStorage) gui).inventorySlots;
+			IItemList<IAEFluidStack> temp = container.getFluidStackList();
+			for (IAEFluidStack f1 : _fluidStackList) {
+				for (IAEFluidStack f2 : temp) {
+					if (f1.getFluid().getID() == f2.getFluid().getID()) {
+						f2.setStackSize(f2.getStackSize() + f1.getStackSize());
+					}
+				}
+			}
+			this.fluidStackList = temp;
+		} else {
+			this.fluidStackList = _fluidStackList;
+		}
 		if (this.guiFluidStorage != null)
 			this.guiFluidStorage.updateFluids();
 	}

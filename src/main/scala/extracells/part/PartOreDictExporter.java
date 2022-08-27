@@ -24,6 +24,7 @@ import extracells.container.ContainerOreDictExport;
 import extracells.gui.GuiOreDictExport;
 import extracells.render.TextureManager;
 import extracells.util.ItemUtils;
+import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
@@ -38,8 +39,10 @@ import net.minecraftforge.common.util.ForgeDirection;
 import net.minecraftforge.oredict.OreDictionary;
 import org.apache.commons.lang3.StringUtils;
 
-import java.util.*;
-
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -336,7 +339,11 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
 
 	@Override
 	public Object getClientGuiElement(EntityPlayer player) {
-		return new GuiOreDictExport(player, this);
+		if (Minecraft.getMinecraft().currentScreen instanceof GuiOreDictExport) {
+			return Minecraft.getMinecraft().currentScreen;
+		} else {
+			return new GuiOreDictExport(player, this);
+		}
 	}
 
 	@Override
