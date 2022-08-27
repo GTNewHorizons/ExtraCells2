@@ -24,7 +24,6 @@ import extracells.container.ContainerOreDictExport;
 import extracells.gui.GuiOreDictExport;
 import extracells.render.TextureManager;
 import extracells.util.ItemUtils;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
@@ -339,11 +338,7 @@ public class PartOreDictExporter extends PartECBase implements IGridTickable {
 
 	@Override
 	public Object getClientGuiElement(EntityPlayer player) {
-		if (Minecraft.getMinecraft().currentScreen instanceof GuiOreDictExport) {
-			return Minecraft.getMinecraft().currentScreen;
-		} else {
-			return new GuiOreDictExport(player, this);
-		}
+		return new GuiOreDictExport(player, this);
 	}
 
 	@Override

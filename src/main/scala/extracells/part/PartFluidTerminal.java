@@ -26,7 +26,6 @@ import extracells.util.FluidUtil;
 import extracells.util.PermissionUtil;
 import extracells.util.inventory.ECPrivateInventory;
 import extracells.util.inventory.IInventoryUpdateReceiver;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.item.EntityItem;
@@ -204,12 +203,9 @@ public class PartFluidTerminal extends PartECBase implements IGridTickable,
 
 	@Override
 	public Object getClientGuiElement(EntityPlayer player) {
-		if (Minecraft.getMinecraft().currentScreen instanceof GuiFluidTerminal) {
-			return Minecraft.getMinecraft().currentScreen;
-		} else {
-			return new GuiFluidTerminal(this, player);
-		}
+		return new GuiFluidTerminal(this, player);
 	}
+
 	public IInventory getInventory() {
 		return this.inventory;
 	}

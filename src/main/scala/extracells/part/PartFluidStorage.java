@@ -20,7 +20,6 @@ import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import extracells.container.ContainerBusFluidStorage;
 import extracells.gui.GuiBusFluidStorage;
-import extracells.gui.GuiFluidStorage;
 import extracells.inventory.HandlerPartStorageFluid;
 import extracells.network.packet.other.IFluidSlotPartOrBlock;
 import extracells.network.packet.other.PacketFluidSlot;
@@ -29,7 +28,6 @@ import extracells.render.TextureManager;
 import extracells.util.PermissionUtil;
 import extracells.util.inventory.ECPrivateInventory;
 import extracells.util.inventory.IInventoryUpdateReceiver;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.RenderBlocks;
 import net.minecraft.client.renderer.Tessellator;
 import net.minecraft.entity.player.EntityPlayer;
@@ -97,11 +95,7 @@ public class PartFluidStorage extends PartECBase implements ICellContainer, IInv
 
 	@Override
 	public Object getClientGuiElement(EntityPlayer player) {
-		if (Minecraft.getMinecraft().currentScreen instanceof GuiFluidStorage) {
-			return Minecraft.getMinecraft().currentScreen;
-		} else {
-			return new GuiBusFluidStorage(this, player);
-		}
+		return new GuiBusFluidStorage(this, player);
 	}
 
 	@Override
