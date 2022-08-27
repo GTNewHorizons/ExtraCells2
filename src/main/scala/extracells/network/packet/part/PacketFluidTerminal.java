@@ -101,7 +101,6 @@ public class PacketFluidTerminal extends AbstractPacket {
 		}
 	}
 
-	@SideOnly(Side.CLIENT)
 	public void case3() {
 		if (this.player != null && this.player.openContainer instanceof ContainerFluidTerminal) {
 			ContainerFluidTerminal fluidContainer = (ContainerFluidTerminal) this.player.openContainer;
