@@ -57,11 +57,12 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 		GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
 		Minecraft.getMinecraft().renderEngine.bindTexture(this.guiTexture);
 		drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize,
-				this.ySize);
+			this.ySize);
 		this.searchbar.drawTextBox();
+		new PacketFluidStorage(this.player).sendPacketToServer();
+
 	}
 
-	@Override
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
 		this.fontRendererObj
 				.drawString(StatCollector.translateToLocal(this.guiName)
