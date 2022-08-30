@@ -143,29 +143,29 @@ public class PacketFluidTerminal extends AbstractPacket {
 		switch (this.mode) {
 			case 0:
 			case 4:
-			this.fluidStackList = AEApi.instance().storage().createFluidList();
-			while (in.readableBytes() > 0) {
-				Fluid fluid = readFluid(in);
-				long fluidAmount = in.readLong();
-				if (fluid == null || fluidAmount <= 0) {
-					continue;
-				}
-				IAEFluidStack stack = AEApi.instance().storage()
+				this.fluidStackList = AEApi.instance().storage().createFluidList();
+				while (in.readableBytes() > 0) {
+					Fluid fluid = readFluid(in);
+					long fluidAmount = in.readLong();
+					if (fluid == null) {
+						continue;
+					}
+					IAEFluidStack stack = AEApi.instance().storage()
 						.createFluidStack(new FluidStack(fluid, 1));
-				stack.setStackSize(fluidAmount);
-				this.fluidStackList.add(stack);
-			}
-			break;
-		case 1:
-			this.terminalFluid = (PartFluidTerminal) readPart(in);
-			this.currentFluid = readFluid(in);
-			break;
-		case 2:
-			this.currentFluid = readFluid(in);
-			break;
-		case 3:
-			this.terminalFluid = (PartFluidTerminal) readPart(in);
-			break;
+					stack.setStackSize(fluidAmount);
+					this.fluidStackList.add(stack);
+				}
+				break;
+			case 1:
+				this.terminalFluid = (PartFluidTerminal) readPart(in);
+				this.currentFluid = readFluid(in);
+				break;
+			case 2:
+				this.currentFluid = readFluid(in);
+				break;
+			case 3:
+				this.terminalFluid = (PartFluidTerminal) readPart(in);
+				break;
 		}
 	}
 

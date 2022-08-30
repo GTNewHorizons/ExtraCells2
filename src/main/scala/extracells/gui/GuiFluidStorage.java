@@ -59,8 +59,6 @@ public class GuiFluidStorage extends GuiContainer implements IFluidSelectorGui {
 		drawTexturedModalRect(this.guiLeft, this.guiTop, 0, 0, this.xSize,
 			this.ySize);
 		this.searchbar.drawTextBox();
-		new PacketFluidStorage(this.player).sendPacketToServer();
-
 	}
 
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
