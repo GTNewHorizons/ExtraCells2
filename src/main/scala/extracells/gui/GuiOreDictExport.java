@@ -111,7 +111,7 @@ public class GuiOreDictExport extends GuiContainer {
 			this.fontRendererObj.drawString(
 				StatCollector.translateToLocal("container.inventory"), 8,
 				this.ySize - 94, 0x000000);
-		if (!filter.isEmpty() && !filter.startsWith("*")) {
+		if (!filter.isEmpty() && !filter.startsWith("*") && !filter.startsWith("^") && !filter.startsWith("$")) {
 			this._containerOreDictExport.part.setFilter(filter, false);
 			Iterator<AEItemStack> items = this._containerOreDictExport.part.getOres().iterator();
 			int size = this._containerOreDictExport.part.getOres().size();
