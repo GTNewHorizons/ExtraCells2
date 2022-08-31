@@ -10,8 +10,6 @@ import appeng.api.storage.IMEMonitorHandlerReceiver;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.storage.data.IItemList;
 import cpw.mods.fml.common.Optional;
-import cpw.mods.fml.relauncher.Side;
-import cpw.mods.fml.relauncher.SideOnly;
 import extracells.api.IPortableGasStorageCell;
 import extracells.api.IWirelessGasTermHandler;
 import extracells.container.slot.SlotPlayerInventory;
@@ -26,8 +24,6 @@ import extracells.util.GasUtil;
 import extracells.util.inventory.ECPrivateInventory;
 import extracells.util.inventory.IInventoryUpdateReceiver;
 import mekanism.api.gas.GasStack;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.inventory.Container;
@@ -425,18 +421,18 @@ public class ContainerGasStorage extends Container implements
 			this.guiGasStorage.updateFluids();
 	}
 
-	@SideOnly(Side.CLIENT)
 	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList, boolean incremental) {
 		if (incremental) {
-			Gui gui = Minecraft.getMinecraft().currentScreen;
-			ContainerGasStorage container = (ContainerGasStorage) ((GuiGasStorage) gui).inventorySlots;
-			IItemList<IAEFluidStack> temp = container.getFluidStackList();
+			IItemList<IAEFluidStack> temp = this.getFluidStackList();
 			for (IAEFluidStack f1 : _fluidStackList) {
+				boolean change = false;
 				for (IAEFluidStack f2 : temp) {
 					if (f1.getFluid().getID() == f2.getFluid().getID()) {
 						f2.setStackSize(f2.getStackSize() + f1.getStackSize());
+						change = true;
 					}
 				}
+				if (!change) temp.add(f1);
 			}
 			this.fluidStackList = temp;
 		} else {
