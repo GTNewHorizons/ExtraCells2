@@ -12,6 +12,8 @@ import extracells.proxy.CommonProxy
 import extracells.registries.ItemEnum
 import extracells.render.RenderHandler
 import extracells.util.{AdvancedCellHandler, ExtraCellsEventHandler, FluidCellHandler, NameHandler}
+import extracells.util.AdvancedCellHandler
+import extracells.util.VoidCellHandler
 import extracells.wireless.AEWirelessTermHandler
 import net.minecraft.creativetab.CreativeTabs
 import net.minecraft.item.ItemStack
@@ -47,6 +49,7 @@ object Extracells {
 		AEApi.instance.registries.wireless.registerWirelessHandler(new AEWirelessTermHandler)
 		AEApi.instance.registries.cell.addCellHandler(new FluidCellHandler)
 		AEApi.instance.registries.cell.addCellHandler(new AdvancedCellHandler)
+		AEApi.instance.registries.cell.addCellHandler(new VoidCellHandler)
 		val handler = new ExtraCellsEventHandler
 		FMLCommonHandler.instance.bus.register(handler)
 		MinecraftForge.EVENT_BUS.register(handler)
