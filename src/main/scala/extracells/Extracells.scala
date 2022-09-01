@@ -28,7 +28,7 @@ object Extracells {
 	var proxy: CommonProxy = null
 
 	var VERSION = ""
-
+	var basePartSpeed = 125
 	var bcBurnTimeMultiplicator = 4
 	var terminalUpdateInterval = 20
 	var configFolder: File = null
@@ -78,6 +78,8 @@ object Extracells {
 		shortenedBuckets = config.get("Tooltips", "shortenedBuckets", true, "Shall the guis shorten large mB values?").getBoolean(true)
 		dynamicTypes = config.get("Storage Cells", "dynamicTypes", true, "Should the mount of bytes needed for a new type depend on the cellsize?").getBoolean(true)
 		terminalUpdateInterval = config.get("Terminal", "Interval", 20, "How often is the fluid in the terminal updated?").getInt(20)
+		basePartSpeed = config.get("BaseFluidPart", "Interval", 125, "Base fluid part import export speed ").getInt(125)
+
 		integration.loadConfig(config)
 
 		config.save()
