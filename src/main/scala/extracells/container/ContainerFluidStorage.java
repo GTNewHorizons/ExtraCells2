@@ -422,10 +422,6 @@ public class ContainerFluidStorage extends Container implements
 		if (this.guiFluidStorage != null)
 			this.guiFluidStorage.updateFluids();
 	}
-
-
-
-
 	public void updateFluidList(IItemList<IAEFluidStack> _fluidStackList, boolean incremental) {
 		if (incremental) {
 			IItemList<IAEFluidStack> temp = this.getFluidStackList();
