@@ -124,8 +124,9 @@ public class PartFluidConversionMonitor extends PartFluidStorageMonitor {
 		Tessellator.instance.setColorOpaque_I(host.getColor().blackVariant);
 		rh.renderFace(x, y, z, TextureManager.CONVERSION_MONITOR.getTextures()[2], ForgeDirection.SOUTH, renderer);
 
-		renderBackPanel(x, y, z, rh, renderer);
 		renderFrontPanel(x, y, z, rh, renderer);
+		renderBackPanel(x, y, z, rh, renderer);
+		renderPowerStatus(x, y, z, rh, renderer);
 	}
 
 }

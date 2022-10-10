@@ -260,8 +260,9 @@ public class PartDrive extends PartECBase implements ICellContainer,
 			}
 		}
 
-		renderBackPanel(x, y, z, rh, renderer);
 		renderFrontPanel(x, y, z, rh, renderer);
+		renderBackPanel(x, y, z, rh, renderer);
+		renderPowerStatus(x, y, z, rh, renderer);
 	}
 
 	@Override

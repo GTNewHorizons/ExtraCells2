@@ -408,7 +408,6 @@ public abstract class PartECBase implements IPart, IGridHost, IActionHost,
 	}
 
 	protected void renderBackPanel(int x, int y, int z, IPartRenderHelper rh, RenderBlocks renderer) {
-		// Render back panel
 		final IIcon backTexture = CableBusTextures.PartMonitorBack.getIcon();
 		final IIcon sideStatusTexture = CableBusTextures.PartMonitorSidesStatus.getIcon();
 		final IIcon noTexture = ItemMultiPart.instance.getIconFromDamage(380);
@@ -416,8 +415,9 @@ public abstract class PartECBase implements IPart, IGridHost, IActionHost,
 		rh.setTexture(sideStatusTexture, sideStatusTexture, backTexture, noTexture, sideStatusTexture, sideStatusTexture);
 		rh.setBounds(4, 4, 13, 12, 12, 14);
 		rh.renderBlock(x, y, z, renderer);
+	}
 
-		// Render power status
+	protected void renderPowerStatus(int x, int y, int z, IPartRenderHelper rh, RenderBlocks renderer) {
 		if (isActive()) {
 			final int l = 14;
 			Tessellator.instance.setBrightness(l << 20 | l << 4);
@@ -432,7 +432,6 @@ public abstract class PartECBase implements IPart, IGridHost, IActionHost,
 		}
 
 		final IIcon sideStatusLightTexture = CableBusTextures.PartMonitorSidesStatusLights.getIcon();
-
 		rh.renderFace(x, y, z, sideStatusLightTexture, ForgeDirection.EAST, renderer);
 		rh.renderFace(x, y, z, sideStatusLightTexture, ForgeDirection.WEST, renderer);
 		rh.renderFace(x, y, z, sideStatusLightTexture, ForgeDirection.UP, renderer);

@@ -300,8 +300,9 @@ public class PartFluidTerminal extends PartECBase implements IGridTickable,
 		Tessellator.instance.setColorOpaque_I(host.getColor().whiteVariant);
 		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[2], ForgeDirection.SOUTH, renderer);
 
-		renderBackPanel(x, y, z, rh, renderer);
 		renderFrontPanel(x, y, z, rh, renderer);
+		renderBackPanel(x, y, z, rh, renderer);
+		renderPowerStatus(x, y, z, rh, renderer);
 	}
 
 	public void sendCurrentFluid() {

@@ -463,8 +463,9 @@ public class PartFluidStorageMonitor extends PartECBase implements IStackWatcher
 		Tessellator.instance.setColorOpaque_I(host.getColor().blackVariant);
 		rh.renderFace(x, y, z, TextureManager.STORAGE_MONITOR.getTextures()[2], ForgeDirection.SOUTH, renderer);
 
-		renderBackPanel(x, y, z, rh, renderer);
 		renderFrontPanel(x, y, z, rh, renderer);
+		renderBackPanel(x, y, z, rh, renderer);
+		renderPowerStatus(x, y, z, rh, renderer);
 	}
 
 	@Override
