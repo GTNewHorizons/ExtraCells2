@@ -14,6 +14,8 @@ import appeng.api.parts.IPartRenderHelper;
 import appeng.api.storage.IMEMonitor;
 import appeng.api.storage.data.IAEFluidStack;
 import appeng.api.util.AEColor;
+import appeng.client.texture.CableBusTextures;
+import appeng.items.parts.ItemMultiPart;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import extracells.container.ContainerFluidTerminal;
@@ -254,36 +256,27 @@ public class PartFluidTerminal extends PartECBase implements IGridTickable,
 	@SideOnly(Side.CLIENT)
 	@Override
 	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
+		final IIcon sideTexture = CableBusTextures.PartMonitorSides.getIcon();
+		final IIcon backTexture = CableBusTextures.PartMonitorBack.getIcon();
 
-		IIcon side = TextureManager.TERMINAL_SIDE.getTexture();
-		rh.setTexture(side);
+		// Back Panel
+		rh.setTexture(sideTexture, sideTexture, backTexture, sideTexture, sideTexture, sideTexture);
 		rh.setBounds(4, 4, 13, 12, 12, 14);
 		rh.renderInventoryBox(renderer);
-		rh.setTexture(side, side, side, TextureManager.BUS_BORDER.getTexture(),
-				side, side);
+
+		// Front Panel
+		rh.setTexture(sideTexture, sideTexture, backTexture, TextureManager.BUS_BORDER.getTexture(), sideTexture, sideTexture);
 		rh.setBounds(2, 2, 14, 14, 14, 16);
 		rh.renderInventoryBox(renderer);
 
-		ts.setBrightness(13 << 20 | 13 << 4);
-
-		rh.setInvColor(0xFFFFFF);
-		rh.renderInventoryFace(TextureManager.BUS_BORDER.getTexture(),
-				ForgeDirection.SOUTH, renderer);
-
+		// Front Screen
 		rh.setBounds(3, 3, 15, 13, 13, 16);
 		rh.setInvColor(AEColor.Transparent.blackVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[0],
-				ForgeDirection.SOUTH, renderer);
+		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[0], ForgeDirection.SOUTH, renderer);
 		rh.setInvColor(AEColor.Transparent.mediumVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[1],
-				ForgeDirection.SOUTH, renderer);
+		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[1], ForgeDirection.SOUTH, renderer);
 		rh.setInvColor(AEColor.Transparent.whiteVariant);
-		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[2],
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(5, 5, 12, 11, 11, 13);
-		renderInventoryBusLights(rh, renderer);
+		rh.renderInventoryFace(TextureManager.TERMINAL_FRONT.getTextures()[2], ForgeDirection.SOUTH, renderer);
 	}
 
 	@SideOnly(Side.CLIENT)
