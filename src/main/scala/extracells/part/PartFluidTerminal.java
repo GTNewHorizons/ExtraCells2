@@ -289,33 +289,19 @@ public class PartFluidTerminal extends PartECBase implements IGridTickable,
 	@SideOnly(Side.CLIENT)
 	@Override
 	public void renderStatic(int x, int y, int z, IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
+		final IPartHost host = getHost();
 
-		IIcon side = TextureManager.TERMINAL_SIDE.getTexture();
-		rh.setTexture(side);
-		rh.setBounds(4, 4, 13, 12, 12, 14);
-		rh.renderBlock(x, y, z, renderer);
-		rh.setTexture(side, side, side, TextureManager.BUS_BORDER.getTexture(), side, side);
-		rh.setBounds(2, 2, 14, 14, 14, 16);
-		rh.renderBlock(x, y, z, renderer);
-
-		if (isActive())
-			Tessellator.instance.setBrightness(13 << 20 | 13 << 4);
-
-		ts.setColorOpaque_I(0xFFFFFF);
-		rh.renderFace(x, y, z, TextureManager.BUS_BORDER.getTexture(), ForgeDirection.SOUTH, renderer);
-
-		IPartHost host = getHost();
+		// Render front screen
 		rh.setBounds(3, 3, 15, 13, 13, 16);
-		ts.setColorOpaque_I(host.getColor().blackVariant);
+		Tessellator.instance.setColorOpaque_I(host.getColor().blackVariant);
 		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[0], ForgeDirection.SOUTH, renderer);
-		ts.setColorOpaque_I(host.getColor().mediumVariant);
+		Tessellator.instance.setColorOpaque_I(host.getColor().mediumVariant);
 		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[1], ForgeDirection.SOUTH, renderer);
-		ts.setColorOpaque_I(host.getColor().whiteVariant);
+		Tessellator.instance.setColorOpaque_I(host.getColor().whiteVariant);
 		rh.renderFace(x, y, z, TextureManager.TERMINAL_FRONT.getTextures()[2], ForgeDirection.SOUTH, renderer);
 
-		rh.setBounds(5, 5, 12, 11, 11, 13);
-		renderStaticBusLights(x, y, z, rh, renderer);
+		renderBackPanel(x, y, z, rh, renderer);
+		renderFrontPanel(x, y, z, rh, renderer);
 	}
 
 	public void sendCurrentFluid() {
