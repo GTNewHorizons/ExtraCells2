@@ -193,24 +193,26 @@ public class PartFluidStorage extends PartECBase implements ICellContainer, IInv
 	@SideOnly(Side.CLIENT)
 	@Override
 	public void renderInventory(IPartRenderHelper rh, RenderBlocks renderer) {
-		Tessellator ts = Tessellator.instance;
+		final IIcon sideTexture = CableBusTextures.PartStorageSides.getIcon();
+		final IIcon backTexture = CableBusTextures.PartStorageBack.getIcon();
+		final IIcon frontTexture = TextureManager.STORAGE_FRONT.getTexture();
+		final IIcon noTexture = ItemMultiPart.instance.getIconFromDamage(220);
 
-		IIcon side = TextureManager.STORAGE_SIDE.getTexture();
-		rh.setTexture(side, side, side,
-				TextureManager.STORAGE_FRONT.getTextures()[0], side, side);
-		rh.setBounds(2, 2, 15, 14, 14, 16);
+		rh.setTexture(sideTexture, sideTexture, noTexture, frontTexture, sideTexture, sideTexture);
+		rh.setBounds(3, 3, 15, 13, 13, 16);
 		rh.renderInventoryBox(renderer);
 
-		rh.setBounds(4, 4, 14, 12, 12, 15);
+		rh.setTexture(sideTexture, sideTexture, backTexture, noTexture, sideTexture, sideTexture);
+		rh.setBounds(2, 2, 14, 14, 14, 15);
 		rh.renderInventoryBox(renderer);
+
+		rh.setBounds(5, 5, 12, 11, 11, 14);
+		rh.renderInventoryBox(renderer);
+
 		rh.setBounds(2, 2, 15, 14, 14, 16);
 		rh.setInvColor(AEColor.Cyan.blackVariant);
-		ts.setBrightness(15 << 20 | 15 << 4);
-		rh.renderInventoryFace(TextureManager.STORAGE_FRONT.getTextures()[1],
-				ForgeDirection.SOUTH, renderer);
-
-		rh.setBounds(5, 5, 13, 11, 11, 14);
-		renderInventoryBusLights(rh, renderer);
+		Tessellator.instance.setBrightness(15 << 20 | 15 << 4);
+		rh.renderInventoryFace(TextureManager.STORAGE_FRONT.getTextures()[1], ForgeDirection.SOUTH, renderer);
 	}
 
 	@SideOnly(Side.CLIENT)
