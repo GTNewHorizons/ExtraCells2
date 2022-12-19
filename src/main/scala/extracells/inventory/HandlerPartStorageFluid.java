@@ -35,7 +35,7 @@ public class HandlerPartStorageFluid
     protected IFluidHandler tank;
     protected AccessRestriction access = AccessRestriction.READ_WRITE;
     protected List<Fluid> prioritizedFluids = new ArrayList<Fluid>();
-    protected boolean inverted;
+    public boolean inverted;
     private IExternalStorageHandler externalHandler = null;
     protected TileEntity tile = null;
     public ITileStorageMonitorable externalSystem;

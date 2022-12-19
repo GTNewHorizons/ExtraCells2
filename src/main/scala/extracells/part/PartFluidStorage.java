@@ -307,9 +307,17 @@ public class PartFluidStorage extends PartECBase
     private void updateNeighborFluids() {
         fluidList.clear();
         if (access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE) {
+            HashMap<Fluid, Boolean> filter = new HashMap<>();
+            for (Fluid fluid : this.filterFluids) {
+                if (fluid != null) filter.put(fluid, true);
+            }
             for (IAEFluidStack stack :
                     handler.getAvailableItems(AEApi.instance().storage().createFluidList())) {
-                fluidList.put(stack, stack.getStackSize());
+                if (this.handler.inverted) {
+                    if (filter.getOrDefault(stack.getFluid(), null) != null) fluidList.put(stack, stack.getStackSize());
+                } else {
+                    if (filter.getOrDefault(stack.getFluid(), null) == null) fluidList.put(stack, stack.getStackSize());
+                }
             }
         }
     }
