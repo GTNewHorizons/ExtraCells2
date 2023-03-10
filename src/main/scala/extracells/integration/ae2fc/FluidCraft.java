@@ -18,9 +18,6 @@ import com.glodblock.github.util.NameConst;
 import cpw.mods.fml.common.Optional;
 import cpw.mods.fml.common.event.FMLModIdMappingEvent;
 import cpw.mods.fml.common.registry.GameRegistry;
-import com.glodblock.github.loader.ItemAndBlockHolder;
-
-import cpw.mods.fml.common.Optional;
 import extracells.registries.PartEnum;
 
 public final class FluidCraft {
