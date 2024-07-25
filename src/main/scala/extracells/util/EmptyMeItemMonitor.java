@@ -32,7 +32,7 @@ public class EmptyMeItemMonitor implements IMEMonitor<IAEItemStack> {
     }
 
     @Override
-    public IItemList<IAEItemStack> getAvailableItems(IItemList out) {
+    public IItemList<IAEItemStack> getAvailableItems(IItemList out, int iteration) {
         return out;
     }
 

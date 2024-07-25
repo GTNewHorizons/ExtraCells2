@@ -28,6 +28,7 @@ import appeng.api.networking.security.PlayerSource;
 import appeng.api.storage.*;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.api.storage.data.IItemList;
+import appeng.util.IterationCounter;
 import appeng.util.Platform;
 import cofh.api.energy.IEnergyContainerItem;
 import cpw.mods.fml.common.Optional;
@@ -192,7 +193,7 @@ public class ItemStoragePhysical extends ItemECBase implements IStorageCell, IAE
             try {
                 IItemList list = AEApi.instance().registries().cell()
                         .getCellInventory(stack, null, StorageChannel.ITEMS)
-                        .getAvailableItems(AEApi.instance().storage().createItemList());
+                        .getAvailableItems(AEApi.instance().storage().createItemList(), IterationCounter.fetchNewId());
                 if (list.isEmpty()) return super.getItemStackDisplayName(stack) + " - "
                         + StatCollector.translateToLocal("extracells.tooltip.empty1");
                 IAEItemStack s = (IAEItemStack) list.getFirstItem();
@@ -316,7 +317,7 @@ public class ItemStoragePhysical extends ItemECBase implements IStorageCell, IAE
             ForgeDirection face = ForgeDirection.getOrientation(side);
             IItemList list = AEApi.instance().registries().cell()
                     .getCellInventory(itemstack, null, StorageChannel.ITEMS)
-                    .getAvailableItems(AEApi.instance().storage().createItemList());
+                    .getAvailableItems(AEApi.instance().storage().createItemList(), IterationCounter.fetchNewId());
             if (list.isEmpty()) return false;
             IAEItemStack storageStack = (IAEItemStack) list.getFirstItem();
             if (world.getBlock(x + face.offsetX, y + face.offsetY, z + face.offsetZ) == Blocks.air

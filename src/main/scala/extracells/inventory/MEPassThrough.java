@@ -48,8 +48,8 @@ public class MEPassThrough<T extends IAEStack<T>> implements IMEInventoryHandler
     }
 
     @Override
-    public IItemList<T> getAvailableItems(final IItemList out) {
-        return this.internal.getAvailableItems(out);
+    public IItemList<T> getAvailableItems(final IItemList out, int iteration) {
+        return this.internal.getAvailableItems(out, iteration);
     }
 
     @Override

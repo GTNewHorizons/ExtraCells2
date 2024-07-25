@@ -83,12 +83,12 @@ public class MEVoidInventoryHandler<T extends IAEStack<T>> implements IMEInvento
     }
 
     @Override
-    public IItemList<T> getAvailableItems(final IItemList<T> out) {
+    public IItemList<T> getAvailableItems(final IItemList<T> out, int iteration) {
         if (!this.hasReadAccess) {
             return out;
         }
 
-        return this.internal.getAvailableItems(out);
+        return this.internal.getAvailableItems(out, iteration);
     }
 
     @Override

@@ -66,7 +66,7 @@ public class HandlerPartStorageGas extends HandlerPartStorageFluid {
     }
 
     @Override
-    public IItemList<IAEFluidStack> getAvailableItems(IItemList<IAEFluidStack> out) {
+    public IItemList<IAEFluidStack> getAvailableItems(IItemList<IAEFluidStack> out, int iteration) {
         if (!this.node.isActive()
                 || !(this.access == AccessRestriction.READ || this.access == AccessRestriction.READ_WRITE))
             return out;
@@ -74,7 +74,8 @@ public class HandlerPartStorageGas extends HandlerPartStorageFluid {
             IMEInventory<IAEFluidStack> inventory = externalHandler
                     .getInventory(this.tile, this.node.getSide().getOpposite(), new MachineSource(this.node));
             if (inventory == null) return out;
-            IItemList<IAEFluidStack> list = inventory.getAvailableItems(AEApi.instance().storage().createFluidList());
+            IItemList<IAEFluidStack> list = inventory
+                    .getAvailableItems(AEApi.instance().storage().createFluidList(), iteration);
             for (IAEFluidStack stack : list) {
                 out.add(stack);
             }

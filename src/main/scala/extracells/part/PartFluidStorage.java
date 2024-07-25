@@ -35,6 +35,7 @@ import appeng.api.util.AEColor;
 import appeng.client.texture.CableBusTextures;
 import appeng.helpers.IPriorityHost;
 import appeng.items.parts.ItemMultiPart;
+import appeng.util.IterationCounter;
 import cpw.mods.fml.relauncher.Side;
 import cpw.mods.fml.relauncher.SideOnly;
 import extracells.container.ContainerBusFluidStorage;
@@ -308,7 +309,8 @@ public class PartFluidStorage extends PartECBase
     private void updateNeighborFluids() {
         fluidList.clear();
         if (access == AccessRestriction.READ || access == AccessRestriction.READ_WRITE) {
-            for (IAEFluidStack stack : handler.getAvailableItems(AEApi.instance().storage().createFluidList())) {
+            for (IAEFluidStack stack : handler
+                    .getAvailableItems(AEApi.instance().storage().createFluidList(), IterationCounter.fetchNewId())) {
                 fluidList.put(stack, stack.getStackSize());
             }
         }
@@ -316,7 +318,8 @@ public class PartFluidStorage extends PartECBase
 
     private boolean wasChanged() {
         HashMap<IAEFluidStack, Long> fluids = new HashMap<IAEFluidStack, Long>();
-        for (IAEFluidStack stack : handler.getAvailableItems(AEApi.instance().storage().createFluidList())) {
+        for (IAEFluidStack stack : handler
+                .getAvailableItems(AEApi.instance().storage().createFluidList(), IterationCounter.fetchNewId())) {
             fluids.put(stack, stack.getStackSize());
         }
         return !fluids.equals(fluidList);

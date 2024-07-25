@@ -18,6 +18,7 @@ import appeng.api.networking.security.BaseActionSource;
 import appeng.api.storage.*;
 import appeng.api.storage.data.IAEItemStack;
 import appeng.api.storage.data.IItemList;
+import appeng.util.IterationCounter;
 import appeng.util.Platform;
 import appeng.util.item.AEItemStack;
 import extracells.api.IStorageCellAdvanced;
@@ -135,7 +136,8 @@ public class AdvancedCellInventory implements ICellInventory {
     }
 
     private boolean isEmpty(final IMEInventory<IAEItemStack> meInventory) {
-        return meInventory.getAvailableItems(AEApi.instance().storage().createItemList()).isEmpty();
+        return meInventory.getAvailableItems(AEApi.instance().storage().createItemList(), IterationCounter.fetchNewId())
+                .isEmpty();
     }
 
     @Override
@@ -365,7 +367,7 @@ public class AdvancedCellInventory implements ICellInventory {
     }
 
     @Override
-    public IItemList<IAEItemStack> getAvailableItems(final IItemList<IAEItemStack> out) {
+    public IItemList<IAEItemStack> getAvailableItems(final IItemList<IAEItemStack> out, int iteration) {
         for (final IAEItemStack i : this.getCellItems()) {
             out.add(i);
         }
