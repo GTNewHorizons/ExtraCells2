@@ -84,7 +84,8 @@ object HandlerMekanismGasTank extends IExternalGasStorageHandler {
     }
 
     override def getAvailableItems(
-        itemList: IItemList[IAEFluidStack]
+        itemList: IItemList[IAEFluidStack],
+        iteration: Int
     ): IItemList[IAEFluidStack] = {
       val gas = tank.getGas
       if (gas != null)

@@ -13,7 +13,7 @@ public class TileEntityCraftingStorage extends TileCraftingStorageTile {
 
     @Override
     protected ItemStack getItemFromTile(final Object obj) {
-        final int storage = ((TileCraftingTile) obj).getStorageBytes() / KILO_SCALAR;
+        final int storage = (int) ((TileCraftingTile) obj).getStorageBytes() / KILO_SCALAR;
 
         switch (storage) {
             case 256:
@@ -29,7 +29,7 @@ public class TileEntityCraftingStorage extends TileCraftingStorageTile {
     }
 
     @Override
-    public int getStorageBytes() {
+    public long getStorageBytes() {
         if (this.worldObj == null || this.notLoaded()) return 0;
 
         switch (this.blockMetadata & 3) {
